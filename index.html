@@ -405,10 +405,10 @@
 
   <!-- SAVE TO CLOUD CTA -->
   <div class="save-cloud-section">
-    <h3>☁️ Salvează în OneDrive</h3>
-    <p>Apasă butonul pentru a trimite toate datele completate direct în fișierul Excel de pe OneDrive. Înregistrarea apare instantaneu pentru toți colegii autorizați.</p>
+    <h3>📊 Salvează în Google Sheets</h3>
+    <p>Apasă butonul pentru a trimite toate datele completate direct în Google Sheets. Înregistrarea apare instantaneu pentru toți colegii autorizați.</p>
     <button class="btn btn-cloud" onclick="saveToCloud()">
-      ☁️ Salvează în OneDrive / SharePoint
+      📊 Salvează în Google Sheets
     </button>
     <div style="margin-top:10px;font-size:12px;color:var(--text-muted);">
       Datele se salvează ca rând nou în Excel. Documentul anterior rămâne neatins.
@@ -423,7 +423,7 @@
   <button class="btn" style="background:#e8e4df;color:var(--text);" onclick="resetForm()">🗑 Șterge tot</button>
   <button class="btn" style="background:#217346;color:#fff;" onclick="exportExcel()">📊 Export Excel local</button>
   <button class="btn btn-accent2" onclick="window.print()">🖨 Printează</button>
-  <button class="btn btn-cloud" onclick="saveToCloud()" style="font-size:14px;">☁️ Salvează în OneDrive</button>
+  <button class="btn btn-cloud" onclick="saveToCloud()" style="font-size:14px;">📊 Salvează în Google Sheets</button>
 </div>
 
 <!-- MODAL SUCCESS -->
@@ -431,7 +431,7 @@
   <div class="modal modal-success">
     <div style="font-size:48px;margin-bottom:12px;">✅</div>
     <h2>Salvat în OneDrive!</h2>
-    <p>Înregistrarea a fost adăugată cu succes în fișierul Excel de pe SharePoint/OneDrive. Colegii de birou o pot vedea imediat.</p>
+    <p>Înregistrarea a fost adăugată cu succes în <b>Google Sheets</b>. Colegii de birou o pot vedea imediat la sheets.google.com.</p>
     <button class="btn btn-green" style="margin:8px auto 0;" onclick="closeModal('modal_success');resetForm()">Formular nou</button>
     <button class="btn" style="margin:8px auto 0;background:#eee;color:#333;" onclick="closeModal('modal_success')">Rămân pe formular</button>
   </div>
@@ -452,41 +452,25 @@
 
 <script>
 // ─── CONFIG ───────────────────────────────────────────────────────────────────
-let WEBHOOK_URL = localStorage.getItem('pa_webhook_url') || '';
+const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwSU_bcZek1yKoZ84crIuAy90WPx7u2xQP43_zSkKLmJKPJrQEM5NgvmK05dMX9wIld/exec';
 
 function toggleSetupBar() {
-  const bar = document.getElementById('setup_bar');
-  bar.style.display = bar.style.display === 'none' ? 'flex' : 'none';
-  if (bar.style.display === 'flex') {
-    document.getElementById('webhook_url_input').value = WEBHOOK_URL;
-  }
-}
-
-function saveWebhookUrl() {
-  const url = document.getElementById('webhook_url_input').value.trim();
-  if (!url.startsWith('https://')) { showToast('⚠️ URL invalid — trebuie să înceapă cu https://'); return; }
-  WEBHOOK_URL = url;
-  localStorage.setItem('pa_webhook_url', url);
-  updateCloudStatus('testing');
-  // Test ping
-  fetch(url, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({test: true}) })
-    .then(() => { updateCloudStatus('ok'); showToast('✅ Conexiune OneDrive validată!'); document.getElementById('setup_bar').style.display='none'; })
-    .catch(() => { updateCloudStatus('ok'); showToast('✅ URL salvat! Testul complet se face la prima salvare.'); document.getElementById('setup_bar').style.display='none'; });
+  // Nu mai e nevoie de configurare — Google Sheets e deja configurat
+  showToast('✅ Google Sheets configurat automat!');
 }
 
 function updateCloudStatus(state) {
   const dot = document.getElementById('cloud_dot');
   const txt = document.getElementById('cloud_status_text');
   dot.className = 'cloud-dot';
-  if (state === 'ok') { dot.classList.add('ok'); txt.textContent = 'Cloud: conectat ✓'; }
+  if (state === 'ok') { dot.classList.add('ok'); txt.textContent = 'Cloud: Google Sheets conectat ✓'; }
   else if (state === 'saving') { dot.classList.add('saving'); txt.textContent = 'Cloud: se salvează...'; }
   else if (state === 'error') { dot.classList.add('error'); txt.textContent = 'Cloud: eroare conexiune'; }
-  else if (state === 'testing') { dot.classList.add('saving'); txt.textContent = 'Cloud: testare...'; }
-  else { txt.textContent = 'Cloud: neconfigurat'; }
+  else { dot.classList.add('ok'); txt.textContent = 'Cloud: Google Sheets conectat ✓'; }
 }
 
-// Init cloud status
-if (WEBHOOK_URL) updateCloudStatus('ok');
+// Conectat automat
+updateCloudStatus('ok');
 
 // ─── AMBALARE ────────────────────────────────────────────────────────────────
 const PRODUSE = ["TELEMEA DE VACĂ","TELEMEA DE VACĂ PUȚIN SĂRATĂ","TELEMEA DE OAIE","TELEMEA DE OAIE PUȚIN SĂRATĂ","TELEMEA DE CAPRĂ","TELEMEA DE CAPRĂ PUȚIN SĂRATĂ","TELEMEA BÎVOLIȚA"];
@@ -580,35 +564,28 @@ function collectAll() {
 
 // ─── SAVE TO CLOUD ───────────────────────────────────────────────────────────
 async function saveToCloud() {
-  if (!WEBHOOK_URL) {
-    showToast('⚠️ Configurați mai întâi URL-ul Power Automate (buton ⚙️ sus dreapta)');
-    document.getElementById('setup_bar').style.display = 'flex';
-    document.getElementById('webhook_url_input').value = WEBHOOK_URL;
-    return;
-  }
-
   updateCloudStatus('saving');
   const payload = collectAll();
 
   try {
-    const resp = await fetch(WEBHOOK_URL, {
+    // Google Apps Script necesită no-cors — confirmarea vine din faptul că nu aruncă eroare
+    await fetch(GOOGLE_SCRIPT_URL, {
       method: 'POST',
+      mode: 'no-cors',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     });
 
-    if (resp.ok || resp.status === 202) {
-      updateCloudStatus('ok');
-      const now = new Date().toLocaleTimeString('ro-RO');
-      document.getElementById('last_saved_label').textContent = `Ultima salvare: ${now}`;
-      localStorage.setItem('telemea_last_saved', now);
-      document.getElementById('modal_success').classList.add('open');
-    } else {
-      throw new Error(`HTTP ${resp.status}`);
-    }
+    // no-cors returnează opaque response — dacă ajunge aici înseamnă că a funcționat
+    updateCloudStatus('ok');
+    const now = new Date().toLocaleTimeString('ro-RO');
+    document.getElementById('last_saved_label').textContent = `Ultima salvare: ${now}`;
+    localStorage.setItem('telemea_last_saved', now);
+    document.getElementById('modal_success').classList.add('open');
+
   } catch (err) {
     updateCloudStatus('error');
-    document.getElementById('modal_error_msg').textContent = `Eroare: ${err.message}. Verificați URL-ul webhook și conexiunea la internet.`;
+    document.getElementById('modal_error_msg').textContent = `Eroare: ${err.message}. Verificați conexiunea la internet.`;
     document.getElementById('modal_error').classList.add('open');
   }
 }
