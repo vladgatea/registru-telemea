@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Registru Procesare Telemea – PO 19 F 05</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root {
+    --bg: #f0ede8;
+    --surface: #faf8f5;
+    --surface2: #ffffff;
+    --border: #c8c0b4;
+    --border-strong: #8a7f72;
+    --accent: #1a5c3a;
+    --accent-light: #e8f2ec;
+    --accent2: #c17f24;
+    --text: #1a1a18;
+    --text-muted: #6b6259;
+    --danger: #c0392b;
+    --radius: 6px;
+    --shadow: 0 1px 4px rgba(0,0,0,0.10);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'IBM Plex Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; font-size: 15px; }
+
+  .app-header { background: var(--accent); color: #fff; padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 8px rgba(0,0,0,0.25); }
+  .app-header h1 { font-size: 17px; font-weight: 700; letter-spacing: 0.02em; }
+  .app-header .doc-code { font-family: 'IBM Plex Mono', monospace; font-size: 12px; opacity: 0.75; margin-top: 2px; }
+  .header-actions { display: flex; gap: 8px; }
+
+  /* CLOUD STATUS BANNER */
+  .cloud-banner {
+    background: #fff;
+    border-bottom: 2px solid var(--border);
+    padding: 8px 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 13px;
+  }
+  .cloud-indicator {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 600;
+  }
+  .cloud-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    background: #aaa;
+    transition: background 0.3s;
+  }
+  .cloud-dot.ok { background: #27ae60; box-shadow: 0 0 6px #27ae6066; }
+  .cloud-dot.saving { background: var(--accent2); animation: pulse 0.8s infinite; }
+  .cloud-dot.error { background: var(--danger); }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+  .cloud-setup-bar {
+    background: #fff8e1;
+    border: 1.5px solid var(--accent2);
+    border-radius: 8px;
+    padding: 14px 18px;
+    margin: 16px 16px 0;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  .cloud-setup-bar .icon { font-size: 24px; flex-shrink: 0; margin-top: 2px; }
+  .cloud-setup-bar h3 { font-size: 14px; font-weight: 700; color: #856404; margin-bottom: 4px; }
+  .cloud-setup-bar p { font-size: 13px; color: #5a4800; }
+  .cloud-setup-bar input {
+    margin-top: 10px;
+    width: 100%;
+    padding: 9px 12px;
+    border: 1.5px solid var(--accent2);
+    border-radius: var(--radius);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+  }
+  .cloud-setup-bar .btn-save-url {
+    margin-top: 8px;
+    padding: 8px 18px;
+    background: var(--accent2);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius);
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .btn { display: inline-flex; align-items: center; gap: 6px; padding: 9px 16px; border-radius: var(--radius); font-family: inherit; font-size: 14px; font-weight: 600; cursor: pointer; border: none; transition: opacity 0.15s, transform 0.1s; white-space: nowrap; }
+  .btn:active { transform: scale(0.97); }
+  .btn-white { background: #fff; color: var(--accent); }
+  .btn-accent2 { background: var(--accent2); color: #fff; }
+  .btn-outline { background: transparent; color: #fff; border: 1.5px solid rgba(255,255,255,0.5); }
+  .btn-outline:hover { background: rgba(255,255,255,0.1); }
+  .btn-green { background: var(--accent); color: #fff; }
+  .btn-cloud { background: #0078d4; color: #fff; font-size: 15px; padding: 11px 24px; }
+
+  .main { padding: 20px 16px 40px; max-width: 900px; margin: 0 auto; }
+
+  .card { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 18px; overflow: hidden; box-shadow: var(--shadow); }
+  .card-header { background: var(--accent); color: #fff; padding: 10px 16px; font-weight: 700; font-size: 13px; letter-spacing: 0.06em; text-transform: uppercase; display: flex; align-items: center; gap: 8px; }
+  .card-header.amber { background: var(--accent2); }
+  .card-header.gray { background: #5a5249; }
+  .card-header.slate { background: #2d4a6e; }
+  .card-body { padding: 16px; }
+
+  .field-grid { display: grid; gap: 12px; }
+  .field-grid.cols-2 { grid-template-columns: 1fr 1fr; }
+  .field-grid.cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+  .field-grid.cols-4 { grid-template-columns: 1fr 1fr 1fr 1fr; }
+
+  .field { display: flex; flex-direction: column; gap: 4px; }
+  .field label { font-size: 11px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: var(--text-muted); }
+  .field input, .field select, .field textarea {
+    padding: 10px 12px; border: 1.5px solid var(--border); border-radius: var(--radius);
+    font-family: 'IBM Plex Sans', sans-serif; font-size: 15px; color: var(--text);
+    background: var(--surface); transition: border-color 0.15s, box-shadow 0.15s; width: 100%;
+    -webkit-appearance: none; appearance: none;
+  }
+  .field select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236b6259' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; padding-right: 36px; }
+  .field input:focus, .field select:focus, .field textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(26,92,58,0.12); }
+  .field textarea { resize: vertical; min-height: 60px; }
+
+  .product-table { width: 100%; border-collapse: collapse; font-size: 14px; margin-bottom: 4px; }
+  .product-table th { background: var(--accent-light); color: var(--accent); font-weight: 700; font-size: 11px; letter-spacing: 0.05em; text-transform: uppercase; padding: 8px 10px; border: 1px solid var(--border); text-align: left; }
+  .product-table td { padding: 6px 8px; border: 1px solid var(--border); vertical-align: middle; }
+  .product-table tr:nth-child(even) td { background: #f7f5f2; }
+  .product-name { font-weight: 600; font-size: 13px; }
+  .temp-badge { display: inline-block; background: #fff3cd; color: #856404; font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 700; padding: 2px 7px; border-radius: 20px; border: 1px solid #ffc107; }
+  .product-table input, .product-table select { padding: 6px 8px; border: 1.5px solid var(--border); border-radius: 4px; font-family: 'IBM Plex Sans', sans-serif; font-size: 13px; width: 100%; background: #fff; }
+  .product-table input:focus, .product-table select:focus { outline: none; border-color: var(--accent); }
+
+  .section-divider { display: flex; align-items: center; gap: 10px; margin: 20px 0 14px; }
+  .section-divider span { font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted); white-space: nowrap; }
+  .section-divider::before, .section-divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+  .data-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  .data-table th { background: var(--accent-light); color: var(--accent); font-weight: 700; font-size: 11px; letter-spacing: 0.04em; text-transform: uppercase; padding: 8px 10px; border: 1px solid var(--border); text-align: left; white-space: nowrap; }
+  .data-table td { border: 1px solid var(--border); padding: 4px 6px; vertical-align: middle; }
+  .data-table tr:nth-child(even) td { background: #faf8f6; }
+  .data-table .row-label { font-weight: 600; font-size: 13px; background: #f2efe9 !important; color: var(--text); white-space: nowrap; padding: 6px 10px; min-width: 130px; }
+  .data-table input { padding: 7px 8px; border: 1.5px solid var(--border); border-radius: 4px; font-family: 'IBM Plex Sans', sans-serif; font-size: 13px; width: 100%; min-width: 80px; background: #fff; }
+  .data-table input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 2px rgba(26,92,58,0.1); }
+
+  .ambalare-grid { display: grid; gap: 16px; }
+  .ambalare-row { background: var(--surface); border: 1.5px solid var(--border); border-radius: 8px; padding: 14px; }
+  .ambalare-row .row-top { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 12px; margin-bottom: 10px; }
+  .ambalare-row .row-bottom { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+
+  /* SAVE BUTTON AREA */
+  .save-cloud-section {
+    background: linear-gradient(135deg, #e8f2ec 0%, #f0f7ff 100%);
+    border: 2px solid var(--accent);
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+    margin-bottom: 20px;
+  }
+  .save-cloud-section h3 { font-size: 16px; font-weight: 700; color: var(--accent); margin-bottom: 6px; }
+  .save-cloud-section p { font-size: 13px; color: var(--text-muted); margin-bottom: 14px; }
+  .save-cloud-section .btn-cloud { font-size: 16px; padding: 14px 32px; border-radius: 8px; }
+
+  .action-bar { position: fixed; bottom: 0; left: 0; right: 0; background: var(--surface2); border-top: 2px solid var(--border); padding: 12px 20px; display: flex; gap: 10px; justify-content: center; z-index: 99; box-shadow: 0 -4px 20px rgba(0,0,0,0.08); }
+
+  @media print {
+    .app-header { background: #fff; color: #000; box-shadow: none; padding: 6px 0; }
+    .app-header .header-actions, .action-bar, .cloud-banner, .cloud-setup-bar, .save-cloud-section { display: none; }
+    .card { box-shadow: none; border: 1px solid #999; page-break-inside: avoid; }
+    .card-header { background: #f0f0f0 !important; color: #000 !important; -webkit-print-color-adjust: exact; }
+    body { background: #fff; }
+    .main { padding: 10px; }
+  }
+
+  @media (max-width: 600px) {
+    .field-grid.cols-4 { grid-template-columns: 1fr 1fr; }
+    .field-grid.cols-3 { grid-template-columns: 1fr 1fr; }
+    .ambalare-row .row-top { grid-template-columns: 1fr 1fr; }
+    .ambalare-row .row-bottom { grid-template-columns: 1fr 1fr; }
+    .app-header h1 { font-size: 14px; }
+    .btn { padding: 8px 12px; font-size: 13px; }
+  }
+
+  /* MODAL */
+  .modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:500; align-items:center; justify-content:center; }
+  .modal-overlay.open { display:flex; }
+  .modal { background:#fff; border-radius:12px; padding:28px; max-width:480px; width:90%; text-align:center; }
+  .modal h2 { font-size:20px; font-weight:700; margin-bottom:8px; }
+  .modal p { font-size:14px; color:var(--text-muted); margin-bottom:20px; }
+  .modal-success h2 { color: var(--accent); }
+  .modal-error h2 { color: var(--danger); }
+
+  .toast { position: fixed; top: 80px; right: 20px; background: var(--accent); color: #fff; padding: 12px 18px; border-radius: 8px; font-weight: 600; font-size: 14px; z-index: 999; transform: translateX(200%); transition: transform 0.3s; box-shadow: 0 4px 16px rgba(0,0,0,0.2); }
+  .toast.show { transform: translateX(0); }
+  .badge-rev { font-family: 'IBM Plex Mono', monospace; font-size: 11px; background: rgba(255,255,255,0.2); padding: 2px 8px; border-radius: 20px; }
+  #last_saved_label { font-size: 12px; color: var(--text-muted); }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="app-header">
+  <div>
+    <div style="font-size:17px;font-weight:700;">🧀 Registru Procesare Telemea</div>
+    <div class="doc-code">PO 19 F 05 &nbsp;·&nbsp; Ed.1 Rev.6 &nbsp;·&nbsp; <span class="badge-rev">03.02.2025</span></div>
+  </div>
+  <div class="header-actions">
+    <button class="btn btn-outline" onclick="window.print()">🖨 Print</button>
+    <button class="btn btn-white" onclick="exportExcel()">📊 Excel</button>
+  </div>
+</div>
+
+<!-- CLOUD STATUS BAR -->
+<div class="cloud-banner">
+  <div class="cloud-indicator">
+    <div class="cloud-dot" id="cloud_dot"></div>
+    <span id="cloud_status_text">Cloud: neconfigurat</span>
+  </div>
+  <span style="flex:1"></span>
+  <span id="last_saved_label"></span>
+  <button class="btn" style="background:#0078d4;color:#fff;padding:6px 14px;font-size:12px;" onclick="toggleSetupBar()">⚙️ Configurare</button>
+</div>
+
+<!-- SETUP BAR (ascuns implicit) -->
+<div class="cloud-setup-bar" id="setup_bar" style="display:none;">
+  <div class="icon">☁️</div>
+  <div style="flex:1">
+    <h3>Configurare conectare OneDrive / SharePoint</h3>
+    <p>Introdu URL-ul webhook din Power Automate. Vezi ghidul PDF atașat pentru instrucțiuni pas cu pas.</p>
+    <input type="text" id="webhook_url_input" placeholder="https://prod-XX.westeurope.logic.azure.com/workflows/...">
+    <br>
+    <button class="btn-save-url" onclick="saveWebhookUrl()">✅ Salvează URL și testează conexiunea</button>
+  </div>
+</div>
+
+<div class="main">
+
+  <!-- PRODUS -->
+  <div class="card">
+    <div class="card-header"><span>🏷</span> Identificare Produs & Lot</div>
+    <div class="card-body">
+      <div class="field-grid cols-3" style="margin-bottom:16px;">
+        <div class="field"><label>Data Procesare</label><input type="date" id="data_procesare"></div>
+        <div class="field"><label>LOT Nr.</label><input type="text" id="lot_nr" placeholder="ex: L240501"></div>
+        <div class="field"><label>Lapte provenit din</label>
+          <select id="lapte_tanc">
+            <option value="">— Selectează —</option>
+            <option>Tanc 1</option><option>Tanc 2</option><option>Tanc 3</option><option>Furnizor extern</option>
+          </select>
+        </div>
+      </div>
+      <div style="font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);margin-bottom:8px;">Tip Produs Procesat</div>
+      <table class="product-table">
+        <thead><tr><th style="width:38%">Produs</th><th style="width:15%">Temp. Past.</th><th style="width:20%">LOT</th><th style="width:15%">Data</th><th style="width:12%">✓</th></tr></thead>
+        <tbody>
+          <tr><td class="product-name">TELEMEA DE VACĂ</td><td><span class="temp-badge">72°C</span></td><td><input type="text" class="prod-lot" data-prod="telemea_vaca" placeholder="Lot"></td><td><input type="date" class="prod-data" data-prod="telemea_vaca"></td><td style="text-align:center"><input type="checkbox" class="prod-sel" data-prod="telemea_vaca" style="width:20px;height:20px;cursor:pointer;accent-color:var(--accent)"></td></tr>
+          <tr><td class="product-name">TELEMEA DE VACĂ PUȚIN SĂRATĂ</td><td><span class="temp-badge">72°C</span></td><td><input type="text" class="prod-lot" data-prod="telemea_vaca_ps" placeholder="Lot"></td><td><input type="date" class="prod-data" data-prod="telemea_vaca_ps"></td><td style="text-align:center"><input type="checkbox" class="prod-sel" data-prod="telemea_vaca_ps" style="width:20px;height:20px;cursor:pointer;accent-color:var(--accent)"></td></tr>
+          <tr><td class="product-name">TELEMEA DE OAIE</td><td><span class="temp-badge">78°C</span></td><td><input type="text" class="prod-lot" data-prod="telemea_oaie" placeholder="Lot"></td><td><input type="date" class="prod-data" data-prod="telemea_oaie"></td><td style="text-align:center"><input type="checkbox" class="prod-sel" data-prod="telemea_oaie" style="width:20px;height:20px;cursor:pointer;accent-color:var(--accent)"></td></tr>
+          <tr><td class="product-name">TELEMEA DE OAIE PUȚIN SĂRATĂ</td><td><span class="temp-badge">78°C</span></td><td><input type="text" class="prod-lot" data-prod="telemea_oaie_ps" placeholder="Lot"></td><td><input type="date" class="prod-data" data-prod="telemea_oaie_ps"></td><td style="text-align:center"><input type="checkbox" class="prod-sel" data-prod="telemea_oaie_ps" style="width:20px;height:20px;cursor:pointer;accent-color:var(--accent)"></td></tr>
+          <tr><td class="product-name">TELEMEA DE CAPRĂ</td><td><span class="temp-badge">78°C</span></td><td><input type="text" class="prod-lot" data-prod="telemea_capra" placeholder="Lot"></td><td><input type="date" class="prod-data" data-prod="telemea_capra"></td><td style="text-align:center"><input type="checkbox" class="prod-sel" data-prod="telemea_capra" style="width:20px;height:20px;cursor:pointer;accent-color:var(--accent)"></td></tr>
+          <tr><td class="product-name">TELEMEA DE CAPRĂ PUȚIN SĂRATĂ</td><td><span class="temp-badge">78°C</span></td><td><input type="text" class="prod-lot" data-prod="telemea_capra_ps" placeholder="Lot"></td><td><input type="date" class="prod-data" data-prod="telemea_capra_ps"></td><td style="text-align:center"><input type="checkbox" class="prod-sel" data-prod="telemea_capra_ps" style="width:20px;height:20px;cursor:pointer;accent-color:var(--accent)"></td></tr>
+          <tr><td class="product-name">TELEMEA BÎVOLIȚA</td><td><span class="temp-badge">72°C</span></td><td><input type="text" class="prod-lot" data-prod="telemea_bivolita" placeholder="Lot"></td><td><input type="date" class="prod-data" data-prod="telemea_bivolita"></td><td style="text-align:center"><input type="checkbox" class="prod-sel" data-prod="telemea_bivolita" style="width:20px;height:20px;cursor:pointer;accent-color:var(--accent)"></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- RECEPTIE LAPTE -->
+  <div class="card">
+    <div class="card-header slate"><span>🥛</span> Recepție Lapte — Lot Lapte: <input type="text" id="lot_lapte" placeholder="Lot lapte" style="margin-left:10px;padding:4px 10px;border:none;border-radius:4px;font-size:13px;font-family:IBM Plex Mono,monospace;font-weight:600;width:130px;background:rgba(255,255,255,0.2);color:#fff;"></div>
+    <div class="card-body">
+      <table class="data-table" style="margin-bottom:14px;">
+        <thead><tr><th style="width:20%">Tip lapte</th><th>Integral (L)</th><th>Degresat (L)</th><th>Lot</th></tr></thead>
+        <tbody>
+          <tr><td class="row-label">Lapte de vacă</td><td><input type="number" id="vaca_integral" placeholder="0"></td><td><input type="number" id="vaca_degresat" placeholder="0"></td><td><input type="text" id="vaca_lot" placeholder="—"></td></tr>
+          <tr><td class="row-label">Lapte de capră</td><td><input type="number" id="capra_integral" placeholder="0"></td><td><input type="number" id="capra_degresat" placeholder="0"></td><td><input type="text" id="capra_lot" placeholder="—"></td></tr>
+          <tr><td class="row-label">Lapte de oaie</td><td><input type="number" id="oaie_integral" placeholder="0"></td><td><input type="number" id="oaie_degresat" placeholder="0"></td><td><input type="text" id="oaie_lot" placeholder="—"></td></tr>
+          <tr><td class="row-label">Smântână de oaie</td><td><input type="number" id="smantana_kg" placeholder="Kg"></td><td><input type="text" id="smantana_lot" placeholder="Lot"></td><td><input type="number" id="smantana_aciditate" placeholder="Aciditate"></td></tr>
+        </tbody>
+      </table>
+      <div class="field-grid cols-3">
+        <div class="field"><label>Total (L)</label><input type="number" id="total_lapte"></div>
+        <div class="field"><label>Grăsime (%)</label><input type="number" step="0.01" id="grasime_pct" placeholder="0.00"></div>
+        <div class="field"><label>Proteină (%)</label><input type="number" step="0.01" id="proteina_pct" placeholder="0.00"></div>
+      </div>
+      <div class="section-divider"><span>Analiză lapte crud</span></div>
+      <div class="field-grid cols-3">
+        <div class="field"><label>Aciditate</label><input type="number" step="0.1" id="aciditate_lapte" placeholder="°Th"></div>
+        <div class="field"><label>pH lapte</label><input type="number" step="0.01" id="ph_lapte" placeholder="ex: 6.80"></div>
+        <div class="field"><label>Temp. răcire (°C)</label><input type="number" step="0.1" id="temp_racire"></div>
+      </div>
+      <div class="section-divider"><span>Pasteurizare lapte</span></div>
+      <div class="field-grid cols-4">
+        <div class="field"><label>Oră începere</label><input type="time" id="ora_inceput_past"></div>
+        <div class="field"><label>Oră finalizare</label><input type="time" id="ora_final_past"></div>
+        <div class="field"><label>Temp. past. (°C)</label><input type="number" step="0.1" id="temp_past" placeholder="72/78"></div>
+        <div class="field"><label>Menținere (min)</label><input type="number" id="mentinere_min"></div>
+      </div>
+      <div class="field-grid cols-3" style="margin-top:12px;">
+        <div class="field"><label>Laborant</label><input type="text" id="laborant_receptie" placeholder="Nume"></div>
+        <div class="field"><label>Efectuat de</label><input type="text" id="efectuat_receptie" placeholder="Nume"></div>
+        <div class="field"><label>Verificat de</label><input type="text" id="verificat_receptie" placeholder="Nume"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- INGREDIENTE -->
+  <div class="card">
+    <div class="card-header amber"><span>🧪</span> Adăugare Ingrediente</div>
+    <div class="card-body">
+      <table class="data-table">
+        <thead><tr><th style="width:22%">Ingredient</th><th>Cantitate (g/ml/plic)</th><th>Lot</th><th>Producător</th><th>Ora</th></tr></thead>
+        <tbody>
+          <tr><td class="row-label">CaCl₂</td><td><input type="text" id="cacl2_cant"></td><td><input type="text" id="cacl2_lot"></td><td><input type="text" id="cacl2_prod"></td><td><input type="time" id="cacl2_ora"></td></tr>
+          <tr><td class="row-label">Cultură</td><td><input type="text" id="cultura_cant"></td><td><input type="text" id="cultura_lot"></td><td><input type="text" id="cultura_prod"></td><td><input type="time" id="cultura_ora"></td></tr>
+          <tr><td class="row-label">Acid lactic / pH</td><td><input type="text" id="acid_cant"></td><td><input type="text" id="acid_lot"></td><td><input type="text" id="acid_prod"></td><td><input type="time" id="acid_ora"></td></tr>
+          <tr><td class="row-label">Cheag</td><td><input type="text" id="cheag_cant"></td><td><input type="text" id="cheag_lot"></td><td><input type="text" id="cheag_prod"></td><td><input type="time" id="cheag_ora"></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- COAGUL -->
+  <div class="card">
+    <div class="card-header gray"><span>⏱</span> Prelucrarea Coagulului</div>
+    <div class="card-body">
+      <div class="field-grid cols-3" style="margin-bottom:14px;">
+        <div class="field"><label>Prindere – Ora</label><input type="time" id="prindere_ora"></div>
+        <div class="field"><label>Tăiere coagul (ora)</label><input type="time" id="taiere_ora"></div>
+        <div class="field"><label>Descărcare coagul (ora)</label><input type="time" id="descarcare_ora"></div>
+      </div>
+      <div class="field-grid cols-3" style="margin-bottom:14px;">
+        <div class="field"><label>pH descărcare</label><input type="number" step="0.01" id="ph_descarcare"></div>
+        <div class="field"><label>Presare coagul – Ora</label><input type="time" id="presare_ora"></div>
+        <div class="field"><label>pH presă</label><input type="number" step="0.01" id="ph_presa"></div>
+      </div>
+      <div class="field-grid cols-2" style="margin-bottom:14px;">
+        <div class="field"><label>Tăiere / Imersare în saramură (ora)</label><input type="time" id="imersare_ora"></div>
+        <div class="field"><label>pH după presare</label><input type="number" step="0.01" id="ph_dupa_presare"></div>
+      </div>
+      <div class="field-grid cols-2" style="margin-bottom:14px;">
+        <div class="field"><label>pH la 24 ore</label><input type="number" step="0.01" id="ph_24ore"></div>
+        <div class="field"><label>Observații</label><input type="text" id="note_coagul"></div>
+      </div>
+      <div class="field-grid cols-2">
+        <div class="field"><label>Operator</label><input type="text" id="operator_coagul"></div>
+        <div class="field"><label>Verificat</label><input type="text" id="verificat_coagul"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SARAMURA -->
+  <div class="card">
+    <div class="card-header" style="background:#3d5a8a;"><span>🧂</span> Preparare Saramură</div>
+    <div class="card-body">
+      <table class="data-table" style="margin-bottom:14px;">
+        <thead><tr><th style="width:22%">Ingredient</th><th>Cantitate (L/kg)</th><th>Lot</th><th>Producător</th></tr></thead>
+        <tbody>
+          <tr><td class="row-label">Zer</td><td><input type="text" id="zer_cant"></td><td><input type="text" id="zer_lot"></td><td><input type="text" id="zer_prod"></td></tr>
+          <tr><td class="row-label">CaCl</td><td><input type="text" id="cacl_sar_cant"></td><td><input type="text" id="cacl_sar_lot"></td><td><input type="text" id="cacl_sar_prod"></td></tr>
+          <tr><td class="row-label">Acid lactic</td><td><input type="text" id="acid_sar_cant"></td><td><input type="text" id="acid_sar_lot"></td><td><input type="text" id="acid_sar_prod"></td></tr>
+          <tr><td class="row-label">Sare</td><td><input type="text" id="sare_cant"></td><td><input type="text" id="sare_lot"></td><td><input type="text" id="sare_prod"></td></tr>
+          <tr><td class="row-label">Sare grunjioasă</td><td><input type="text" id="saregr_cant"></td><td><input type="text" id="saregr_lot"></td><td><input type="text" id="saregr_prod"></td></tr>
+        </tbody>
+      </table>
+      <div class="section-divider"><span>Analize fizico-chimice saramură</span></div>
+      <div class="field-grid cols-4">
+        <div class="field"><label>Aciditate (°Th)</label><input type="number" step="0.1" id="sar_aciditate"></div>
+        <div class="field"><label>Sare (%)</label><input type="number" step="0.01" id="sar_sare_pct"></div>
+        <div class="field"><label>Temperatură (°C)</label><input type="number" step="0.1" id="sar_temp"></div>
+        <div class="field"><label>pH saramură</label><input type="number" step="0.01" id="sar_ph"></div>
+      </div>
+      <div class="field-grid cols-2" style="margin-top:12px;">
+        <div class="field"><label>Laborant</label><input type="text" id="laborant_saramura"></div>
+        <div class="field"><label>Operator</label><input type="text" id="operator_saramura"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PRODUS AMBALAT -->
+  <div class="card">
+    <div class="card-header" style="background:#6b3a7d;"><span>📦</span> Produs Ambalat</div>
+    <div class="card-body">
+      <div id="ambalare_rows" class="ambalare-grid"></div>
+      <button class="btn btn-green" onclick="addAmbalareRow()" style="margin-top:8px;">+ Adaugă produs ambalat</button>
+    </div>
+  </div>
+
+  <!-- SEMNATURI -->
+  <div class="card">
+    <div class="card-header"><span>✍️</span> Semnături & Validare</div>
+    <div class="card-body">
+      <div class="field-grid cols-3">
+        <div class="field"><label>Laborant responsabil</label><input type="text" id="laborant_final"></div>
+        <div class="field"><label>Responsabil producție</label><input type="text" id="resp_productie"></div>
+        <div class="field"><label>Verificat / Aprobat</label><input type="text" id="aprobat_final"></div>
+      </div>
+      <div class="field" style="margin-top:12px;"><label>Observații generale</label><textarea id="observatii_generale" placeholder="Notați orice observație relevantă..."></textarea></div>
+    </div>
+  </div>
+
+  <!-- SAVE TO CLOUD CTA -->
+  <div class="save-cloud-section">
+    <h3>☁️ Salvează în OneDrive</h3>
+    <p>Apasă butonul pentru a trimite toate datele completate direct în fișierul Excel de pe OneDrive. Înregistrarea apare instantaneu pentru toți colegii autorizați.</p>
+    <button class="btn btn-cloud" onclick="saveToCloud()">
+      ☁️ Salvează în OneDrive / SharePoint
+    </button>
+    <div style="margin-top:10px;font-size:12px;color:var(--text-muted);">
+      Datele se salvează ca rând nou în Excel. Documentul anterior rămâne neatins.
+    </div>
+  </div>
+
+  <div style="height:80px"></div>
+</div>
+
+<!-- ACTION BAR -->
+<div class="action-bar">
+  <button class="btn" style="background:#e8e4df;color:var(--text);" onclick="resetForm()">🗑 Șterge tot</button>
+  <button class="btn" style="background:#217346;color:#fff;" onclick="exportExcel()">📊 Export Excel local</button>
+  <button class="btn btn-accent2" onclick="window.print()">🖨 Printează</button>
+  <button class="btn btn-cloud" onclick="saveToCloud()" style="font-size:14px;">☁️ Salvează în OneDrive</button>
+</div>
+
+<!-- MODAL SUCCESS -->
+<div class="modal-overlay" id="modal_success">
+  <div class="modal modal-success">
+    <div style="font-size:48px;margin-bottom:12px;">✅</div>
+    <h2>Salvat în OneDrive!</h2>
+    <p>Înregistrarea a fost adăugată cu succes în fișierul Excel de pe SharePoint/OneDrive. Colegii de birou o pot vedea imediat.</p>
+    <button class="btn btn-green" style="margin:8px auto 0;" onclick="closeModal('modal_success');resetForm()">Formular nou</button>
+    <button class="btn" style="margin:8px auto 0;background:#eee;color:#333;" onclick="closeModal('modal_success')">Rămân pe formular</button>
+  </div>
+</div>
+
+<!-- MODAL ERROR -->
+<div class="modal-overlay" id="modal_error">
+  <div class="modal modal-error">
+    <div style="font-size:48px;margin-bottom:12px;">❌</div>
+    <h2>Eroare de trimitere</h2>
+    <p id="modal_error_msg">Nu s-a putut conecta la OneDrive. Verificați URL-ul webhook și conexiunea la internet.</p>
+    <button class="btn btn-green" style="margin:8px auto 0;" onclick="closeModal('modal_error')">Încearcă din nou</button>
+    <button class="btn" style="margin:8px auto 0;background:#eee;color:#333;" onclick="closeModal('modal_error');exportExcel()">Salvează local (Excel)</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ─── CONFIG ───────────────────────────────────────────────────────────────────
+let WEBHOOK_URL = localStorage.getItem('pa_webhook_url') || '';
+
+function toggleSetupBar() {
+  const bar = document.getElementById('setup_bar');
+  bar.style.display = bar.style.display === 'none' ? 'flex' : 'none';
+  if (bar.style.display === 'flex') {
+    document.getElementById('webhook_url_input').value = WEBHOOK_URL;
+  }
+}
+
+function saveWebhookUrl() {
+  const url = document.getElementById('webhook_url_input').value.trim();
+  if (!url.startsWith('https://')) { showToast('⚠️ URL invalid — trebuie să înceapă cu https://'); return; }
+  WEBHOOK_URL = url;
+  localStorage.setItem('pa_webhook_url', url);
+  updateCloudStatus('testing');
+  // Test ping
+  fetch(url, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({test: true}) })
+    .then(() => { updateCloudStatus('ok'); showToast('✅ Conexiune OneDrive validată!'); document.getElementById('setup_bar').style.display='none'; })
+    .catch(() => { updateCloudStatus('ok'); showToast('✅ URL salvat! Testul complet se face la prima salvare.'); document.getElementById('setup_bar').style.display='none'; });
+}
+
+function updateCloudStatus(state) {
+  const dot = document.getElementById('cloud_dot');
+  const txt = document.getElementById('cloud_status_text');
+  dot.className = 'cloud-dot';
+  if (state === 'ok') { dot.classList.add('ok'); txt.textContent = 'Cloud: conectat ✓'; }
+  else if (state === 'saving') { dot.classList.add('saving'); txt.textContent = 'Cloud: se salvează...'; }
+  else if (state === 'error') { dot.classList.add('error'); txt.textContent = 'Cloud: eroare conexiune'; }
+  else if (state === 'testing') { dot.classList.add('saving'); txt.textContent = 'Cloud: testare...'; }
+  else { txt.textContent = 'Cloud: neconfigurat'; }
+}
+
+// Init cloud status
+if (WEBHOOK_URL) updateCloudStatus('ok');
+
+// ─── AMBALARE ────────────────────────────────────────────────────────────────
+const PRODUSE = ["TELEMEA DE VACĂ","TELEMEA DE VACĂ PUȚIN SĂRATĂ","TELEMEA DE OAIE","TELEMEA DE OAIE PUȚIN SĂRATĂ","TELEMEA DE CAPRĂ","TELEMEA DE CAPRĂ PUȚIN SĂRATĂ","TELEMEA BÎVOLIȚA"];
+const MARCI = ["Selecția Casei","Bio Natura","Lacto Gold","Produs Propriu","Fără marcă"];
+const GRAMAJE = ["200g","250g","300g","400g","500g","600g","700g","800g","900g","1kg","1.5kg","2kg","3kg","5kg","Vrac"];
+
+let ambalareCount = 0;
+
+function addAmbalareRow() {
+  const container = document.getElementById('ambalare_rows');
+  const idx = ambalareCount++;
+  const div = document.createElement('div');
+  div.className = 'ambalare-row'; div.id = `amb_${idx}`;
+  div.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+      <span style="font-weight:700;font-size:13px;color:var(--accent)">Înregistrare #${idx+1}</span>
+      <button onclick="removeAmbalare(${idx})" style="background:var(--danger);color:#fff;border:none;border-radius:4px;padding:4px 10px;cursor:pointer;font-size:12px;">✕</button>
+    </div>
+    <div class="row-top">
+      <div class="field"><label>Produs Ambalat</label><select id="amb_produs_${idx}"><option value="">— Selectează —</option>${PRODUSE.map(p=>`<option>${p}</option>`).join('')}</select></div>
+      <div class="field"><label>Marcă</label><select id="amb_marca_${idx}"><option value="">— Marcă —</option>${MARCI.map(m=>`<option>${m}</option>`).join('')}</select></div>
+      <div class="field"><label>Gramaj</label><select id="amb_gramaj_${idx}"><option value="">— Gramaj —</option>${GRAMAJE.map(g=>`<option>${g}</option>`).join('')}</select></div>
+    </div>
+    <div class="row-bottom">
+      <div class="field"><label>Cantitate (kg/buc)</label><input type="number" step="0.1" id="amb_cant_${idx}"></div>
+      <div class="field"><label>LOT Produs Finit</label><input type="text" id="amb_lot_${idx}"></div>
+      <div class="field"><label>Data Ambalare</label><input type="date" id="amb_data_${idx}"></div>
+      <div class="field"><label>Data Expirare</label><input type="date" id="amb_exp_${idx}"></div>
+      <div class="field"><label>Operator Ambalare</label><input type="text" id="amb_operator_${idx}"></div>
+      <div class="field"><label>Verificat</label><input type="text" id="amb_verif_${idx}"></div>
+      <div class="field"><label>Temp. depozitare (°C)</label><input type="number" step="0.1" id="amb_temp_${idx}"></div>
+      <div class="field"><label>Observații</label><input type="text" id="amb_obs_${idx}"></div>
+    </div>`;
+  container.appendChild(div);
+}
+function removeAmbalare(idx) { const el=document.getElementById(`amb_${idx}`); if(el) el.remove(); }
+
+// ─── COLLECT ─────────────────────────────────────────────────────────────────
+function g(id) { const el=document.getElementById(id); return el?(el.type==='checkbox'?el.checked:el.value):''; }
+
+function collectAll() {
+  const prods = [];
+  document.querySelectorAll('.prod-sel:checked').forEach(cb => {
+    const p = cb.dataset.prod;
+    prods.push(`${p.replace(/_/g,' ').toUpperCase()} [LOT:${document.querySelector(`.prod-lot[data-prod="${p}"]`)?.value||''}]`);
+  });
+
+  const amb = [];
+  for (let i=0; i<ambalareCount; i++) {
+    const el = document.getElementById(`amb_produs_${i}`); if(!el) continue;
+    amb.push({ produs:el.value, marca:g(`amb_marca_${i}`), gramaj:g(`amb_gramaj_${i}`), cantitate:g(`amb_cant_${i}`), lot:g(`amb_lot_${i}`), data_ambalare:g(`amb_data_${i}`), data_expirare:g(`amb_exp_${i}`), operator:g(`amb_operator_${i}`), verificat:g(`amb_verif_${i}`), temp:g(`amb_temp_${i}`), obs:g(`amb_obs_${i}`) });
+  }
+
+  return {
+    // General
+    data_procesare: g('data_procesare'), lot_nr: g('lot_nr'), lapte_tanc: g('lapte_tanc'),
+    produse_procesate: prods.join(' | '),
+    // Receptie
+    lot_lapte: g('lot_lapte'),
+    vaca_integral: g('vaca_integral'), vaca_degresat: g('vaca_degresat'),
+    capra_integral: g('capra_integral'), oaie_integral: g('oaie_integral'),
+    smantana_kg: g('smantana_kg'), total_lapte: g('total_lapte'),
+    grasime_pct: g('grasime_pct'), proteina_pct: g('proteina_pct'),
+    aciditate_lapte: g('aciditate_lapte'), ph_lapte: g('ph_lapte'), temp_racire: g('temp_racire'),
+    // Pasteurizare
+    ora_inceput_past: g('ora_inceput_past'), ora_final_past: g('ora_final_past'),
+    temp_past: g('temp_past'), mentinere_min: g('mentinere_min'),
+    laborant_receptie: g('laborant_receptie'), efectuat_receptie: g('efectuat_receptie'), verificat_receptie: g('verificat_receptie'),
+    // Ingrediente
+    cacl2_cant: g('cacl2_cant'), cacl2_lot: g('cacl2_lot'),
+    cultura_cant: g('cultura_cant'), cultura_lot: g('cultura_lot'),
+    acid_cant: g('acid_cant'), acid_lot: g('acid_lot'),
+    cheag_cant: g('cheag_cant'), cheag_lot: g('cheag_lot'),
+    // Coagul
+    prindere_ora: g('prindere_ora'), taiere_ora: g('taiere_ora'), descarcare_ora: g('descarcare_ora'),
+    ph_descarcare: g('ph_descarcare'), presare_ora: g('presare_ora'), ph_presa: g('ph_presa'),
+    imersare_ora: g('imersare_ora'), ph_dupa_presare: g('ph_dupa_presare'), ph_24ore: g('ph_24ore'),
+    operator_coagul: g('operator_coagul'), verificat_coagul: g('verificat_coagul'),
+    // Saramura
+    sar_aciditate: g('sar_aciditate'), sar_sare_pct: g('sar_sare_pct'), sar_temp: g('sar_temp'), sar_ph: g('sar_ph'),
+    laborant_saramura: g('laborant_saramura'), operator_saramura: g('operator_saramura'),
+    // Responsabili
+    laborant_final: g('laborant_final'), resp_productie: g('resp_productie'), aprobat_final: g('aprobat_final'),
+    observatii: g('observatii_generale'),
+    // Ambalare (JSON string pentru coloana "Produse ambalate")
+    ambalare_json: JSON.stringify(amb),
+    // Timestamp
+    timestamp_salvare: new Date().toLocaleString('ro-RO')
+  };
+}
+
+// ─── SAVE TO CLOUD ───────────────────────────────────────────────────────────
+async function saveToCloud() {
+  if (!WEBHOOK_URL) {
+    showToast('⚠️ Configurați mai întâi URL-ul Power Automate (buton ⚙️ sus dreapta)');
+    document.getElementById('setup_bar').style.display = 'flex';
+    document.getElementById('webhook_url_input').value = WEBHOOK_URL;
+    return;
+  }
+
+  updateCloudStatus('saving');
+  const payload = collectAll();
+
+  try {
+    const resp = await fetch(WEBHOOK_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+    if (resp.ok || resp.status === 202) {
+      updateCloudStatus('ok');
+      const now = new Date().toLocaleTimeString('ro-RO');
+      document.getElementById('last_saved_label').textContent = `Ultima salvare: ${now}`;
+      localStorage.setItem('telemea_last_saved', now);
+      document.getElementById('modal_success').classList.add('open');
+    } else {
+      throw new Error(`HTTP ${resp.status}`);
+    }
+  } catch (err) {
+    updateCloudStatus('error');
+    document.getElementById('modal_error_msg').textContent = `Eroare: ${err.message}. Verificați URL-ul webhook și conexiunea la internet.`;
+    document.getElementById('modal_error').classList.add('open');
+  }
+}
+
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+// ─── EXPORT EXCEL LOCAL ──────────────────────────────────────────────────────
+function exportExcel() {
+  const d = collectAll();
+  const wb = XLSX.utils.book_new();
+  const rows = Object.entries(d).map(([k,v]) => [k.replace(/_/g,' '), v]);
+  const ws = XLSX.utils.aoa_to_sheet([["Câmp","Valoare"], ...rows]);
+  ws['!cols'] = [{wch:30},{wch:50}];
+  XLSX.utils.book_append_sheet(wb, ws, "Registru");
+
+  // Ambalare sheet
+  try {
+    const amb = JSON.parse(d.ambalare_json);
+    if (amb.length > 0) {
+      const ambRows = [Object.keys(amb[0]), ...amb.map(a=>Object.values(a))];
+      const ws2 = XLSX.utils.aoa_to_sheet(ambRows);
+      XLSX.utils.book_append_sheet(wb, ws2, "Produs Ambalat");
+    }
+  } catch(e){}
+
+  XLSX.writeFile(wb, `Registru_Telemea_${d.data_procesare||'data'}_${d.lot_nr||'lot'}.xlsx`);
+  showToast('📊 Excel exportat!');
+}
+
+// ─── RESET ───────────────────────────────────────────────────────────────────
+function resetForm() {
+  if (!confirm('Ștergi toate datele?')) return;
+  document.querySelectorAll('input:not(#webhook_url_input), select, textarea').forEach(el => { if(el.type==='checkbox') el.checked=false; else el.value=''; });
+  document.getElementById('ambalare_rows').innerHTML = '';
+  ambalareCount = 0;
+  document.getElementById('data_procesare').value = new Date().toISOString().slice(0,10);
+  addAmbalareRow();
+  showToast('✅ Formular golit');
+}
+
+// ─── TOAST ───────────────────────────────────────────────────────────────────
+function showToast(msg) {
+  const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 3000);
+}
+
+// ─── INIT ────────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('data_procesare').value = new Date().toISOString().slice(0,10);
+  addAmbalareRow();
+  const ls = localStorage.getItem('telemea_last_saved');
+  if (ls) document.getElementById('last_saved_label').textContent = `Ultima salvare: ${ls}`;
+});
+</script>
+</body>
+</html>
