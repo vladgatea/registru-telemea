@@ -189,6 +189,11 @@
   .rec-val.fail { background: var(--danger-light); color: var(--danger); }
   .record-item .rec-delete { background: none; border: none; cursor: pointer; color: var(--danger); font-size: 18px; padding: 4px; border-radius: 4px; }
   .record-item .rec-delete:hover { background: var(--danger-light); }
+  .record-item .rec-edit { background: none; border: none; cursor: pointer; color: var(--accent); font-size: 16px; padding: 4px; border-radius: 4px; margin-right: 2px; }
+  .record-item .rec-edit:hover { background: var(--accent-light); }
+  .record-item.locked { background: #f9f9f9; border-color: var(--ok); }
+  .saved-badge { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 20px; background: var(--ok); color: #fff; margin-left: 4px; }
+  .lock-icon { font-size: 14px; color: var(--ok); flex-shrink: 0; }
 
   /* DIVIDER */
   .section-divider { display: flex; align-items: center; gap: 10px; margin: 16px 0 12px; }
@@ -299,13 +304,12 @@
         </div>
       </div>
 
-      <!-- NOTĂ -->
-      <div class="section-divider"><span>Notă calitate</span></div>
-      <div class="nota-group" style="margin-bottom:16px;">
-        <button class="nota-btn" id="nota_A" onclick="selectNota('A')">A</button>
-        <button class="nota-btn" id="nota_B" onclick="selectNota('B')">B</button>
-        <button class="nota-btn" id="nota_C" onclick="selectNota('C')">C</button>
-        <button class="nota-btn" id="nota_D" onclick="selectNota('D')">D</button>
+      <!-- NOTĂ AUTOMATĂ -->
+      <div class="section-divider"><span>Notă calitate — calculată automat</span></div>
+      <div id="nota_auto_display" style="margin-bottom:16px;">
+        <div style="background:var(--surface);border:2px dashed var(--border);border-radius:8px;padding:16px;text-align:center;color:var(--text-muted);font-size:13px;">
+          🔢 Introduceți parametrii pentru calculul automat al notei
+        </div>
       </div>
       <input type="hidden" id="f_nota">
 
@@ -544,6 +548,7 @@ function updateStandard() {
 
   // Update comparison panel
   updateComparison();
+  sugereazaNota();
 }
 
 function resetBox(param) {
@@ -592,6 +597,7 @@ function checkParam(param) {
   }
 
   updateComparison();
+  sugereazaNota();
 }
 
 // ─── COMPARISON PANEL ────────────────────────────────────────────────────────
@@ -654,11 +660,22 @@ function addRecord() {
 
   if (!produs) { showToast('⚠️ Selectați produsul!'); return; }
   if (!lot)    { showToast('⚠️ Introduceți LOT-ul!'); return; }
-  if (!nota)   { showToast('⚠️ Selectați nota (A-D)!'); return; }
 
+  // Dacă laborantul nu a selectat manual, aplică nota automată
+  let notaFinala = nota;
+  if (!notaFinala) {
+    const notaAuto = calcNotaAuto(produs);
+    if (notaAuto) { notaFinala = notaAuto; selectNota(notaAuto); }
+    else { showToast('⚠️ Selectați nota (A-D) sau introduceți parametrii pentru calcul automat!'); return; }
+  }
+
+  const notaAuto = calcNotaAuto(produs) || notaFinala;
   const record = {
     timestamp: new Date().toLocaleString('ro-RO'),
-    data, produs, lot, nota,
+    data, produs, lot,
+    nota: notaFinala,
+    nota_auto: notaAuto,
+    nota_modificata: notaFinala !== notaAuto ? 'DA' : 'NU',
     aciditate: document.getElementById('f_aciditate').value,
     sare:      document.getElementById('f_sare').value,
     ph:        document.getElementById('f_ph').value,
@@ -672,74 +689,221 @@ function addRecord() {
     acid_lactic:  document.getElementById('f_acid_lactic').value,
     efectuat:  document.getElementById('f_efectuat').value,
     verificat: document.getElementById('f_verificat').value,
-    // Conformitate vs standard
     conformitate: getConformitate(produs),
+    saved: false,  // devine true după salvare în cloud
   };
 
   records.push(record);
   renderRecords();
   clearForm();
-  showToast(`✅ Analiza ${produs} – LOT ${lot} adăugată!`);
+  showToast(`✅ Analiza ${produs} – LOT ${lot} · Nota ${notaFinala} adăugată!`);
 }
 
 function getConformitate(produs) {
+  const nota = calcNotaAuto(produs);
+  if (nota === null) return 'N/A';
+  return nota === 'A' ? 'CONFORM' : nota === 'D' ? 'NECONFORM' : `CONFORM (${nota})`;
+}
+
+// ─── CALCUL AUTOMAT NOTĂ ─────────────────────────────────────────────────────
+// Toleranță: abatere ≤10% față de limită = "ușoară" (Nota B)
+//            abatere 10-20% = "mare" (contribuie la C)
+//            abatere >20% sau E-Coli >100 = Nota D automat
+function calcNotaAuto(produs) {
   const std = STANDARDE[produs];
-  if (!std) return 'N/A';
-  const checks = [];
-  const g = id => parseFloat(document.getElementById(id)?.value);
-  if (std.aciditate) checks.push(g('f_aciditate') >= std.aciditate[0] && g('f_aciditate') <= std.aciditate[1]);
-  if (std.ph) checks.push(g('f_ph') >= std.ph[0] && g('f_ph') <= std.ph[1]);
-  if (std.su_min) checks.push(g('f_su') >= std.su_min);
-  if (std.grasime) checks.push(g('f_gb') >= std.grasime);
-  if (std.gsu_min) checks.push(g('f_gsu') >= std.gsu_min);
-  const ecoli = document.getElementById('f_ecoli').value;
-  if (ecoli) checks.push(ecoli === '<100');
-  if (checks.length === 0) return 'N/A';
-  return checks.every(Boolean) ? 'CONFORM' : 'NECONFORM';
+  if (!std) return null;
+
+  const gv = id => parseFloat(document.getElementById(id)?.value);
+  const ecoli = document.getElementById('f_ecoli')?.value;
+
+  // E-Coli >100 = D automat
+  if (ecoli === '>100') return 'D';
+
+  // Calculează abaterea relativă față de limita depășită
+  function abatere(val, min, max) {
+    if (isNaN(val)) return 0;
+    if (min !== undefined && val < min) return (min - val) / min;
+    if (max !== undefined && val > max) return (val - max) / max;
+    return 0;
+  }
+
+  const abateri = [];
+
+  // Aciditate
+  if (std.aciditate) {
+    const v = gv('f_aciditate');
+    if (!isNaN(v)) abateri.push(abatere(v, std.aciditate[0], std.aciditate[1]));
+  }
+  // pH
+  if (std.ph) {
+    const v = gv('f_ph');
+    if (!isNaN(v)) abateri.push(abatere(v, std.ph[0], std.ph[1]));
+  }
+  // Temperatură
+  if (std.temp) {
+    const v = gv('f_temp');
+    const tMax = std.temp[1] === 999 ? undefined : std.temp[1];
+    if (!isNaN(v)) abateri.push(abatere(v, std.temp[0], tMax));
+  }
+  // SU
+  if (std.su_min) {
+    const v = gv('f_su');
+    if (!isNaN(v)) abateri.push(abatere(v, std.su_min, undefined));
+  }
+  // Grăsime
+  if (std.grasime) {
+    const v = gv('f_gb');
+    if (!isNaN(v)) abateri.push(abatere(v, std.grasime, undefined));
+  }
+  // G/SU
+  if (std.gsu_min) {
+    const v = gv('f_gsu');
+    if (!isNaN(v)) abateri.push(abatere(v, std.gsu_min, undefined));
+  }
+
+  if (abateri.length === 0) return null;
+
+  const depasiri = abateri.filter(a => a > 0);
+  const nrDepasiri = depasiri.length;
+  const maxAbatere = nrDepasiri > 0 ? Math.max(...depasiri) : 0;
+
+  // Logica de notare
+  if (nrDepasiri === 0) return 'A';
+  if (maxAbatere > 0.20 || nrDepasiri >= 3) return 'D';
+  if (maxAbatere > 0.10 || nrDepasiri >= 2) return 'C';
+  return 'B'; // 1 parametru depășit cu ≤10%
+}
+
+// ─── SUGESTIE NOTĂ AUTOMATĂ ──────────────────────────────────────────────────
+function sugereazaNota() {
+  const produs = document.getElementById('f_produs').value;
+  const nota = calcNotaAuto(produs);
+  const banner = document.getElementById('nota_auto_banner');
+  const bannerText = document.getElementById('nota_auto_text');
+
+  if (!nota || !produs) {
+    banner.style.display = 'none';
+    return;
+  }
+
+  const mesaje = {
+    'A': '✅ Toți parametrii în standard — Notă sugerată: A',
+    'B': '🟡 1 parametru ușor în afara standardului (≤10%) — Notă sugerată: B',
+    'C': '🟠 Abatere semnificativă (>10%) sau 2 parametri depășiți — Notă sugerată: C',
+    'D': '🔴 Abatere majoră (>20%), 3+ parametri sau E-Coli >100 — Notă sugerată: D',
+  };
+
+  const culori = { A: '#e8f5ec', B: '#fff8e1', C: '#fef5e7', D: '#fdecea' };
+  const borduri = { A: 'var(--ok)', B: '#f0ad4e', C: 'var(--warn)', D: 'var(--danger)' };
+  const texte  = { A: 'var(--ok)', B: '#856404', C: 'var(--warn)', D: 'var(--danger)' };
+
+  banner.style.display = 'flex';
+  banner.style.background = culori[nota];
+  banner.style.borderColor = borduri[nota];
+  banner.style.color = texte[nota];
+  bannerText.textContent = mesaje[nota];
+
+  // Aplică sugestia automat dacă laborantul nu a selectat deja manual
+  const notaCurenta = document.getElementById('f_nota').value;
+  if (!notaCurenta) selectNota(nota);
 }
 
 // ─── RENDER RECORDS ──────────────────────────────────────────────────────────
 function renderRecords() {
   const container = document.getElementById('records_list');
-  document.getElementById('records_count').textContent = `${records.length} înregistrări`;
+  const total = records.length;
+  const unsaved = records.filter(r => !r.saved).length;
+  document.getElementById('records_count').textContent =
+    `${total} înregistrări${unsaved > 0 ? ` · ${unsaved} nesalvate` : ' · toate salvate ✓'}`;
 
-  if (records.length === 0) {
+  if (total === 0) {
     container.innerHTML = `<div class="empty-state"><div class="icon">🔬</div><p>Nicio analiză adăugată încă.<br>Completați formularul de mai sus și apăsați "Adaugă analiză".</p></div>`;
     return;
   }
 
   container.innerHTML = records.map((r, i) => {
     const confBg = r.conformitate === 'CONFORM' ? 'var(--ok)' : r.conformitate === 'NECONFORM' ? 'var(--danger)' : '#aaa';
+    const lockedClass = r.saved ? 'locked' : '';
+    const actions = r.saved
+      ? `<span class="lock-icon" title="Salvat în cloud — nu poate fi modificat">🔒</span>`
+      : `<button class="rec-edit" onclick="editRecord(${i})" title="Editează">✏️</button>
+         <button class="rec-delete" onclick="deleteRecord(${i})" title="Șterge">×</button>`;
+
     return `
-    <div class="record-item">
+    <div class="record-item ${lockedClass}">
       <div class="rec-nota rec-nota-${r.nota}">${r.nota}</div>
       <div style="flex:1;min-width:0;">
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
           <span class="rec-produs">${r.produs}</span>
           <span class="rec-lot">${r.lot}</span>
           <span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px;background:${confBg};color:#fff;">${r.conformitate}</span>
+          ${r.saved ? '<span class="saved-badge">✓ Salvat</span>' : '<span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px;background:#f0ad4e;color:#fff;">Nesalvat</span>'}
         </div>
         <div class="rec-vals" style="margin-top:6px;">
           ${r.aciditate ? `<span class="rec-val">A: ${r.aciditate}°Th</span>` : ''}
-          ${r.sare      ? `<span class="rec-val">S: ${r.sare}%</span>` : ''}
-          ${r.ph        ? `<span class="rec-val">pH: ${r.ph}</span>` : ''}
-          ${r.temp      ? `<span class="rec-val">T: ${r.temp}°C</span>` : ''}
-          ${r.su        ? `<span class="rec-val">SU: ${r.su}%</span>` : ''}
-          ${r.gb        ? `<span class="rec-val">GB: ${r.gb}%</span>` : ''}
-          ${r.gsu       ? `<span class="rec-val">G/SU: ${r.gsu}%</span>` : ''}
-          ${r.ecoli     ? `<span class="rec-val">E-Coli: ${r.ecoli}</span>` : ''}
+          ${r.sare      ? `<span class="rec-val">S: ${r.sare}%</span>`       : ''}
+          ${r.ph        ? `<span class="rec-val">pH: ${r.ph}</span>`          : ''}
+          ${r.temp      ? `<span class="rec-val">T: ${r.temp}°C</span>`       : ''}
+          ${r.su        ? `<span class="rec-val">SU: ${r.su}%</span>`         : ''}
+          ${r.gb        ? `<span class="rec-val">GB: ${r.gb}%</span>`         : ''}
+          ${r.gsu       ? `<span class="rec-val">G/SU: ${r.gsu}%</span>`     : ''}
+          ${r.ecoli     ? `<span class="rec-val">E-Coli: ${r.ecoli}</span>`   : ''}
         </div>
         <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">${r.data} · ${r.efectuat || '—'}</div>
       </div>
-      <button class="rec-delete" onclick="deleteRecord(${i})" title="Șterge">×</button>
+      <div style="display:flex;align-items:center;gap:4px;">
+        ${actions}
+      </div>
     </div>`;
   }).join('');
 }
 
 function deleteRecord(i) {
+  if (records[i].saved) { showToast('🔒 Analiza a fost salvată în cloud și nu poate fi ștearsă!'); return; }
   if (!confirm('Ștergi această analiză?')) return;
   records.splice(i, 1);
   renderRecords();
+}
+
+// ─── EDIT RECORD ─────────────────────────────────────────────────────────────
+function editRecord(i) {
+  const r = records[i];
+  if (r.saved) { showToast('🔒 Analiza este salvată în cloud și nu mai poate fi modificată!'); return; }
+
+  // Populează formularul cu datele înregistrării
+  document.getElementById('f_data').value       = r.data;
+  document.getElementById('f_lot').value        = r.lot;
+  document.getElementById('f_aciditate').value  = r.aciditate;
+  document.getElementById('f_sare').value       = r.sare;
+  document.getElementById('f_ph').value         = r.ph;
+  document.getElementById('f_temp').value       = r.temp;
+  document.getElementById('f_su').value         = r.su;
+  document.getElementById('f_gb').value         = r.gb;
+  document.getElementById('f_gsu').value        = r.gsu;
+  document.getElementById('f_ecoli').value      = r.ecoli;
+  document.getElementById('f_dm').value         = r.dm;
+  document.getElementById('f_organoleptic').value = r.organoleptic;
+  document.getElementById('f_acid_lactic').value  = r.acid_lactic;
+  document.getElementById('f_efectuat').value   = r.efectuat;
+  document.getElementById('f_verificat').value  = r.verificat;
+
+  // Setează produsul și actualizează standardele
+  document.getElementById('f_produs').value = r.produs;
+  updateStandard();
+
+  // Setează nota
+  selectNota(r.nota);
+
+  // Verifică toți parametrii
+  ['aciditate','sare','ph','temp','su','gb','gsu','ecoli'].forEach(checkParam);
+
+  // Marchează ca în editare și șterge din listă
+  records.splice(i, 1);
+  renderRecords();
+
+  // Scroll la formular
+  document.querySelector('.card').scrollIntoView({ behavior: 'smooth' });
+  showToast(`✏️ Editezi analiza ${r.produs} – LOT ${r.lot}`);
 }
 
 // ─── CLEAR FORM ──────────────────────────────────────────────────────────────
@@ -752,31 +916,37 @@ function clearForm() {
   ['A','B','C','D'].forEach(n => { document.getElementById(`nota_${n}`).className = 'nota-btn'; });
   ['aciditate','sare','ph','temp','su','gb','gsu','ecoli'].forEach(resetBox);
   document.getElementById('comparison_panel').style.display = 'none';
+  document.getElementById('nota_auto_banner').style.display = 'none';
   document.getElementById('f_data').value = new Date().toISOString().slice(0,10);
 }
 
 // ─── SAVE TO CLOUD ────────────────────────────────────────────────────────────
 async function saveToCloud() {
-  if (records.length === 0) { showToast('⚠️ Nu există analize de salvat!'); return; }
+  const unsaved = records.filter(r => !r.saved);
+  if (unsaved.length === 0) { showToast('⚠️ Nu există analize noi de salvat!'); return; }
 
   const dot = document.getElementById('cloud_dot');
   const txt = document.getElementById('cloud_status');
   dot.className = 'cloud-dot saving';
-  txt.textContent = 'Se salvează...';
+  txt.textContent = `Se salvează ${unsaved.length} analize...`;
 
   try {
     await fetch(GOOGLE_SCRIPT_URL, {
       method: 'POST',
       mode: 'no-cors',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ tip: 'analize', records })
+      body: JSON.stringify({ tip: 'analize', records: unsaved })
     });
+
+    // Marchează toate ca salvate — blocare editare
+    records.forEach(r => { r.saved = true; });
 
     dot.className = 'cloud-dot';
     txt.textContent = 'Google Sheets conectat ✓';
     const now = new Date().toLocaleTimeString('ro-RO');
     document.getElementById('last_saved').textContent = `Ultima salvare: ${now}`;
     localStorage.setItem('analize_last_saved', now);
+    renderRecords();
     document.getElementById('modal_success').classList.add('open');
   } catch(err) {
     dot.className = 'cloud-dot error';
@@ -790,8 +960,8 @@ async function saveToCloud() {
 function exportExcel() {
   if (records.length === 0) { showToast('⚠️ Nu există analize de exportat!'); return; }
 
-  const headers = ['Timestamp','Data','Produs','Lot','Nota','Aciditate','Sare','pH','Temp(°C)','SU(%)','GB(%)','G/SU(%)','E-Coli','D/M','Organoleptic','Acid Lactic','Efectuat','Verificat','Conformitate'];
-  const rows = records.map(r => [r.timestamp, r.data, r.produs, r.lot, r.nota, r.aciditate, r.sare, r.ph, r.temp, r.su, r.gb, r.gsu, r.ecoli, r.dm, r.organoleptic, r.acid_lactic, r.efectuat, r.verificat, r.conformitate]);
+  const headers = ['Timestamp','Data','Produs','Lot','Nota Finala','Nota Auto','Nota Modificata Manual','Aciditate','Sare','pH','Temp(°C)','SU(%)','GB(%)','G/SU(%)','E-Coli','D/M','Organoleptic','Acid Lactic','Efectuat','Verificat','Conformitate'];
+  const rows = records.map(r => [r.timestamp, r.data, r.produs, r.lot, r.nota, r.nota_auto||'', r.nota_modificata||'', r.aciditate, r.sare, r.ph, r.temp, r.su, r.gb, r.gsu, r.ecoli, r.dm, r.organoleptic, r.acid_lactic, r.efectuat, r.verificat, r.conformitate]);
 
   const wb = XLSX.utils.book_new();
   const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
