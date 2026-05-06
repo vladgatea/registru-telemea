@@ -656,21 +656,18 @@ function addRecord() {
   if (!produs) { showToast('⚠️ Selectați produsul!'); return; }
   if (!lot)    { showToast('⚠️ Introduceți LOT-ul!'); return; }
 
-  // Nota vine direct din calcul automat
-  let notaFinala = document.getElementById('f_nota').value;
-  if (!notaFinala) {
-    const notaAuto = calcNotaAuto(produs);
-    if (notaAuto) { notaFinala = notaAuto; document.getElementById('f_nota').value = notaAuto; }
-    else { showToast('⚠️ Introduceți parametrii pentru calculul automat al notei!'); return; }
-  }
+  // Calculează nota automat — întotdeauna, indiferent de conformitate
+  const notaAuto = calcNotaAuto(produs) || 'C';
+  let notaFinala = document.getElementById('f_nota').value || notaAuto;
+  document.getElementById('f_nota').value = notaFinala;
 
-  const notaAuto = calcNotaAuto(produs) || notaFinala;
+  const notaAutoFinal = calcNotaAuto(produs) || notaFinala;
   const record = {
     timestamp: new Date().toLocaleString('ro-RO'),
     data, produs, lot,
     nota: notaFinala,
-    nota_auto: notaAuto,
-    nota_modificata: notaFinala !== notaAuto ? 'DA' : 'NU',
+    nota_auto: notaAutoFinal,
+    nota_modificata: notaFinala !== notaAutoFinal ? 'DA' : 'NU',
     aciditate: document.getElementById('f_aciditate').value,
     sare:      document.getElementById('f_sare').value,
     ph:        document.getElementById('f_ph').value,
