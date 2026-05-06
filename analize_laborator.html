@@ -766,21 +766,22 @@ function calcNotaAuto(produs) {
     if (!isNaN(v)) abateri.push(abatere(v, std.gsu_min, std.gsu_max || undefined));
   }
 
-function getConformitate(produs) {
-  const nota = calcNotaAuto(produs);
-  if (nota === null) return 'N/A';
-  return nota === 'A' ? 'CONFORM' : nota === 'D' ? 'NECONFORM' : `PARTIAL (${nota})`;
-}
+  if (abateri.length === 0) return null;
 
   const depasiri = abateri.filter(a => a > 0);
   const nrDepasiri = depasiri.length;
   const maxAbatere = nrDepasiri > 0 ? Math.max(...depasiri) : 0;
 
-  // Logica cu toleranță ±5%
   if (nrDepasiri === 0) return 'A';
   if (maxAbatere > 0.15 || nrDepasiri >= 3) return 'D';
   if (maxAbatere > 0.05 || nrDepasiri >= 2) return 'C';
-  return 'B'; // 1 parametru depășit cu ≤5%
+  return 'B';
+}
+
+function getConformitate(produs) {
+  const nota = calcNotaAuto(produs);
+  if (nota === null) return 'N/A';
+  return nota === 'A' ? 'CONFORM' : nota === 'D' ? 'NECONFORM' : `PARTIAL (${nota})`;
 }
 
 // ─── DISPLAY NOTĂ AUTOMATĂ ───────────────────────────────────────────────────
