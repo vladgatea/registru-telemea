@@ -487,35 +487,30 @@ const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwSU_bcZek1yK
 
 // ─── STANDARDE ───────────────────────────────────────────────────────────────
 const STANDARDE = {
-  'Telemea proaspata de vaca': { aciditate: null, grasime: 11, su_min: 30, gsu_min: 38, ecoli: '<100', ph: [6.2, 6.5], temp: [8, 8] },
-  'TVPS 4-8kg':                { aciditate: [170, 220], grasime: 16, su_min: 35, gsu_min: 40, ecoli: '<100', ph: [4.6, 4.9], temp: [15, 17] },
-  'TV 4-8kg':                  { aciditate: [170, 220], grasime: 16, su_min: 35, gsu_min: 40, ecoli: '<100', ph: [4.6, 4.9], temp: [15, 17] },
-  'TC 4-8 kg':                 { aciditate: [170, 220], grasime: 18, su_min: 38, gsu_min: 47, ecoli: '<100', ph: [4.6, 4.9], temp: [15, 17] },
-  'TO 4-8kg':                  { aciditate: [160, 220], grasime: 20, su_min: 40, gsu_min: 47, ecoli: '<100', ph: [4.6, 4.9], temp: [15, 17] },
-  'Cas de vaca materie prima': { aciditate: [110, 170], grasime: 20, su_min: 48, gsu_min: 42, ecoli: '<100', ph: [5.2, 5.5], temp: [13, 14] },
-  'Cas de vaca rotund':        { aciditate: [120, 190], grasime: 20, su_min: 48, gsu_min: 42, ecoli: '<100', ph: [5.3, 5.5], temp: [13, 14] },
-  'Cas de vaca si oaie materie prima': { aciditate: [120, 190], grasime: 24, su_min: 48, gsu_min: 44, ecoli: '<100', ph: [5.4, 5.5], temp: [13, 14] },
-  'Cas de vaca si oaie rotund':{ aciditate: [130, 180], grasime: 24, su_min: 48, gsu_min: 44, ecoli: '<100', ph: [5.5, 5.5], temp: [13, 14] },
-  'Cas de oaie mp':            { aciditate: [140, 180], grasime: 25, su_min: 48, gsu_min: 47, ecoli: '<100', ph: [5.5, 5.6], temp: [13, 14] },
-  'Branza de vaci':            { aciditate: [150, 210], grasime: 13, su_min: 34, gsu_min: 35, ecoli: '<100', ph: [4.5, 4.6], temp: [17, 20] },
-  'Crema de branza':           { aciditate: [140, 160], grasime: 10, su_min: 28, gsu_min: 27, ecoli: '<100', ph: [4.6, 4.6], temp: [17, 20] },
-  'BB DLF':                    { aciditate: [140, 180], grasime: 24, su_min: 47, gsu_min: 45, ecoli: '<100', ph: [4.9, 5.2], temp: [8, 999] },
-  'BB PDA':                    { aciditate: [160, 190], grasime: 22, su_min: 53, gsu_min: 47, ecoli: '<100', ph: [4.9, 5.2], temp: [8, 999] },
+  'Telemea proaspata de vaca': { aciditate: null,       grasime: 11,  su_min: 30,  su_max: null, gsu_min: 38,  gsu_max: null, ph: [6.2, 6.5], temp: [8,    8]    },
+  'TVPS 4-8kg':                { aciditate: [170, 220], grasime: 16,  su_min: 35,  su_max: null, gsu_min: 40,  gsu_max: null, ph: [4.6, 4.9], temp: [15,   17]   },
+  'TV 4-8kg':                  { aciditate: [170, 220], grasime: 16,  su_min: 35,  su_max: null, gsu_min: 40,  gsu_max: null, ph: [4.6, 4.9], temp: [15,   17]   },
+  'TC 4-8 kg':                 { aciditate: [170, 220], grasime: 18,  su_min: 38,  su_max: null, gsu_min: 47,  gsu_max: null, ph: [4.6, 4.9], temp: [15,   17]   },
+  'TO 4-8kg':                  { aciditate: [160, 220], grasime: 20,  su_min: 40,  su_max: null, gsu_min: 47,  gsu_max: null, ph: [4.6, 4.9], temp: [15,   17]   },
+  'Cas de vaca materie prima': { aciditate: [110, 170], grasime: 20,  su_min: 48,  su_max: 50,   gsu_min: 42,  gsu_max: null, ph: [5.2, 5.5], temp: [13,   14]   },
+  'Cas de vaca rotund':        { aciditate: [120, 190], grasime: 20,  su_min: 48,  su_max: 50,   gsu_min: 42,  gsu_max: null, ph: [5.3, 5.5], temp: [13,   14]   },
+  'Cas de vaca si oaie materie prima': { aciditate: [120, 190], grasime: 24, su_min: 48, su_max: 50, gsu_min: 44, gsu_max: 45, ph: [5.4, 5.5], temp: [13, 14] },
+  'Cas de vaca si oaie rotund':{ aciditate: [130, 180], grasime: 24,  su_min: 48,  su_max: 50,   gsu_min: 44,  gsu_max: 45,  ph: [5.5, 5.5], temp: [13,   14]   },
+  'Cas de oaie mp':            { aciditate: [140, 180], grasime: 25,  su_min: 48,  su_max: 50,   gsu_min: 47,  gsu_max: 48,  ph: [5.5, 5.6], temp: [13,   14]   },
+  'Branza de vaci':            { aciditate: [150, 210], grasime: 13,  su_min: 34,  su_max: null, gsu_min: 35,  gsu_max: null, ph: [4.5, 4.6], temp: [17,   20]   },
+  'Crema de branza':           { aciditate: [140, 160], grasime: 10,  su_min: 28,  su_max: null, gsu_min: 27,  gsu_max: null, ph: [4.6, 4.6], temp: [17,   20]   },
+  'BB DLF':                    { aciditate: [140, 180], grasime: 24,  su_min: 47,  su_max: null, gsu_min: 45,  gsu_max: null, ph: [4.9, 5.2], temp: [8,    9999] },
+  'BB PDA':                    { aciditate: [160, 190], grasime: 22,  su_min: 53,  su_max: null, gsu_min: 47,  gsu_max: null, ph: [4.9, 5.2], temp: [8,    9999] },
 };
 
 // ─── STATE ───────────────────────────────────────────────────────────────────
 let records = [];
 let selectedNota = '';
 
-// ─── NOTA SELECTION ──────────────────────────────────────────────────────────
+// ─── NOTA (set programmatic only) ────────────────────────────────────────────
 function selectNota(nota) {
   selectedNota = nota;
   document.getElementById('f_nota').value = nota;
-  ['A','B','C','D'].forEach(n => {
-    const btn = document.getElementById(`nota_${n}`);
-    btn.className = 'nota-btn';
-    if (n === nota) btn.classList.add(`active-${n}`);
-  });
 }
 
 // ─── STANDARD DISPLAY ────────────────────────────────────────────────────────
@@ -538,9 +533,9 @@ function updateStandard() {
   document.getElementById('std_sare').textContent = '—';
   document.getElementById('std_ph').textContent = std.ph ? `${std.ph[0]}–${std.ph[1]}` : '—';
   document.getElementById('std_temp').textContent = std.temp ? (std.temp[1] === 999 ? `min ${std.temp[0]}°C` : `${std.temp[0]}–${std.temp[1]}°C`) : '—';
-  document.getElementById('std_su').textContent = std.su_min ? `min. ${std.su_min}%` : '—';
-  document.getElementById('std_gb').textContent = std.grasime ? `min. ${std.grasime}%` : '—';
-  document.getElementById('std_gsu').textContent = std.gsu_min ? `min. ${std.gsu_min}%` : '—';
+  document.getElementById('std_su').textContent  = std.su_min  ? (std.su_max  ? `${std.su_min}–${std.su_max}%`  : `min. ${std.su_min}%`)  : '—';
+  document.getElementById('std_gb').textContent  = std.grasime ? `min. ${std.grasime}%` : '—';
+  document.getElementById('std_gsu').textContent = std.gsu_min ? (std.gsu_max ? `${std.gsu_min}–${std.gsu_max}%` : `min. ${std.gsu_min}%`) : '—';
   document.getElementById('std_ecoli').textContent = '<100';
 
   // Recheck all params
@@ -579,10 +574,10 @@ function checkParam(param) {
 
     if (param === 'aciditate' && std.aciditate) ok = val >= std.aciditate[0] && val <= std.aciditate[1];
     else if (param === 'ph' && std.ph) ok = val >= std.ph[0] && val <= std.ph[1];
-    else if (param === 'temp' && std.temp) ok = std.temp[1] === 999 ? val >= std.temp[0] : val >= std.temp[0] && val <= std.temp[1];
-    else if (param === 'su' && std.su_min) ok = val >= std.su_min;
+    else if (param === 'temp' && std.temp) ok = std.temp[1] === 9999 ? val >= std.temp[0] : val >= std.temp[0] && val <= std.temp[1];
+    else if (param === 'su' && std.su_min) ok = val >= std.su_min && (std.su_max ? val <= std.su_max : true);
     else if (param === 'gb' && std.grasime) ok = val >= std.grasime;
-    else if (param === 'gsu' && std.gsu_min) ok = val >= std.gsu_min;
+    else if (param === 'gsu' && std.gsu_min) ok = val >= std.gsu_min && (std.gsu_max ? val <= std.gsu_max : true);
     else { resetBox(param); updateComparison(); return; }
   }
 
@@ -661,12 +656,12 @@ function addRecord() {
   if (!produs) { showToast('⚠️ Selectați produsul!'); return; }
   if (!lot)    { showToast('⚠️ Introduceți LOT-ul!'); return; }
 
-  // Dacă laborantul nu a selectat manual, aplică nota automată
-  let notaFinala = nota;
+  // Nota vine direct din calcul automat
+  let notaFinala = document.getElementById('f_nota').value;
   if (!notaFinala) {
     const notaAuto = calcNotaAuto(produs);
-    if (notaAuto) { notaFinala = notaAuto; selectNota(notaAuto); }
-    else { showToast('⚠️ Selectați nota (A-D) sau introduceți parametrii pentru calcul automat!'); return; }
+    if (notaAuto) { notaFinala = notaAuto; document.getElementById('f_nota').value = notaAuto; }
+    else { showToast('⚠️ Introduceți parametrii pentru calculul automat al notei!'); return; }
   }
 
   const notaAuto = calcNotaAuto(produs) || notaFinala;
@@ -699,16 +694,10 @@ function addRecord() {
   showToast(`✅ Analiza ${produs} – LOT ${lot} · Nota ${notaFinala} adăugată!`);
 }
 
-function getConformitate(produs) {
-  const nota = calcNotaAuto(produs);
-  if (nota === null) return 'N/A';
-  return nota === 'A' ? 'CONFORM' : nota === 'D' ? 'NECONFORM' : `CONFORM (${nota})`;
-}
-
 // ─── CALCUL AUTOMAT NOTĂ ─────────────────────────────────────────────────────
-// Toleranță: abatere ≤10% față de limită = "ușoară" (Nota B)
-//            abatere 10-20% = "mare" (contribuie la C)
-//            abatere >20% sau E-Coli >100 = Nota D automat
+// Toleranță: abatere ≤5% față de limită = "ușoară" (Nota B)
+//            abatere 5-15% = "mare" (Nota C)
+//            abatere >15% sau E-Coli >100 = Nota D automat
 function calcNotaAuto(produs) {
   const std = STANDARDE[produs];
   if (!std) return null;
@@ -719,7 +708,6 @@ function calcNotaAuto(produs) {
   // E-Coli >100 = D automat
   if (ecoli === '>100') return 'D';
 
-  // Calculează abaterea relativă față de limita depășită
   function abatere(val, min, max) {
     if (isNaN(val)) return 0;
     if (min !== undefined && val < min) return (min - val) / min;
@@ -729,83 +717,110 @@ function calcNotaAuto(produs) {
 
   const abateri = [];
 
-  // Aciditate
   if (std.aciditate) {
     const v = gv('f_aciditate');
     if (!isNaN(v)) abateri.push(abatere(v, std.aciditate[0], std.aciditate[1]));
   }
-  // pH
   if (std.ph) {
     const v = gv('f_ph');
     if (!isNaN(v)) abateri.push(abatere(v, std.ph[0], std.ph[1]));
   }
-  // Temperatură
   if (std.temp) {
     const v = gv('f_temp');
-    const tMax = std.temp[1] === 999 ? undefined : std.temp[1];
+    const tMax = std.temp[1] === 9999 ? undefined : std.temp[1];
     if (!isNaN(v)) abateri.push(abatere(v, std.temp[0], tMax));
   }
-  // SU
   if (std.su_min) {
     const v = gv('f_su');
-    if (!isNaN(v)) abateri.push(abatere(v, std.su_min, undefined));
+    if (!isNaN(v)) abateri.push(abatere(v, std.su_min, std.su_max || undefined));
   }
-  // Grăsime
   if (std.grasime) {
     const v = gv('f_gb');
     if (!isNaN(v)) abateri.push(abatere(v, std.grasime, undefined));
   }
-  // G/SU
   if (std.gsu_min) {
     const v = gv('f_gsu');
-    if (!isNaN(v)) abateri.push(abatere(v, std.gsu_min, undefined));
+    if (!isNaN(v)) abateri.push(abatere(v, std.gsu_min, std.gsu_max || undefined));
   }
 
-  if (abateri.length === 0) return null;
+function getConformitate(produs) {
+  const nota = calcNotaAuto(produs);
+  if (nota === null) return 'N/A';
+  return nota === 'A' ? 'CONFORM' : nota === 'D' ? 'NECONFORM' : `PARTIAL (${nota})`;
+}
 
   const depasiri = abateri.filter(a => a > 0);
   const nrDepasiri = depasiri.length;
   const maxAbatere = nrDepasiri > 0 ? Math.max(...depasiri) : 0;
 
-  // Logica de notare
+  // Logica cu toleranță ±5%
   if (nrDepasiri === 0) return 'A';
-  if (maxAbatere > 0.20 || nrDepasiri >= 3) return 'D';
-  if (maxAbatere > 0.10 || nrDepasiri >= 2) return 'C';
-  return 'B'; // 1 parametru depășit cu ≤10%
+  if (maxAbatere > 0.15 || nrDepasiri >= 3) return 'D';
+  if (maxAbatere > 0.05 || nrDepasiri >= 2) return 'C';
+  return 'B'; // 1 parametru depășit cu ≤5%
 }
 
-// ─── SUGESTIE NOTĂ AUTOMATĂ ──────────────────────────────────────────────────
+// ─── DISPLAY NOTĂ AUTOMATĂ ───────────────────────────────────────────────────
 function sugereazaNota() {
   const produs = document.getElementById('f_produs').value;
   const nota = calcNotaAuto(produs);
-  const banner = document.getElementById('nota_auto_banner');
-  const bannerText = document.getElementById('nota_auto_text');
+  const display = document.getElementById('nota_auto_display');
 
   if (!nota || !produs) {
-    banner.style.display = 'none';
+    display.innerHTML = `
+      <div style="background:var(--surface);border:2px dashed var(--border);border-radius:8px;padding:16px;text-align:center;color:var(--text-muted);font-size:13px;">
+        🔢 Introduceți parametrii pentru calculul automat al notei
+      </div>`;
+    document.getElementById('f_nota').value = '';
     return;
   }
 
-  const mesaje = {
-    'A': '✅ Toți parametrii în standard — Notă sugerată: A',
-    'B': '🟡 1 parametru ușor în afara standardului (≤10%) — Notă sugerată: B',
-    'C': '🟠 Abatere semnificativă (>10%) sau 2 parametri depășiți — Notă sugerată: C',
-    'D': '🔴 Abatere majoră (>20%), 3+ parametri sau E-Coli >100 — Notă sugerată: D',
+  // Setează nota în câmpul hidden
+  document.getElementById('f_nota').value = nota;
+
+  const config = {
+    'A': { bg: 'var(--ok)',     light: 'var(--ok-light)',    icon: '✅', text: 'Toți parametrii în standard',                          detail: 'Nicio abatere detectată față de limitele standardului.' },
+    'B': { bg: '#3498db',      light: '#e8f4fd',             icon: '🟡', text: '1 parametru ușor în afara standardului (abatere ≤5%)', detail: 'Abatere mică — în limita toleranței acceptabile.' },
+    'C': { bg: 'var(--warn)',   light: 'var(--warn-light)',   icon: '🟠', text: 'Abatere >5% sau 2 parametri depășiți',                 detail: 'Verificați parametrii marcați cu ✗ și luați măsuri corective.' },
+    'D': { bg: 'var(--danger)', light: 'var(--danger-light)', icon: '🔴', text: 'Abatere majoră (>15%), 3+ parametri sau E-Coli >100',   detail: 'Produs NECONFORM. Notificați responsabilul de calitate!' },
   };
+  const c = config[nota];
 
-  const culori = { A: '#e8f5ec', B: '#fff8e1', C: '#fef5e7', D: '#fdecea' };
-  const borduri = { A: 'var(--ok)', B: '#f0ad4e', C: 'var(--warn)', D: 'var(--danger)' };
-  const texte  = { A: 'var(--ok)', B: '#856404', C: 'var(--warn)', D: 'var(--danger)' };
+  // Calculează detalii abateri pentru afișare
+  const std = STANDARDE[produs];
+  const gv = id => parseFloat(document.getElementById(id)?.value);
+  const detalii = [];
+  if (std) {
+    const checks = [
+      { label: 'Aciditate', val: gv('f_aciditate'), min: std.aciditate?.[0], max: std.aciditate?.[1] },
+      { label: 'pH',        val: gv('f_ph'),        min: std.ph?.[0],        max: std.ph?.[1] },
+      { label: 'SU',        val: gv('f_su'),        min: std.su_min },
+      { label: 'GB',        val: gv('f_gb'),        min: std.grasime },
+      { label: 'G/SU',      val: gv('f_gsu'),       min: std.gsu_min },
+    ];
+    checks.forEach(({ label, val, min, max }) => {
+      if (isNaN(val)) return;
+      let ab = 0;
+      if (min !== undefined && val < min) ab = (min - val) / min;
+      else if (max !== undefined && val > max) ab = (val - max) / max;
+      if (ab > 0) detalii.push(`${label}: ${(ab*100).toFixed(1)}% abatere`);
+    });
+    if (document.getElementById('f_ecoli')?.value === '>100') detalii.push('E-Coli >100 ⚠️');
+  }
 
-  banner.style.display = 'flex';
-  banner.style.background = culori[nota];
-  banner.style.borderColor = borduri[nota];
-  banner.style.color = texte[nota];
-  bannerText.textContent = mesaje[nota];
-
-  // Aplică sugestia automat dacă laborantul nu a selectat deja manual
-  const notaCurenta = document.getElementById('f_nota').value;
-  if (!notaCurenta) selectNota(nota);
+  display.innerHTML = `
+    <div style="background:${c.light};border:2px solid ${c.bg};border-radius:10px;padding:16px;display:flex;align-items:flex-start;gap:14px;">
+      <div style="font-size:48px;line-height:1;flex-shrink:0;">${c.icon}</div>
+      <div style="flex:1;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+          <span style="font-size:32px;font-weight:900;font-family:IBM Plex Mono,monospace;color:${c.bg};">NOTA ${nota}</span>
+          <span style="font-size:12px;font-weight:700;padding:3px 10px;border-radius:20px;background:${c.bg};color:#fff;">CALCULAT AUTOMAT</span>
+        </div>
+        <div style="font-size:14px;font-weight:700;color:${c.bg};margin-bottom:4px;">${c.text}</div>
+        <div style="font-size:12px;color:var(--text-muted);">${c.detail}</div>
+        ${detalii.length > 0 ? `<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;">${detalii.map(d=>`<span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:4px;background:${c.bg};color:#fff;">${d}</span>`).join('')}</div>` : ''}
+      </div>
+    </div>`;
 }
 
 // ─── RENDER RECORDS ──────────────────────────────────────────────────────────
@@ -887,15 +902,13 @@ function editRecord(i) {
   document.getElementById('f_efectuat').value   = r.efectuat;
   document.getElementById('f_verificat').value  = r.verificat;
 
-  // Setează produsul și actualizează standardele
+  // Setează produsul și actualizează standardele + recalculează nota
   document.getElementById('f_produs').value = r.produs;
   updateStandard();
 
-  // Setează nota
-  selectNota(r.nota);
-
-  // Verifică toți parametrii
+  // Verifică toți parametrii și recalculează nota automat
   ['aciditate','sare','ph','temp','su','gb','gsu','ecoli'].forEach(checkParam);
+  sugereazaNota();
 
   // Marchează ca în editare și șterge din listă
   records.splice(i, 1);
@@ -916,7 +929,10 @@ function clearForm() {
   ['A','B','C','D'].forEach(n => { document.getElementById(`nota_${n}`).className = 'nota-btn'; });
   ['aciditate','sare','ph','temp','su','gb','gsu','ecoli'].forEach(resetBox);
   document.getElementById('comparison_panel').style.display = 'none';
-  document.getElementById('nota_auto_banner').style.display = 'none';
+  document.getElementById('nota_auto_display').innerHTML = `
+    <div style="background:var(--surface);border:2px dashed var(--border);border-radius:8px;padding:16px;text-align:center;color:var(--text-muted);font-size:13px;">
+      🔢 Introduceți parametrii pentru calculul automat al notei
+    </div>`;
   document.getElementById('f_data').value = new Date().toISOString().slice(0,10);
 }
 
