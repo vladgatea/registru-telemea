@@ -671,6 +671,7 @@ function addRecordDebug() {
 
 // ─── ADD RECORD ───────────────────────────────────────────────────────────────
 function addRecord() {
+  try {
   const produs = document.getElementById('f_produs').value;
   const lot = document.getElementById('f_lot').value.trim();
   const data = document.getElementById('f_data').value;
@@ -679,7 +680,6 @@ function addRecord() {
   if (!produs) { showToast('⚠️ Selectați produsul!'); return; }
   if (!lot)    { showToast('⚠️ Introduceți LOT-ul!'); return; }
 
-  // Calculează nota automat — întotdeauna, indiferent de conformitate
   const notaAuto = calcNotaAuto(produs) || 'C';
   let notaFinala = document.getElementById('f_nota').value || notaAuto;
   document.getElementById('f_nota').value = notaFinala;
@@ -705,13 +705,16 @@ function addRecord() {
     efectuat:  document.getElementById('f_efectuat').value,
     verificat: document.getElementById('f_verificat').value,
     conformitate: getConformitate(produs),
-    saved: false,  // devine true după salvare în cloud
+    saved: false,
   };
 
   records.push(record);
   renderRecords();
   clearForm();
   showToast(`✅ Analiza ${produs} – LOT ${lot} · Nota ${notaFinala} adăugată!`);
+  } catch(err) {
+    alert('❌ EROARE în addRecord:\n' + err.message + '\n\nLinie: ' + err.stack);
+  }
 }
 
 // ─── CALCUL AUTOMAT NOTĂ ─────────────────────────────────────────────────────
