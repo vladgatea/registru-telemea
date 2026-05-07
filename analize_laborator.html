@@ -417,7 +417,7 @@
 
   <!-- BUTON ADAUGĂ -->
   <div style="text-align:center;margin-bottom:20px;">
-    <button class="btn btn-green" style="font-size:16px;padding:14px 32px;" onclick="addRecordDebug()">
+    <button class="btn btn-green" style="font-size:16px;padding:14px 32px;" onclick="addRecord()">
       ✅ Adaugă analiză în registru
     </button>
   </div>
@@ -548,9 +548,9 @@ function updateStandard() {
 
 function resetBox(param) {
   const box = document.getElementById(`box_${param}`);
-  const st = document.getElementById(`st_${param}`);
-  if (box) { box.className = 'param-box'; }
-  if (st) { st.className = 'param-status empty'; st.textContent = '·'; }
+  const st  = document.getElementById(`st_${param}`);
+  if (box) box.className = 'param-box';
+  if (st)  { st.className = 'param-status empty'; st.textContent = '·'; }
 }
 
 // ─── PARAM CHECK ─────────────────────────────────────────────────────────────
@@ -684,13 +684,10 @@ function addRecord() {
   let notaFinala = document.getElementById('f_nota').value || notaAuto;
   document.getElementById('f_nota').value = notaFinala;
 
-  const notaAutoFinal = calcNotaAuto(produs) || notaFinala;
   const record = {
     timestamp: new Date().toLocaleString('ro-RO'),
     data, produs, lot,
     nota: notaFinala,
-    nota_auto: notaAutoFinal,
-    nota_modificata: notaFinala !== notaAutoFinal ? 'DA' : 'NU',
     aciditate: document.getElementById('f_aciditate').value,
     sare:      document.getElementById('f_sare').value,
     ph:        document.getElementById('f_ph').value,
@@ -945,19 +942,30 @@ function editRecord(i) {
 
 // ─── CLEAR FORM ──────────────────────────────────────────────────────────────
 function clearForm() {
-  ['f_produs','f_lot','f_nota','f_aciditate','f_sare','f_ph','f_temp','f_su','f_gb','f_gsu','f_ecoli','f_dm','f_organoleptic','f_acid_lactic','f_efectuat','f_verificat'].forEach(id => {
+  ['f_produs','f_lot','f_nota','f_aciditate','f_sare','f_ph','f_temp',
+   'f_su','f_gb','f_gsu','f_ecoli','f_dm','f_organoleptic',
+   'f_acid_lactic','f_efectuat','f_verificat'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.value = '';
   });
   selectedNota = '';
-  ['A','B','C','D'].forEach(n => { document.getElementById(`nota_${n}`).className = 'nota-btn'; });
-  ['aciditate','sare','ph','temp','su','gb','gsu','ecoli'].forEach(resetBox);
-  document.getElementById('comparison_panel').style.display = 'none';
-  document.getElementById('nota_auto_display').innerHTML = `
-    <div style="background:var(--surface);border:2px dashed var(--border);border-radius:8px;padding:16px;text-align:center;color:var(--text-muted);font-size:13px;">
-      🔢 Introduceți parametrii pentru calculul automat al notei
-    </div>`;
-  document.getElementById('f_data').value = new Date().toISOString().slice(0,10);
+
+  // Reset param boxes — safe, skip if element missing
+  ['aciditate','sare','ph','temp','su','gb','gsu','ecoli'].forEach(param => {
+    const box = document.getElementById('box_' + param);
+    const st  = document.getElementById('st_'  + param);
+    if (box) box.className = 'param-box';
+    if (st)  { st.className = 'param-status empty'; st.textContent = '·'; }
+  });
+
+  const cp = document.getElementById('comparison_panel');
+  if (cp) cp.style.display = 'none';
+
+  const nad = document.getElementById('nota_auto_display');
+  if (nad) nad.innerHTML = '<div style="background:var(--surface);border:2px dashed var(--border);border-radius:8px;padding:16px;text-align:center;color:var(--text-muted);font-size:13px;">🔢 Introduceți parametrii pentru calculul automat al notei</div>';
+
+  const fd = document.getElementById('f_data');
+  if (fd) fd.value = new Date().toISOString().slice(0,10);
 }
 
 // ─── SAVE TO CLOUD ────────────────────────────────────────────────────────────
@@ -1000,8 +1008,8 @@ async function saveToCloud() {
 function exportExcel() {
   if (records.length === 0) { showToast('⚠️ Nu există analize de exportat!'); return; }
 
-  const headers = ['Timestamp','Data','Produs','Lot','Nota Finala','Nota Auto','Nota Modificata Manual','Aciditate','Sare','pH','Temp(°C)','SU(%)','GB(%)','G/SU(%)','E-Coli','D/M','Organoleptic','Acid Lactic','Efectuat','Verificat','Conformitate'];
-  const rows = records.map(r => [r.timestamp, r.data, r.produs, r.lot, r.nota, r.nota_auto||'', r.nota_modificata||'', r.aciditate, r.sare, r.ph, r.temp, r.su, r.gb, r.gsu, r.ecoli, r.dm, r.organoleptic, r.acid_lactic, r.efectuat, r.verificat, r.conformitate]);
+  const headers = ['Timestamp','Data','Produs','Lot','Nota','Aciditate(°Th)','Sare(%)','pH','Temp(°C)','SU(%)','GB(%)','G/SU(%)','E-Coli','D/M','Organoleptic','Acid Lactic','Efectuat','Verificat','Conformitate'];
+  const rows = records.map(r => [r.timestamp, r.data, r.produs, r.lot, r.nota, r.aciditate, r.sare, r.ph, r.temp, r.su, r.gb, r.gsu, r.ecoli, r.dm, r.organoleptic, r.acid_lactic, r.efectuat, r.verificat, r.conformitate]);
 
   const wb = XLSX.utils.book_new();
   const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
