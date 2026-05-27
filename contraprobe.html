@@ -318,6 +318,15 @@
         </div>
       </div>
 
+      <!-- DATA EXPIRARE -->
+      <div class="field-grid cols-2" style="margin-bottom:18px;">
+        <div class="field">
+          <label>Data Expirare</label>
+          <input type="date" id="f_data_expirare">
+        </div>
+        <div id="expirare_status" style="display:flex;align-items:center;"></div>
+      </div>
+
       <!-- GREUTATE -->
       <div class="section-divider"><span>Greutate</span></div>
       <div class="greutate-row" style="margin-bottom:18px;">
@@ -639,6 +648,7 @@ function addRecord() {
   const record = {
     timestamp:    new Date().toLocaleString('ro-RO'),
     data, articol, lot,
+    data_expirare: document.getElementById('f_data_expirare').value,
     greutate,
     greutate_conf: grConf,
     textura:      document.getElementById('f_textura').value,
@@ -685,6 +695,7 @@ function renderRecords() {
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px;">
           <span class="rec-articol">${r.articol}</span>
           <span class="rec-lot">LOT: ${r.lot}</span>
+          ${r.data_expirare ? `<span class="rec-val">Exp: ${r.data_expirare}</span>` : ''}
           <span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px;background:${confBg};color:#fff;">${r.conformitate}</span>
           ${r.saved ? '<span class="saved-badge">✓ Salvat</span>' : '<span class="unsaved-badge">Nesalvat</span>'}
         </div>
@@ -715,10 +726,11 @@ function editRecord(i) {
   const r = records[i];
   if (r.saved) { showToast('🔒 Înregistrarea este salvată și nu mai poate fi modificată!'); return; }
 
-  document.getElementById('f_data').value       = r.data;
-  document.getElementById('f_articol').value    = r.articol;
-  document.getElementById('f_lot').value        = r.lot;
-  document.getElementById('f_greutate').value   = r.greutate;
+  document.getElementById('f_data').value          = r.data;
+  document.getElementById('f_articol').value       = r.articol;
+  document.getElementById('f_lot').value           = r.lot;
+  document.getElementById('f_data_expirare').value = r.data_expirare || '';
+  document.getElementById('f_greutate').value      = r.greutate;
   document.getElementById('f_textura').value    = r.textura;
   document.getElementById('f_miros').value      = r.miros;
   document.getElementById('f_gust').value       = r.gust;
@@ -740,7 +752,7 @@ function editRecord(i) {
 
 // ─── CLEAR FORM ───────────────────────────────────────────────────────────────
 function clearForm() {
-  ['f_articol','f_lot','f_greutate','f_textura','f_miros','f_gust',
+  ['f_articol','f_lot','f_data_expirare','f_greutate','f_textura','f_miros','f_gust',
    'f_ph','f_observatii','f_efectuat','f_verificat'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.value = '';
@@ -800,8 +812,8 @@ async function saveToCloud() {
 // ─── EXPORT EXCEL ─────────────────────────────────────────────────────────────
 function exportExcel() {
   if (records.length === 0) { showToast('⚠️ Nu există contraprobe de exportat!'); return; }
-  const headers = ['Timestamp','Data','Articol','Lot','Greutate(g)','Gr. Conf.','Textura','Miros','Gust','pH','pH Conf.','Observatii','Efectuat','Verificat','Conformitate'];
-  const rows    = records.map(r => [r.timestamp, r.data, r.articol, r.lot, r.greutate, r.greutate_conf, r.textura, r.miros, r.gust, r.ph, r.ph_conf, r.observatii, r.efectuat, r.verificat, r.conformitate]);
+  const headers = ['Timestamp','Data','Articol','Lot','Data Expirare','Greutate(g)','Gr. Conf.','Textura','Miros','Gust','pH','pH Conf.','Observatii','Efectuat','Verificat','Conformitate'];
+  const rows    = records.map(r => [r.timestamp, r.data, r.articol, r.lot, r.data_expirare||'', r.greutate, r.greutate_conf, r.textura, r.miros, r.gust, r.ph, r.ph_conf, r.observatii, r.efectuat, r.verificat, r.conformitate]);
   const wb      = XLSX.utils.book_new();
   const ws      = XLSX.utils.aoa_to_sheet([headers, ...rows]);
   ws['!cols']   = headers.map((h, i) => ({ wch: i === 2 ? 22 : i === 10 ? 30 : 14 }));
