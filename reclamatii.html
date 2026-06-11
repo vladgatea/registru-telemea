@@ -1,0 +1,1071 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Reclamații Clienți</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --green: #2E7D32;
+    --green-light: #43A047;
+    --green-bg: #F1F8E9;
+    --red: #C62828;
+    --red-bg: #FFEBEE;
+    --orange: #E65100;
+    --gray-1: #F7F8FA;
+    --gray-2: #ECEEF2;
+    --gray-3: #C8CDD6;
+    --gray-4: #7A8494;
+    --gray-5: #3D4452;
+    --dark: #1A1D23;
+    --white: #FFFFFF;
+    --radius: 14px;
+    --shadow: 0 2px 12px rgba(0,0,0,0.08);
+    --shadow-lg: 0 8px 32px rgba(0,0,0,0.13);
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: var(--gray-1);
+    color: var(--dark);
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ── HEADER ── */
+  .app-header {
+    background: var(--green);
+    color: white;
+    padding: 20px 20px 24px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  }
+  .header-top {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .header-icon {
+    width: 40px; height: 40px;
+    background: rgba(255,255,255,0.15);
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+    flex-shrink: 0;
+  }
+  .header-title { font-size: 18px; font-weight: 700; letter-spacing: -0.3px; }
+  .header-sub { font-size: 12px; opacity: 0.75; margin-top: 2px; }
+
+  /* ── MAIN ── */
+  .main { padding: 16px; max-width: 600px; margin: 0 auto; }
+
+  /* ── STEP INDICATOR ── */
+  .steps-bar {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 20px;
+  }
+  .step-dot {
+    height: 4px;
+    border-radius: 2px;
+    background: var(--gray-3);
+    flex: 1;
+    transition: background 0.3s;
+  }
+  .step-dot.active { background: var(--green); }
+  .step-dot.done { background: var(--green-light); }
+
+  /* ── CARD ── */
+  .card {
+    background: var(--white);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 20px;
+    margin-bottom: 12px;
+  }
+  .card-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--green);
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .card-title-icon {
+    width: 28px; height: 28px;
+    background: var(--green-bg);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px;
+  }
+
+  /* ── FORM FIELDS ── */
+  .field { margin-bottom: 16px; }
+  .field:last-child { margin-bottom: 0; }
+
+  label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--gray-5);
+    margin-bottom: 6px;
+  }
+  label .req { color: var(--red); margin-left: 2px; }
+
+  input[type="text"],
+  input[type="date"],
+  input[type="number"],
+  textarea,
+  select {
+    width: 100%;
+    padding: 13px 14px;
+    border: 1.5px solid var(--gray-2);
+    border-radius: 10px;
+    font-size: 16px; /* prevents iOS zoom */
+    color: var(--dark);
+    background: var(--gray-1);
+    transition: border-color 0.2s, background 0.2s;
+    appearance: none;
+    -webkit-appearance: none;
+    outline: none;
+  }
+  input[type="text"]:focus,
+  input[type="date"]:focus,
+  input[type="number"]:focus,
+  textarea:focus,
+  select:focus {
+    border-color: var(--green);
+    background: var(--white);
+    box-shadow: 0 0 0 3px rgba(46,125,50,0.1);
+  }
+  input.error, select.error, textarea.error {
+    border-color: var(--red);
+    background: var(--red-bg);
+  }
+  .field-error {
+    font-size: 12px;
+    color: var(--red);
+    margin-top: 5px;
+    display: none;
+  }
+  .field-error.show { display: block; }
+
+  textarea {
+    resize: vertical;
+    min-height: 90px;
+    font-family: inherit;
+  }
+
+  /* Select wrapper */
+  .select-wrap { position: relative; }
+  .select-wrap::after {
+    content: '▾';
+    position: absolute;
+    right: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--gray-4);
+    pointer-events: none;
+    font-size: 14px;
+  }
+  select { padding-right: 36px; }
+
+  /* ── PRODUCT SEARCH ── */
+  .search-wrap { position: relative; }
+  .search-input {
+    padding-left: 40px !important;
+    background: var(--gray-1) !important;
+  }
+  .search-icon {
+    position: absolute;
+    left: 13px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--gray-4);
+    font-size: 16px;
+    pointer-events: none;
+  }
+  .dropdown-list {
+    display: none;
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0; right: 0;
+    background: var(--white);
+    border: 1.5px solid var(--green);
+    border-radius: 10px;
+    box-shadow: var(--shadow-lg);
+    max-height: 240px;
+    overflow-y: auto;
+    z-index: 200;
+  }
+  .dropdown-list.open { display: block; }
+  .dropdown-item {
+    padding: 12px 14px;
+    font-size: 14px;
+    cursor: pointer;
+    border-bottom: 1px solid var(--gray-2);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    transition: background 0.15s;
+  }
+  .dropdown-item:last-child { border-bottom: none; }
+  .dropdown-item:hover, .dropdown-item.selected-item { background: var(--green-bg); }
+  .dropdown-item-name { flex: 1; line-height: 1.3; }
+  .dropdown-item-um {
+    font-size: 11px;
+    font-weight: 700;
+    background: var(--gray-2);
+    color: var(--gray-4);
+    padding: 2px 7px;
+    border-radius: 20px;
+    flex-shrink: 0;
+  }
+  .dropdown-no-results {
+    padding: 16px 14px;
+    font-size: 14px;
+    color: var(--gray-4);
+    text-align: center;
+  }
+
+  /* Selected product pill */
+  .selected-product {
+    display: none;
+    background: var(--green-bg);
+    border: 1.5px solid var(--green-light);
+    border-radius: 10px;
+    padding: 11px 14px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--green);
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+  }
+  .selected-product.show { display: flex; }
+  .selected-product-name { flex: 1; }
+  .selected-product-um {
+    font-size: 11px;
+    background: var(--green);
+    color: white;
+    padding: 2px 8px;
+    border-radius: 20px;
+  }
+  .selected-product-clear {
+    color: var(--gray-4);
+    font-size: 18px;
+    line-height: 1;
+    padding: 0 2px;
+  }
+
+  /* ── PHOTO UPLOAD ── */
+  .photo-upload-area {
+    border: 2px dashed var(--gray-3);
+    border-radius: 12px;
+    padding: 24px 16px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: var(--gray-1);
+    position: relative;
+  }
+  .photo-upload-area:hover, .photo-upload-area.dragover {
+    border-color: var(--green);
+    background: var(--green-bg);
+  }
+  .photo-upload-area input[type="file"] {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+    border: none;
+    padding: 0;
+    background: none;
+  }
+  .photo-icon { font-size: 36px; margin-bottom: 8px; }
+  .photo-label { font-size: 14px; font-weight: 600; color: var(--gray-5); }
+  .photo-sublabel { font-size: 12px; color: var(--gray-4); margin-top: 4px; }
+
+  .photo-preview-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-top: 12px;
+  }
+  .photo-thumb {
+    position: relative;
+    aspect-ratio: 1;
+    border-radius: 8px;
+    overflow: hidden;
+    background: var(--gray-2);
+  }
+  .photo-thumb img {
+    width: 100%; height: 100%;
+    object-fit: cover;
+  }
+  .photo-thumb-remove {
+    position: absolute;
+    top: 4px; right: 4px;
+    width: 22px; height: 22px;
+    background: rgba(0,0,0,0.6);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    font-size: 14px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    line-height: 1;
+  }
+
+  /* ── BUTTONS ── */
+  .btn-primary {
+    width: 100%;
+    padding: 16px;
+    background: var(--green);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.1s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 8px;
+  }
+  .btn-primary:hover { background: var(--green-light); }
+  .btn-primary:active { transform: scale(0.98); }
+  .btn-primary:disabled {
+    background: var(--gray-3);
+    cursor: not-allowed;
+    transform: none;
+  }
+  .btn-secondary {
+    width: 100%;
+    padding: 14px;
+    background: var(--gray-2);
+    color: var(--gray-5);
+    border: none;
+    border-radius: 12px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+    margin-top: 8px;
+  }
+  .btn-secondary:hover { background: var(--gray-3); }
+
+  /* ── SPINNER ── */
+  .spinner {
+    width: 20px; height: 20px;
+    border: 3px solid rgba(255,255,255,0.3);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    display: none;
+  }
+  .spinner.show { display: block; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── TOAST ── */
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: var(--dark);
+    color: white;
+    padding: 12px 20px;
+    border-radius: 24px;
+    font-size: 14px;
+    font-weight: 600;
+    z-index: 999;
+    transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1);
+    white-space: nowrap;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+    max-width: calc(100vw - 40px);
+    white-space: normal;
+    text-align: center;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+  .toast.success { background: var(--green); }
+  .toast.error { background: var(--red); }
+
+  /* ── SUCCESS SCREEN ── */
+  .success-screen {
+    display: none;
+    text-align: center;
+    padding: 40px 20px;
+  }
+  .success-screen.show { display: block; }
+  .success-icon {
+    font-size: 64px;
+    margin-bottom: 16px;
+    animation: pop 0.4s cubic-bezier(0.34,1.56,0.64,1);
+  }
+  @keyframes pop { from { transform: scale(0); } to { transform: scale(1); } }
+  .success-title { font-size: 24px; font-weight: 800; color: var(--green); margin-bottom: 8px; }
+  .success-sub { font-size: 15px; color: var(--gray-4); line-height: 1.5; margin-bottom: 32px; }
+
+  /* ── CONFIG PANEL ── */
+  .config-btn {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    width: 44px; height: 44px;
+    background: var(--gray-5);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    font-size: 18px;
+    cursor: pointer;
+    box-shadow: var(--shadow-lg);
+    z-index: 500;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .config-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 600;
+    align-items: flex-end;
+  }
+  .config-overlay.open { display: flex; }
+  .config-sheet {
+    background: white;
+    border-radius: 20px 20px 0 0;
+    padding: 24px 20px 40px;
+    width: 100%;
+    max-width: 600px;
+    margin: 0 auto;
+  }
+  .config-handle {
+    width: 40px; height: 4px;
+    background: var(--gray-3);
+    border-radius: 2px;
+    margin: 0 auto 20px;
+  }
+  .config-title { font-size: 16px; font-weight: 700; margin-bottom: 16px; }
+  .status-dot {
+    display: inline-block;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--gray-3);
+    margin-right: 6px;
+  }
+  .status-dot.connected { background: #4CAF50; }
+  .status-label { font-size: 13px; color: var(--gray-4); margin-bottom: 16px; }
+
+  /* ── COUNTER BADGE ── */
+  .char-counter {
+    font-size: 11px;
+    color: var(--gray-4);
+    text-align: right;
+    margin-top: 4px;
+  }
+
+  /* ── BOTTOM SAFE AREA ── */
+  .bottom-spacer { height: 80px; }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="app-header">
+  <div class="header-top">
+    <div class="header-icon">⚠️</div>
+    <div>
+      <div class="header-title">Reclamații Clienți</div>
+      <div class="header-sub">Ferma cu Omenie · Vânzări</div>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN FORM -->
+<div class="main" id="formView">
+
+  <!-- Step bar -->
+  <div class="steps-bar" id="stepsBar">
+    <div class="step-dot active" id="step1"></div>
+    <div class="step-dot" id="step2"></div>
+    <div class="step-dot" id="step3"></div>
+  </div>
+
+  <!-- Card 1: Identificare -->
+  <div class="card">
+    <div class="card-title">
+      <div class="card-title-icon">📋</div>
+      Informații reclamație
+    </div>
+
+    <div class="field">
+      <label>Data reclamației <span class="req">*</span></label>
+      <input type="date" id="f_data" />
+      <div class="field-error" id="err_data">Completați data reclamației</div>
+    </div>
+
+    <div class="field">
+      <label>Numele clientului <span class="req">*</span></label>
+      <input type="text" id="f_client" placeholder="ex: Popescu Ion" autocomplete="off" />
+      <div class="field-error" id="err_client">Completați numele clientului</div>
+    </div>
+  </div>
+
+  <!-- Card 2: Produs -->
+  <div class="card">
+    <div class="card-title">
+      <div class="card-title-icon">🧀</div>
+      Produsul reclamat
+    </div>
+
+    <div class="field">
+      <label>Articol <span class="req">*</span></label>
+      <!-- Selected pill -->
+      <div class="selected-product" id="selectedProductPill" onclick="clearProductSelection()">
+        <span class="selected-product-name" id="selectedProductName"></span>
+        <span class="selected-product-um" id="selectedProductUM"></span>
+        <span class="selected-product-clear">✕</span>
+      </div>
+      <!-- Search -->
+      <div class="search-wrap" id="searchWrap">
+        <span class="search-icon">🔍</span>
+        <input type="text" class="search-input" id="productSearch"
+          placeholder="Caută articol..." autocomplete="off"
+          oninput="filterProducts()" onfocus="openDropdown()" />
+        <div class="dropdown-list" id="dropdownList"></div>
+      </div>
+      <div class="field-error" id="err_produs">Selectați un articol</div>
+    </div>
+
+    <div class="field" id="umField" style="display:none">
+      <label>Unitate de măsură</label>
+      <input type="text" id="f_um" readonly style="background: var(--gray-2); color: var(--gray-4); font-weight:600;" />
+    </div>
+
+    <div class="field">
+      <label>Număr lot <span class="req">*</span></label>
+      <input type="text" id="f_lot" placeholder="ex: L2024-001" autocomplete="off" />
+      <div class="field-error" id="err_lot">Completați numărul de lot</div>
+    </div>
+
+    <div class="field">
+      <label>Cantitate reclamată <span class="req">*</span></label>
+      <div style="display:flex; gap:8px; align-items:center;">
+        <input type="number" id="f_cantitate" placeholder="0" min="0" step="any" style="flex:1;" />
+        <span id="umLabel" style="font-weight:700; color:var(--gray-5); font-size:15px; white-space:nowrap; min-width:40px;"></span>
+      </div>
+      <div class="field-error" id="err_cantitate">Completați cantitatea reclamată</div>
+    </div>
+  </div>
+
+  <!-- Card 3: Reclamatie -->
+  <div class="card">
+    <div class="card-title">
+      <div class="card-title-icon">💬</div>
+      Detalii reclamație
+    </div>
+
+    <div class="field">
+      <label>Reclamația clientului <span class="req">*</span></label>
+      <textarea id="f_reclamatie" placeholder="Descrieți problema semnalată de client..."
+        oninput="updateCounter(this, 'cnt_recl', 500)" maxlength="500"></textarea>
+      <div class="char-counter"><span id="cnt_recl">0</span>/500</div>
+      <div class="field-error" id="err_reclamatie">Completați descrierea reclamației</div>
+    </div>
+  </div>
+
+  <!-- Card 4: Foto -->
+  <div class="card">
+    <div class="card-title">
+      <div class="card-title-icon">📷</div>
+      Fotografie produs
+    </div>
+    <div class="field">
+      <label>Fotografii atașate <span style="color:var(--gray-4); font-weight:400;">(opțional)</span></label>
+      <div class="photo-upload-area" id="uploadArea">
+        <input type="file" id="f_poze" accept="image/*" multiple onchange="handlePhotos(event)" />
+        <div class="photo-icon">📸</div>
+        <div class="photo-label">Adaugă fotografii</div>
+        <div class="photo-sublabel">Apasă sau trage fișierele aici · JPG, PNG</div>
+      </div>
+      <div class="photo-preview-grid" id="photoPreview"></div>
+    </div>
+  </div>
+
+  <!-- Submit -->
+  <button class="btn-primary" id="submitBtn" onclick="submitForm()">
+    <span id="btnText">Trimite reclamația</span>
+    <div class="spinner" id="btnSpinner"></div>
+  </button>
+
+  <div class="bottom-spacer"></div>
+</div>
+
+<!-- SUCCESS SCREEN -->
+<div class="main success-screen" id="successView">
+  <div class="success-icon">✅</div>
+  <div class="success-title">Reclamație trimisă!</div>
+  <div class="success-sub">Informațiile au fost salvate cu succes în registrul de reclamații. Echipa de achiziții va analiza situația.</div>
+  <button class="btn-primary" onclick="resetForm()">
+    + Adaugă o nouă reclamație
+  </button>
+  <button class="btn-secondary" onclick="window.print()">
+    🖨 Printează
+  </button>
+  <div class="bottom-spacer"></div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- CONFIG BTN -->
+<button class="config-btn" onclick="openConfig()" title="Configurare">⚙️</button>
+
+<!-- CONFIG SHEET -->
+<div class="config-overlay" id="configOverlay" onclick="closeConfig(event)">
+  <div class="config-sheet">
+    <div class="config-handle"></div>
+    <div class="config-title">⚙️ Configurare Google Sheets</div>
+    <div class="status-label">
+      <span class="status-dot" id="statusDot"></span>
+      <span id="statusLabel">Neconectat</span>
+    </div>
+    <div class="field">
+      <label>URL Google Apps Script</label>
+      <input type="text" id="configUrl" placeholder="https://script.google.com/macros/s/..." />
+    </div>
+    <button class="btn-primary" onclick="saveConfig()">Salvează URL</button>
+  </div>
+</div>
+
+<script>
+// ── DATA ──
+const ARTICOLE = [
+  {name:'TELEMEA DE VACA SI CAPRA 4 KG "Pachet de Acasa"', um:'KG', prod:'Ferma cu Omenie'},
+  {name:'TELEMEA PUTIN SARATA DE VACA 4 KG "Pachet de Acasa"', um:'KG', prod:'Ferma cu Omenie'},
+  {name:'TELEMEA PROASPATA DIN LAPTE DE VACA 4 KG', um:'KG', prod:'Ferma cu Omenie'},
+  {name:"BRANZA DE BURDUF 'Pachet de acasa' 300 G", um:'BUC', prod:'Ferma cu Omenie'},
+  {name:'BURDUF CU GUST BLAND "De la Ferma" 250G', um:'BUC', prod:'Ferma cu Omenie'},
+  {name:'MINI BRANZA DE BURDUF DE LA FERMA 5x60g', um:'BUC', prod:'Ferma cu Omenie'},
+  {name:'SMANTANA 32% "Pachet de acasa" 500 G', um:'BUC', prod:'Five'},
+  {name:'MINI BRANZA DE BURDUF DE LA FERMA 4x60g', um:'BUC', prod:'Ferma cu Omenie'},
+  {name:'TELEMEA DE CAPRA PUTIN SARATA 4 KG', um:'KG', prod:'Ferma cu Omenie'},
+  {name:'CAS DE VACA "De la Ferma" 300 G', um:'BUC', prod:'Ferma cu Omenie'},
+  {name:'CASCAVAL DE VACA "Pachet de acasa" 350 G', um:'BUC', prod:'Therezia'},
+  {name:'TELEMEA PUTIN SARATA 375G', um:'BUC', prod:'Ferma cu Omenie'},
+  {name:'BRANZA PROASPATA DE VACA "Pachet de acasa" 400 G', um:'BUC', prod:'Ferma cu Omenie'},
+  {name:'SANA "Pachet de acasa" 330 G', um:'BUC', prod:'Five'},
+  {name:'BURDUF CU GUST BLAND "De la Ferma" 350 G', um:'BUC', prod:'Ferma cu Omenie'},
+  {name:'TELEMEA MATURATA DIN LAPTE DE OAIE "Pachet de Acasa" 8 KG', um:'KG', prod:'Ferma cu Omenie'},
+  {name:'Unt 80% grasime 300g PDA', um:'BUC', prod:'Lactosineli'},
+  {name:'LAPTE BATUT "Pachet de acasa" 330 G', um:'BUC', prod:'Five'},
+  {name:'CASCAVAL AFUMAT DE VACA "Pachet de acasa" 350 G', um:'BUC', prod:'Therezia'},
+  {name:'TELEMEA PUTIN SARATA 800G', um:'BUC', prod:'Ferma cu Omenie'},
+  {name:'KEFIR "Pachet de acasa" 330 G', um:'BUC', prod:'Five'},
+  {name:'TELEMEA DE VACA 4 KG "Pachet de Acasa"', um:'KG', prod:'Ferma cu Omenie'},
+  {name:'SMANTANA 20% "Pachet de Acasa" 200 g', um:'BUC', prod:'Simultan'},
+  {name:'BRANZA PROASPATA DE VACA 5 KG "Pachet de Acasa"', um:'KG', prod:'Ferma cu Omenie'},
+  {name:'SMANTANA 32% "Pachet de acasa" 900 G', um:'BUC', prod:'Five'},
+  {name:'TELEMEA DE VACA SI OAIE 4 KG "Pachet de Acasa"', um:'KG', prod:'Ferma cu Omenie'},
+  {name:'TELEMEA DE OAIE PUTIN SARATA 4 KG', um:'KG', prod:'Ferma cu Omenie'},
+  {name:'CASCAVAL IMPLETIT AFUMAT 38% 235g "Pachet de acasa"', um:'BUC', prod:'Five'},
+  {name:'CASCAVAL CLASIC DE ACASA 40% 400 G "Pachet de acasa"', um:'BUC', prod:'Five'},
+  {name:'SMANTANA 20% "Pachet de acasa" 900 G', um:'BUC', prod:'Simultan'},
+  {name:'TELEMEA USOARA DE VACA 4 KG', um:'KG', prod:'Ferma cu Omenie'},
+  {name:'TELEMEA PROASPATA DIN LAPTE DE VACA 800G DLF', um:'BUC', prod:'Ferma cu Omenie'},
+  {name:'BRANZA DE GRATAR', um:'KG', prod:'Ariesul agrolact'},
+  {name:'TELEMEA DE CAPRA PUTIN SARATA 800 G', um:'BUC', prod:'Ferma cu Omenie'},
+  {name:'BURDUF CU GUST BLAND "De la Ferma" 2 KG', um:'KG', prod:'Ferma cu Omenie'},
+  {name:'Iaurt 150 g 5% Transilvania Lactate', um:'BUC', prod:'Transilvania Lactate'},
+  {name:'TELEMEA DE OAIE PUTIN SARATA 800 G', um:'BUC', prod:'Ferma cu Omenie'},
+  {name:'BRANZA DE BURDUF FRAMANTATA PATISERIE "Pachet de Acasa"', um:'KG', prod:'Ferma cu Omenie'},
+  {name:'SMANTANA 20% "PACHET DE ACASA" 400 G', um:'BUC', prod:'Simultan'},
+  {name:'SMANTANA 20% "Pachet de Acasa" 5 KG', um:'KG', prod:'Simultan'},
+  {name:'CASCAVAL CLASIC 1,8 Kg', um:'KG', prod:'Five'},
+  {name:'CAS DE VACA SI OAIE "Pachet de Acasa" 300g', um:'BUC', prod:'Ferma cu Omenie'},
+  {name:'BRANZA DE BURDUF "Pachet de acasa" 2 KG', um:'KG', prod:'Ferma cu Omenie'},
+  {name:'BRANZA MATURATA DIN LAPTE DE OAIE', um:'KG', prod:'Lactitalia'},
+  {name:'BRANZA DE BURDUF 100% OAIE 300G', um:'BUC', prod:'Ferma cu Omenie'},
+  {name:'CAS DE VACA SI OAIE "Pachet de Acasa"', um:'KG', prod:'Ferma cu Omenie'},
+  {name:'Branza maturata aleasa 200gr PDA', um:'BUC', prod:'De Coltesti'},
+  {name:'Branza maturata cu Chilli 200gr PDA', um:'BUC', prod:'De Coltesti'},
+  {name:'SMANTANA 32% 5 KG "Pachet de Acasa"', um:'KG', prod:'Five'},
+  {name:'Cascaval in crusta de usturoi 200g', um:'BUC', prod:'Lacto Sineli'},
+  {name:'IAURT IN STIL GRECESC 10% 500G', um:'BUC', prod:'Lactosineli'},
+  {name:'Branza maturata nobila 200gr PDA', um:'BUC', prod:'De Coltesti'},
+  {name:'Miere cu fagure BIO 250 gr Apis Transylvania', um:'BUC', prod:'Transilvania Lactate'},
+  {name:'Iaurt de baut 400 g 3% Transilvania Lactate', um:'BUC', prod:'Transilvania Lactate'},
+  {name:'TELEMEA BIVOLITA MATURATA IN SARAMURA 7 KG', um:'KG', prod:'Tarina'},
+  {name:'Branza maturata cu rosii si busuioc 200gr PDA', um:'BUC', prod:'De Coltesti'},
+  {name:'Branza maturata cu Alune si Fistic 200gr PDA', um:'BUC', prod:'De Coltesti'},
+  {name:'Branza maturata cu Trufe 200gr PDA', um:'BUC', prod:'De Coltesti'},
+  {name:'Bulgarasi sarati, 425g, Ferma cu Omenie', um:'BUC', prod:'Ferma cu Omenie'},
+  {name:'Branza maturata cu Nuca 200gr PDA', um:'BUC', prod:'De Coltesti'},
+  {name:'Branza maturata cu Chimen 200gr PDA', um:'BUC', prod:'De Coltesti'},
+  {name:'Ayran 400 g 4.5% Transilvania Lactate', um:'BUC', prod:'Transilvania Lactate'},
+  {name:'Branza maturata cu Masline 200gr PDA', um:'BUC', prod:'De Coltesti'},
+  {name:'Miere poliflora BIO 250 gr Apis Transylvania', um:'BUC', prod:'Transilvania Lactate'},
+  {name:'Branza maturata cu Busuioc 200gr PDA', um:'BUC', prod:'De Coltesti'},
+  {name:'Miere crema poliflora BIO 250 gr Apis Transylvania', um:'BUC', prod:'Transilvania Lactate'},
+  {name:'CAS DE OAIE ARTIZANAL', um:'KG', prod:'Ferma cu Omenie'},
+  {name:'Iaurt 150 g 10% Transilvania Lactate', um:'BUC', prod:'Transilvania Lactate'},
+  {name:'Mozzarella din lapte de bivolita Bocconcini 250 g Transilvania Lactate', um:'BUC', prod:'Transilvania Lactate'},
+  {name:'CAS DE VACA "Pachet de Acasa"', um:'KG', prod:'Ferma cu Omenie'},
+  {name:'Cascaval in crusta de piper 200g', um:'BUC', prod:'Lacto Sineli'},
+  {name:'Miere de salcam BIO 250 gr Apis Transylvania', um:'BUC', prod:'Transilvania Lactate'},
+  {name:'SANA DE CAPRA 300ML', um:'BUC', prod:'Baier'},
+  {name:'CHEFIR DE CAPRA 300ML', um:'BUC', prod:'Baier'},
+  {name:'IAURT DE CAPRA 300ML', um:'BUC', prod:'Baier'},
+  {name:'CAS DE VACA ARTIZANAL', um:'KG', prod:'Ferma cu Omenie'},
+  {name:'Bulgaras sarat', um:'KG', prod:'Ferma cu Omenie'},
+  {name:'BRANZA MATURATA HOREZU DIN LAPTE DE OAIE 150g', um:'KG', prod:'Five'},
+  {name:'Miere de salcam cu nuca 230 gr Apis Transylvania', um:'BUC', prod:'Transilvania Lactate'},
+];
+
+// ── STATE ──
+let selectedArticle = null;
+let photoFiles = [];
+const SCRIPT_KEY = 'reclamatii_script_url';
+
+// ── INIT ──
+window.addEventListener('load', () => {
+  // Set today's date
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('f_data').value = today;
+
+  // Load saved URL
+  const saved = localStorage.getItem(SCRIPT_KEY);
+  if (saved) {
+    document.getElementById('configUrl').value = saved;
+    updateStatus(true);
+  }
+
+  // Close dropdown on outside click
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.search-wrap')) closeDropdown();
+  });
+});
+
+// ── PRODUCT SEARCH ──
+function filterProducts() {
+  const q = document.getElementById('productSearch').value.toLowerCase().trim();
+  openDropdown();
+  renderDropdown(q);
+}
+
+function renderDropdown(q) {
+  const list = document.getElementById('dropdownList');
+  const filtered = q
+    ? ARTICOLE.filter(a => a.name.toLowerCase().includes(q))
+    : ARTICOLE;
+
+  if (filtered.length === 0) {
+    list.innerHTML = '<div class="dropdown-no-results">Niciun articol găsit</div>';
+    return;
+  }
+
+  list.innerHTML = filtered.slice(0, 40).map((a, i) => `
+    <div class="dropdown-item" onclick="selectArticle(${ARTICOLE.indexOf(a)})">
+      <span class="dropdown-item-name">${highlight(a.name, q)}</span>
+      <span class="dropdown-item-um">${a.um}</span>
+    </div>
+  `).join('');
+}
+
+function highlight(text, q) {
+  if (!q) return text;
+  const re = new RegExp('(' + q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi');
+  return text.replace(re, '<strong style="color:var(--green)">$1</strong>');
+}
+
+function openDropdown() {
+  const list = document.getElementById('dropdownList');
+  const q = document.getElementById('productSearch').value.toLowerCase();
+  renderDropdown(q);
+  list.classList.add('open');
+}
+
+function closeDropdown() {
+  document.getElementById('dropdownList').classList.remove('open');
+}
+
+function selectArticle(idx) {
+  selectedArticle = ARTICOLE[idx];
+  closeDropdown();
+
+  // Show pill
+  document.getElementById('selectedProductName').textContent = selectedArticle.name;
+  document.getElementById('selectedProductUM').textContent = selectedArticle.um;
+  document.getElementById('selectedProductPill').classList.add('show');
+  document.getElementById('searchWrap').style.display = 'none';
+
+  // UM field
+  document.getElementById('f_um').value = selectedArticle.um;
+  document.getElementById('umField').style.display = 'block';
+  document.getElementById('umLabel').textContent = selectedArticle.um;
+
+  // Clear error
+  clearError('produs');
+  updateSteps();
+}
+
+function clearProductSelection() {
+  selectedArticle = null;
+  document.getElementById('selectedProductPill').classList.remove('show');
+  document.getElementById('searchWrap').style.display = 'block';
+  document.getElementById('productSearch').value = '';
+  document.getElementById('umField').style.display = 'none';
+  document.getElementById('umLabel').textContent = '';
+  document.getElementById('productSearch').focus();
+}
+
+// ── PHOTOS ──
+function handlePhotos(event) {
+  const files = Array.from(event.target.files);
+  files.forEach(f => {
+    if (photoFiles.length >= 5) return;
+    if (!f.type.startsWith('image/')) return;
+    photoFiles.push(f);
+  });
+  renderPhotos();
+}
+
+function renderPhotos() {
+  const grid = document.getElementById('photoPreview');
+  grid.innerHTML = photoFiles.map((f, i) => `
+    <div class="photo-thumb">
+      <img src="${URL.createObjectURL(f)}" alt="foto ${i+1}" />
+      <button class="photo-thumb-remove" onclick="removePhoto(${i})">×</button>
+    </div>
+  `).join('');
+}
+
+function removePhoto(idx) {
+  photoFiles.splice(idx, 1);
+  renderPhotos();
+}
+
+// ── VALIDATION ──
+function validate() {
+  let ok = true;
+  const checks = [
+    { id: 'f_data', errId: 'err_data', check: v => v.trim() !== '' },
+    { id: 'f_client', errId: 'err_client', check: v => v.trim().length >= 2 },
+    { id: 'f_lot', errId: 'err_lot', check: v => v.trim() !== '' },
+    { id: 'f_cantitate', errId: 'err_cantitate', check: v => v !== '' && parseFloat(v) > 0 },
+    { id: 'f_reclamatie', errId: 'err_reclamatie', check: v => v.trim().length >= 5 },
+  ];
+
+  checks.forEach(c => {
+    const el = document.getElementById(c.id);
+    const val = el.value;
+    if (!c.check(val)) {
+      el.classList.add('error');
+      document.getElementById(c.errId).classList.add('show');
+      ok = false;
+    } else {
+      clearError(c.id.replace('f_', ''));
+    }
+  });
+
+  if (!selectedArticle) {
+    document.getElementById('err_produs').classList.add('show');
+    ok = false;
+  }
+
+  return ok;
+}
+
+function clearError(field) {
+  const mapping = {
+    data: ['f_data', 'err_data'],
+    client: ['f_client', 'err_client'],
+    produs: [null, 'err_produs'],
+    lot: ['f_lot', 'err_lot'],
+    cantitate: ['f_cantitate', 'err_cantitate'],
+    reclamatie: ['f_reclamatie', 'err_reclamatie'],
+  };
+  const [inputId, errId] = mapping[field] || [];
+  if (inputId) document.getElementById(inputId)?.classList.remove('error');
+  if (errId) document.getElementById(errId)?.classList.remove('show');
+}
+
+['f_data','f_client','f_lot','f_cantitate','f_reclamatie'].forEach(id => {
+  document.getElementById(id)?.addEventListener('input', () => {
+    clearError(id.replace('f_', ''));
+    updateSteps();
+  });
+});
+
+// ── STEPS ──
+function updateSteps() {
+  const s1 = document.getElementById('f_data').value && document.getElementById('f_client').value.trim().length >= 2;
+  const s2 = selectedArticle && document.getElementById('f_lot').value.trim() && document.getElementById('f_cantitate').value;
+  const s3 = document.getElementById('f_reclamatie').value.trim().length >= 5;
+
+  setStep(1, s1);
+  setStep(2, s2);
+  setStep(3, s3);
+}
+
+function setStep(n, done) {
+  const dot = document.getElementById('step' + n);
+  dot.classList.toggle('done', !!done);
+}
+
+// ── CHAR COUNTER ──
+function updateCounter(el, counterId, max) {
+  document.getElementById(counterId).textContent = el.value.length;
+  clearError('reclamatie');
+  updateSteps();
+}
+
+// ── SUBMIT ──
+async function submitForm() {
+  if (!validate()) {
+    showToast('Completați câmpurile obligatorii', 'error');
+    return;
+  }
+
+  const scriptUrl = localStorage.getItem(SCRIPT_KEY);
+  if (!scriptUrl) {
+    showToast('Configurați URL-ul Google Sheets (⚙️)', 'error');
+    openConfig();
+    return;
+  }
+
+  setLoading(true);
+
+  // Build photos base64
+  const photoDataArr = [];
+  for (const f of photoFiles) {
+    const b64 = await toBase64(f);
+    photoDataArr.push({ name: f.name, data: b64, type: f.type });
+  }
+
+  const payload = {
+    tip: 'reclamatie',
+    timestamp: new Date().toLocaleString('ro-RO'),
+    data_reclamatie: document.getElementById('f_data').value,
+    client: document.getElementById('f_client').value.trim(),
+    articol: selectedArticle.name,
+    um: selectedArticle.um,
+    producator: selectedArticle.prod,
+    lot: document.getElementById('f_lot').value.trim(),
+    cantitate: document.getElementById('f_cantitate').value,
+    reclamatie: document.getElementById('f_reclamatie').value.trim(),
+    nr_poze: photoFiles.length,
+    // Photos as base64 for Drive
+    poze: photoDataArr,
+  };
+
+  try {
+    const resp = await fetch(scriptUrl, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+    const result = await resp.json();
+    if (result.status === 'success') {
+      setLoading(false);
+      showSuccess();
+    } else {
+      throw new Error(result.message || 'Eroare server');
+    }
+  } catch (err) {
+    setLoading(false);
+    showToast('Eroare la trimitere: ' + err.message, 'error');
+  }
+}
+
+function toBase64(file) {
+  return new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = () => res(r.result.split(',')[1]);
+    r.onerror = rej;
+    r.readAsDataURL(file);
+  });
+}
+
+function setLoading(on) {
+  const btn = document.getElementById('submitBtn');
+  const txt = document.getElementById('btnText');
+  const sp = document.getElementById('btnSpinner');
+  btn.disabled = on;
+  txt.textContent = on ? 'Se trimite...' : 'Trimite reclamația';
+  sp.classList.toggle('show', on);
+}
+
+function showSuccess() {
+  document.getElementById('formView').style.display = 'none';
+  document.getElementById('successView').classList.add('show');
+  window.scrollTo(0, 0);
+}
+
+function resetForm() {
+  document.getElementById('formView').style.display = 'block';
+  document.getElementById('successView').classList.remove('show');
+  document.getElementById('formView').style.display = '';
+
+  // Reset fields
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('f_data').value = today;
+  document.getElementById('f_client').value = '';
+  document.getElementById('f_lot').value = '';
+  document.getElementById('f_cantitate').value = '';
+  document.getElementById('f_reclamatie').value = '';
+  document.getElementById('cnt_recl').textContent = '0';
+  photoFiles = [];
+  renderPhotos();
+  clearProductSelection();
+  window.scrollTo(0, 0);
+}
+
+// ── CONFIG ──
+function openConfig() {
+  document.getElementById('configOverlay').classList.add('open');
+}
+function closeConfig(e) {
+  if (e.target === document.getElementById('configOverlay')) {
+    document.getElementById('configOverlay').classList.remove('open');
+  }
+}
+function saveConfig() {
+  const url = document.getElementById('configUrl').value.trim();
+  if (!url.startsWith('https://script.google.com')) {
+    showToast('URL invalid', 'error');
+    return;
+  }
+  localStorage.setItem(SCRIPT_KEY, url);
+  updateStatus(true);
+  document.getElementById('configOverlay').classList.remove('open');
+  showToast('URL salvat!', 'success');
+}
+function updateStatus(connected) {
+  document.getElementById('statusDot').classList.toggle('connected', connected);
+  document.getElementById('statusLabel').textContent = connected ? 'Conectat la Google Sheets' : 'Neconectat';
+}
+
+// ── TOAST ──
+let toastTimer;
+function showToast(msg, type = '') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show ' + type;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 3500);
+}
+</script>
+</body>
+</html>
