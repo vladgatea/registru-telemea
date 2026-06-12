@@ -948,13 +948,6 @@ async function submitForm() {
 
   setLoading(true);
 
-  // Build photos base64
-  const photoDataArr = [];
-  for (const f of photoFiles) {
-    const b64 = await toBase64(f);
-    photoDataArr.push({ name: f.name, data: b64, type: f.type });
-  }
-
   const payload = {
     tip: 'reclamatie',
     timestamp: new Date().toLocaleString('ro-RO'),
@@ -967,8 +960,6 @@ async function submitForm() {
     cantitate: document.getElementById('f_cantitate').value,
     reclamatie: document.getElementById('f_reclamatie').value.trim(),
     nr_poze: photoFiles.length,
-    // Photos as base64 for Drive
-    poze: photoDataArr,
   };
 
   try {
@@ -989,14 +980,7 @@ async function submitForm() {
   }
 }
 
-function toBase64(file) {
-  return new Promise((res, rej) => {
-    const r = new FileReader();
-    r.onload = () => res(r.result.split(',')[1]);
-    r.onerror = rej;
-    r.readAsDataURL(file);
-  });
-}
+
 
 function setLoading(on) {
   const btn = document.getElementById('submitBtn');
