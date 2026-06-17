@@ -738,6 +738,7 @@ const ARTICOLE = [
 let selectedArticle = null;
 let photoFiles = [];
 const SCRIPT_KEY = 'reclamatii_script_url';
+const SCRIPT_URL_DEFAULT = 'https://script.google.com/macros/s/AKfycbwSU_bcZek1yKoZ84crIuAy90WPx7u2xQP43_zSkKLmJKPJrQEM5NgvmK05dMX9wIld/exec';
 
 // ── INIT ──
 window.addEventListener('load', () => {
@@ -746,11 +747,12 @@ window.addEventListener('load', () => {
   document.getElementById('f_data').value = today;
 
   // Load saved URL
-  const saved = localStorage.getItem(SCRIPT_KEY);
-  if (saved) {
-    document.getElementById('configUrl').value = saved;
-    updateStatus(true);
+  const saved = localStorage.getItem(SCRIPT_KEY) || SCRIPT_URL_DEFAULT;
+  document.getElementById('configUrl').value = saved;
+  if (!localStorage.getItem(SCRIPT_KEY)) {
+    localStorage.setItem(SCRIPT_KEY, SCRIPT_URL_DEFAULT);
   }
+  updateStatus(true);
 
   // Close dropdown on outside click
   document.addEventListener('click', (e) => {
@@ -933,20 +935,56 @@ function updateCounter(el, counterId, max) {
 }
 
 // ── SUBMIT ──
+// ── IMGUR UPLOAD ──────────────────────────────────────
+const IMGUR_CLIENT_ID = '546c25a59c58ad7'; // public anonymous client ID
+
+async function uploadToImgur(file) {
+  const b64 = await toBase64(file);
+  const resp = await fetch('https://api.imgur.com/3/image', {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Client-ID ' + IMGUR_CLIENT_ID,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ image: b64, type: 'base64' }),
+  });
+  const data = await resp.json();
+  if (data.success) return data.data.link;
+  throw new Error('Imgur: ' + (data.data?.error || 'eroare upload'));
+}
+
+function toBase64(file) {
+  return new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = () => res(r.result.split(',')[1]);
+    r.onerror = rej;
+    r.readAsDataURL(file);
+  });
+}
+
 async function submitForm() {
   if (!validate()) {
     showToast('Completați câmpurile obligatorii', 'error');
     return;
   }
 
-  const scriptUrl = localStorage.getItem(SCRIPT_KEY);
-  if (!scriptUrl) {
-    showToast('Configurați URL-ul Google Sheets (⚙️)', 'error');
-    openConfig();
-    return;
+  const scriptUrl = localStorage.getItem(SCRIPT_KEY) || SCRIPT_URL_DEFAULT;
+  setLoading(true);
+
+  // Upload poze pe Imgur
+  const linkuriPoze = ['', '', '', '', ''];
+  if (photoFiles.length > 0) {
+    document.getElementById('btnText').textContent = 'Se încarcă pozele...';
+    for (let i = 0; i < Math.min(photoFiles.length, 5); i++) {
+      try {
+        linkuriPoze[i] = await uploadToImgur(photoFiles[i]);
+      } catch(e) {
+        linkuriPoze[i] = 'Eroare upload poza ' + (i+1);
+      }
+    }
   }
 
-  setLoading(true);
+  document.getElementById('btnText').textContent = 'Se salvează...';
 
   const payload = {
     tip: 'reclamatie',
@@ -960,6 +998,11 @@ async function submitForm() {
     cantitate: document.getElementById('f_cantitate').value,
     reclamatie: document.getElementById('f_reclamatie').value.trim(),
     nr_poze: photoFiles.length,
+    poza_1: linkuriPoze[0],
+    poza_2: linkuriPoze[1],
+    poza_3: linkuriPoze[2],
+    poza_4: linkuriPoze[3],
+    poza_5: linkuriPoze[4],
   };
 
   try {
