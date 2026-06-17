@@ -935,24 +935,6 @@ function updateCounter(el, counterId, max) {
 }
 
 // ── SUBMIT ──
-// ── IMGUR UPLOAD ──────────────────────────────────────
-const IMGUR_CLIENT_ID = '546c25a59c58ad7'; // public anonymous client ID
-
-async function uploadToImgur(file) {
-  const b64 = await toBase64(file);
-  const resp = await fetch('https://api.imgur.com/3/image', {
-    method: 'POST',
-    headers: {
-      'Authorization': 'Client-ID ' + IMGUR_CLIENT_ID,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ image: b64, type: 'base64' }),
-  });
-  const data = await resp.json();
-  if (data.success) return data.data.link;
-  throw new Error('Imgur: ' + (data.data?.error || 'eroare upload'));
-}
-
 function toBase64(file) {
   return new Promise((res, rej) => {
     const r = new FileReader();
@@ -971,20 +953,17 @@ async function submitForm() {
   const scriptUrl = localStorage.getItem(SCRIPT_KEY) || SCRIPT_URL_DEFAULT;
   setLoading(true);
 
-  // Upload poze pe Imgur
-  const linkuriPoze = ['', '', '', '', ''];
+  // Convertește pozele în base64 și trimite la Apps Script care le urcă pe Imgur
+  const pozeB64 = [];
   if (photoFiles.length > 0) {
-    document.getElementById('btnText').textContent = 'Se încarcă pozele...';
+    document.getElementById('btnText').textContent = 'Se pregătesc pozele...';
     for (let i = 0; i < Math.min(photoFiles.length, 5); i++) {
-      try {
-        linkuriPoze[i] = await uploadToImgur(photoFiles[i]);
-      } catch(e) {
-        linkuriPoze[i] = 'Eroare upload poza ' + (i+1);
-      }
+      const b64 = await toBase64(photoFiles[i]);
+      pozeB64.push({ data: b64, type: photoFiles[i].type, name: photoFiles[i].name });
     }
   }
 
-  document.getElementById('btnText').textContent = 'Se salvează...';
+  document.getElementById('btnText').textContent = 'Se trimite...';
 
   const payload = {
     tip: 'reclamatie',
@@ -998,11 +977,7 @@ async function submitForm() {
     cantitate: document.getElementById('f_cantitate').value,
     reclamatie: document.getElementById('f_reclamatie').value.trim(),
     nr_poze: photoFiles.length,
-    poza_1: linkuriPoze[0],
-    poza_2: linkuriPoze[1],
-    poza_3: linkuriPoze[2],
-    poza_4: linkuriPoze[3],
-    poza_5: linkuriPoze[4],
+    poze: pozeB64,
   };
 
   try {
