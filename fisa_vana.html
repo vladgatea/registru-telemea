@@ -1,0 +1,963 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Fișă Vană — Producție</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --blue:       #1565C0;
+  --blue-mid:   #1976D2;
+  --blue-light: #E3F2FD;
+  --blue-bg:    #F0F7FF;
+  --green:      #2E7D32;
+  --green-bg:   #F1F8E9;
+  --red:        #C62828;
+  --red-bg:     #FFEBEE;
+  --gray-1:     #F7F8FA;
+  --gray-2:     #ECEEF2;
+  --gray-3:     #C8CDD6;
+  --gray-4:     #7A8494;
+  --gray-5:     #3D4452;
+  --dark:       #1A1D23;
+  --white:      #FFFFFF;
+  --radius:     12px;
+  --shadow:     0 2px 12px rgba(0,0,0,0.08);
+  --shadow-lg:  0 8px 32px rgba(0,0,0,0.13);
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: var(--gray-1);
+  color: var(--dark);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── HEADER ── */
+.app-header {
+  background: var(--blue);
+  color: white;
+  padding: 16px 20px 20px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+.header-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.header-icon {
+  width: 40px; height: 40px;
+  background: rgba(255,255,255,0.15);
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px; flex-shrink: 0;
+}
+.header-title { font-size: 18px; font-weight: 700; }
+.header-sub   { font-size: 12px; opacity: 0.75; margin-top: 2px; }
+
+/* ── MAIN ── */
+.main { padding: 16px; max-width: 720px; margin: 0 auto; }
+
+/* ── HEADER INFO BAR ── */
+.info-bar {
+  background: white;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 16px;
+  margin-bottom: 12px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+@media (min-width: 480px) {
+  .info-bar { grid-template-columns: 1fr 1fr 1fr; }
+}
+
+/* ── CARD ── */
+.card {
+  background: white;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  margin-bottom: 12px;
+  overflow: hidden;
+}
+.card-header {
+  padding: 12px 16px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid var(--gray-2);
+}
+.card-header.blue  { background: var(--blue-bg);  color: var(--blue); }
+.card-header.green { background: var(--green-bg); color: var(--green); }
+.card-header.gray  { background: var(--gray-2);   color: var(--gray-5); }
+.card-body { padding: 16px; }
+
+/* ── FORM GRID ── */
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+.grid-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 10px; }
+.span-2 { grid-column: span 2; }
+.span-3 { grid-column: span 3; }
+
+/* ── FIELD ── */
+.field { display: flex; flex-direction: column; gap: 5px; }
+label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--gray-4);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+label .req { color: var(--red); }
+
+input[type="text"],
+input[type="number"],
+input[type="time"],
+input[type="date"],
+select,
+textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1.5px solid var(--gray-2);
+  border-radius: 8px;
+  font-size: 15px;
+  color: var(--dark);
+  background: var(--gray-1);
+  appearance: none;
+  -webkit-appearance: none;
+  outline: none;
+  transition: border-color 0.2s, background 0.2s;
+}
+input:focus, select:focus, textarea:focus {
+  border-color: var(--blue-mid);
+  background: white;
+  box-shadow: 0 0 0 3px rgba(25,118,210,0.1);
+}
+input.error, select.error { border-color: var(--red); background: var(--red-bg); }
+.field-err { font-size: 11px; color: var(--red); display: none; }
+.field-err.show { display: block; }
+
+.select-wrap { position: relative; }
+.select-wrap::after {
+  content: '▾';
+  position: absolute; right: 12px; top: 50%;
+  transform: translateY(-50%);
+  color: var(--gray-4); pointer-events: none; font-size: 13px;
+}
+select { padding-right: 32px; cursor: pointer; }
+
+/* ── VANA BLOCK ── */
+.vana-block {
+  border: 2px solid var(--gray-2);
+  border-radius: var(--radius);
+  margin-bottom: 12px;
+  overflow: hidden;
+  transition: border-color 0.2s;
+}
+.vana-block.active { border-color: var(--blue-mid); }
+
+.vana-header {
+  background: var(--blue-bg);
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  user-select: none;
+}
+.vana-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--blue);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.vana-num {
+  width: 28px; height: 28px;
+  background: var(--blue);
+  color: white;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 800;
+  flex-shrink: 0;
+}
+.vana-tip-label {
+  font-size: 12px;
+  color: var(--gray-4);
+  font-weight: 400;
+  margin-left: 4px;
+}
+.vana-actions { display: flex; gap: 8px; align-items: center; }
+.btn-icon {
+  width: 32px; height: 32px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px;
+  transition: background 0.15s;
+}
+.btn-remove { background: #FFEBEE; color: var(--red); }
+.btn-remove:hover { background: #FFCDD2; }
+.btn-toggle { background: white; color: var(--gray-4); font-size: 12px; }
+
+.vana-body { padding: 16px; }
+.vana-body.collapsed { display: none; }
+
+/* ── SECTION DIVIDER ── */
+.section-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--gray-4);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin: 14px 0 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--gray-2);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.section-label:first-child { margin-top: 0; }
+
+/* ── ADD VANA BTN ── */
+.btn-add-vana {
+  width: 100%;
+  padding: 14px;
+  background: white;
+  border: 2px dashed var(--gray-3);
+  border-radius: var(--radius);
+  color: var(--blue-mid);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  gap: 8px;
+  transition: all 0.2s;
+  margin-bottom: 12px;
+}
+.btn-add-vana:hover { border-color: var(--blue-mid); background: var(--blue-bg); }
+
+/* ── SUBMIT ── */
+.btn-primary {
+  width: 100%;
+  padding: 16px;
+  background: var(--blue);
+  color: white;
+  border: none;
+  border-radius: var(--radius);
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  gap: 8px;
+  transition: background 0.2s, transform 0.1s;
+  margin-bottom: 12px;
+}
+.btn-primary:hover { background: var(--blue-mid); }
+.btn-primary:active { transform: scale(0.98); }
+.btn-primary:disabled { background: var(--gray-3); cursor: not-allowed; }
+
+.btn-secondary {
+  width: 100%;
+  padding: 13px;
+  background: var(--gray-2);
+  color: var(--gray-5);
+  border: none;
+  border-radius: var(--radius);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+  margin-bottom: 12px;
+}
+.btn-secondary:hover { background: var(--gray-3); }
+
+/* ── SPINNER ── */
+.spinner {
+  width: 20px; height: 20px;
+  border: 3px solid rgba(255,255,255,0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  display: none;
+}
+.spinner.show { display: block; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── TOAST ── */
+.toast {
+  position: fixed;
+  bottom: 24px; left: 50%;
+  transform: translateX(-50%) translateY(80px);
+  background: var(--dark);
+  color: white;
+  padding: 12px 20px;
+  border-radius: 24px;
+  font-size: 14px; font-weight: 600;
+  z-index: 999;
+  transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+  max-width: calc(100vw - 40px);
+  text-align: center;
+}
+.toast.show { transform: translateX(-50%) translateY(0); }
+.toast.success { background: var(--green); }
+.toast.error   { background: var(--red); }
+
+/* ── SUCCESS ── */
+.success-screen { display: none; text-align: center; padding: 40px 20px; }
+.success-screen.show { display: block; }
+.success-icon { font-size: 64px; margin-bottom: 16px; animation: pop 0.4s cubic-bezier(0.34,1.56,0.64,1); }
+@keyframes pop { from { transform: scale(0); } to { transform: scale(1); } }
+.success-title { font-size: 22px; font-weight: 800; color: var(--blue); margin-bottom: 8px; }
+.success-sub   { font-size: 14px; color: var(--gray-4); margin-bottom: 28px; line-height: 1.5; }
+
+/* ── SUMMARY TABLE ── */
+.summary-table {
+  background: white;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 16px;
+  margin-bottom: 20px;
+  text-align: left;
+}
+.summary-table h3 { font-size: 13px; color: var(--gray-4); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+.summary-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--gray-2);
+  font-size: 13px;
+}
+.summary-row:last-child { border-bottom: none; }
+.summary-row strong { color: var(--blue); }
+
+/* ── CONFIG ── */
+.config-btn {
+  position: fixed; bottom: 20px; right: 20px;
+  width: 44px; height: 44px;
+  background: var(--gray-5); color: white;
+  border: none; border-radius: 50%;
+  font-size: 18px; cursor: pointer;
+  box-shadow: var(--shadow-lg); z-index: 500;
+  display: flex; align-items: center; justify-content: center;
+}
+.config-overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.5); z-index: 600; align-items: flex-end;
+}
+.config-overlay.open { display: flex; }
+.config-sheet {
+  background: white; border-radius: 20px 20px 0 0;
+  padding: 24px 20px 40px;
+  width: 100%; max-width: 720px; margin: 0 auto;
+}
+.config-handle { width: 40px; height: 4px; background: var(--gray-3); border-radius: 2px; margin: 0 auto 20px; }
+.status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--gray-3); margin-right: 6px; }
+.status-dot.connected { background: #4CAF50; }
+.status-label { font-size: 13px; color: var(--gray-4); margin-bottom: 16px; }
+
+.bottom-spacer { height: 80px; }
+
+/* ── DRAFT ITEM ── */
+.draft-item {
+  border: 1.5px solid var(--gray-2);
+  border-radius: 10px;
+  padding: 14px;
+  margin-bottom: 10px;
+  background: var(--gray-1);
+}
+.draft-item:last-child { margin-bottom: 0; }
+.draft-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 8px;
+}
+.draft-title { font-size: 14px; font-weight: 700; color: var(--dark); }
+.draft-meta  { font-size: 12px; color: var(--gray-4); margin-top: 2px; }
+.draft-badge {
+  font-size: 11px; font-weight: 700; padding: 3px 10px;
+  border-radius: 20px;
+}
+.draft-badge.nesalvat { background: #FFF3CD; color: #856404; }
+.draft-badge.salvat   { background: #D4EDDA; color: #155724; }
+.draft-actions { display: flex; gap: 8px; margin-top: 10px; }
+.draft-actions button {
+  flex: 1; padding: 9px; border: none; border-radius: 8px;
+  font-size: 13px; font-weight: 600; cursor: pointer;
+}
+.btn-draft-edit   { background: var(--blue-bg);  color: var(--blue); }
+.btn-draft-send   { background: var(--green);     color: white; }
+.btn-draft-delete { background: var(--red-bg);    color: var(--red); }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="app-header">
+  <div class="header-row">
+    <div class="header-icon">🧑‍🏭</div>
+    <div style="flex:1;">
+      <div class="header-title">Fișă Vană — Producție</div>
+      <div class="header-sub">Ferma cu Omenie · Procesare</div>
+    </div>
+    <button onclick="arataDrafturi()" style="background:rgba(255,255,255,0.15); border:none; color:white; padding:8px 12px; border-radius:8px; font-size:13px; font-weight:600; cursor:pointer; white-space:nowrap;">
+      📋 Drafturi
+    </button>
+  </div>
+</div>
+
+<!-- FORM VIEW -->
+<div class="main" id="formView">
+
+  <!-- Info generală -->
+  <div class="info-bar">
+    <div class="field">
+      <label>Data <span class="req">*</span></label>
+      <input type="date" id="g_data" />
+    </div>
+    <div class="field">
+      <label>Preparator <span class="req">*</span></label>
+      <input type="text" id="g_preparator" placeholder="Nume preparator" />
+    </div>
+    <div class="field" style="grid-column: span 2;">
+      <label>Observații generale</label>
+      <input type="text" id="g_obs" placeholder="Observații..." />
+    </div>
+  </div>
+
+  <!-- Văne -->
+  <div id="vaneContainer"></div>
+
+  <!-- Adaugă vană -->
+  <button class="btn-add-vana" onclick="adaugaVana()">
+    + Adaugă vană
+  </button>
+
+  <!-- Butoane acțiuni -->
+  <div style="display:flex; gap:10px; margin-bottom:8px;">
+    <button class="btn-secondary" style="flex:1; margin:0;" onclick="salvezDraft()">
+      💾 Salvează draft
+    </button>
+    <button class="btn-primary" style="flex:1; margin:0;" id="submitBtn" onclick="trimiteGSheets()">
+      <span id="btnText">📤 Trimite în Google Sheets</span>
+      <div class="spinner" id="btnSpinner"></div>
+    </button>
+  </div>
+
+  <div class="bottom-spacer"></div>
+</div>
+
+<!-- LISTA DRAFTURI -->
+<div id="drafturiPanel" style="display:none;" class="main">
+  <div class="card">
+    <div class="card-header blue">📋 Fișe salvate (drafturi)</div>
+    <div class="card-body" id="drafturiList"></div>
+  </div>
+  <div class="bottom-spacer"></div>
+</div>
+
+<!-- SUCCESS -->
+<div class="main success-screen" id="successView">
+  <div class="success-icon">✅</div>
+  <div class="success-title">Fișă salvată!</div>
+  <div class="success-sub" id="successSub"></div>
+  <div class="summary-table" id="summaryTable"></div>
+  <button class="btn-primary" onclick="resetForm()">+ Fișă nouă</button>
+  <button class="btn-secondary" onclick="window.print()">🖨 Printează</button>
+  <button class="btn-secondary" onclick="arataDrafturi()">📋 Vezi toate drafurile</button>
+  <div class="bottom-spacer"></div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- CONFIG -->
+<button class="config-btn" onclick="openConfig()" title="Configurare">⚙️</button>
+<div class="config-overlay" id="configOverlay" onclick="closeConfig(event)">
+  <div class="config-sheet">
+    <div class="config-handle"></div>
+    <div style="font-size:16px; font-weight:700; margin-bottom:12px;">⚙️ Configurare Google Sheets</div>
+    <div class="status-label">
+      <span class="status-dot" id="statusDot"></span>
+      <span id="statusLabel">Neconectat</span>
+    </div>
+    <div class="field" style="margin-bottom:12px;">
+      <label>URL Google Apps Script</label>
+      <input type="text" id="configUrl" placeholder="https://script.google.com/macros/s/..." />
+    </div>
+    <button class="btn-primary" onclick="saveConfig()">Salvează URL</button>
+  </div>
+</div>
+
+<script>
+// ── CONSTANTE ──────────────────────────────────────────
+const TIPURI_BRANZA = [
+  'TELEMEA PUTIN SARATA DIN LAPTE DE VACA',
+  'TELEMEA PROASPATA DIN LAPTE DE VACA',
+  'TELEMEA VACA OAIE',
+  'TELEMEA VACA CAPRA',
+  'BRANZA PROASPATA DE VACA',
+  'CAS VACA',
+  'CAS OAIE',
+  'CAS VACA SI OAIE DFL',
+  'TELEMEA PUTIN SARATA DIN LAPTE DE OAIE',
+  'TELEMEA PUTIN SARATA DIN LAPTE DE CAPRA',
+  'TELEMEA DE VACA USOARA',
+  'TELEMEA DE VACA',
+];
+
+const SCRIPT_KEY      = 'fisa_vana_script_url';
+const DRAFTURI_KEY    = 'fisa_vana_drafturi';
+const SCRIPT_URL_DEFAULT = 'https://script.google.com/macros/s/AKfycbwSU_bcZek1yKoZ84crIuAy90WPx7u2xQP43_zSkKLmJKPJrQEM5NgvmK05dMX9wIld/exec';
+
+let vanaCounter  = 0;
+let vaneIds      = [];
+let currentDraftId = null; // ID-ul draft-ului curent în editare
+
+// ── INIT ──────────────────────────────────────────────
+window.addEventListener('load', () => {
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('g_data').value = today;
+
+  const saved = localStorage.getItem(SCRIPT_KEY) || SCRIPT_URL_DEFAULT;
+  document.getElementById('configUrl').value = saved;
+  if (!localStorage.getItem(SCRIPT_KEY)) localStorage.setItem(SCRIPT_KEY, SCRIPT_URL_DEFAULT);
+  updateStatus(true);
+
+  adaugaVana();
+  actualizeazaBadgeDrafturi();
+});
+
+// ── DRAFTURI — localStorage ───────────────────────────
+function getDrafturi() {
+  try { return JSON.parse(localStorage.getItem(DRAFTURI_KEY) || '[]'); }
+  catch { return []; }
+}
+function salvezDrafturi(list) {
+  localStorage.setItem(DRAFTURI_KEY, JSON.stringify(list));
+  actualizeazaBadgeDrafturi();
+}
+function actualizeazaBadgeDrafturi() {
+  const n = getDrafturi().filter(d => !d.trimis).length;
+  const btn = document.querySelector('.app-header button');
+  if (btn) btn.textContent = n > 0 ? `📋 Drafturi (${n})` : '📋 Drafturi';
+}
+
+// ── COLECTEAZĂ DATE DIN FORMULAR ──────────────────────
+function colecteazaDate() {
+  const vane = vaneIds.map(id => ({
+    tip:       document.getElementById('v'+id+'_tip').value,
+    tanc:      document.getElementById('v'+id+'_tanc').value,
+    t_tanc:    document.getElementById('v'+id+'_t_tanc').value,
+    ph_tanc:   document.getElementById('v'+id+'_ph_tanc').value,
+    gr:        document.getElementById('v'+id+'_gr').value,
+    pr:        document.getElementById('v'+id+'_pr').value,
+    nr_vana:   document.getElementById('v'+id+'_nr_vana').value,
+    litri:     document.getElementById('v'+id+'_litri').value,
+    ph_lapte:  document.getElementById('v'+id+'_ph_lapte').value,
+    t_lapte:   document.getElementById('v'+id+'_t_lapte').value,
+    a_lactic:  document.getElementById('v'+id+'_a_lactic').value,
+    cacl2:     document.getElementById('v'+id+'_cacl2').value,
+    ph_dupa:   document.getElementById('v'+id+'_ph_dupa').value,
+    ora_ad:    document.getElementById('v'+id+'_ora_ad').value,
+    ferm_tip:  document.getElementById('v'+id+'_ferm_tip').value,
+    ferm_uc:   document.getElementById('v'+id+'_ferm_uc').value,
+    ferm_lot:  document.getElementById('v'+id+'_ferm_lot').value,
+    cheag_tip: document.getElementById('v'+id+'_cheag_tip').value,
+    cheag_lot: document.getElementById('v'+id+'_cheag_lot').value,
+    cheag_ml:  document.getElementById('v'+id+'_cheag_ml').value,
+    cheag_ora: document.getElementById('v'+id+'_cheag_ora').value,
+    prindere:  document.getElementById('v'+id+'_prindere').value,
+    intarire:  document.getElementById('v'+id+'_intarire').value,
+    taiere:    document.getElementById('v'+id+'_taiere').value,
+    obs:       document.getElementById('v'+id+'_obs').value,
+  }));
+
+  return {
+    tip:          'fisa_vana',
+    data:         document.getElementById('g_data').value,
+    preparator:   document.getElementById('g_preparator').value.trim(),
+    obs_generale: document.getElementById('g_obs').value.trim(),
+    nr_vane:      vaneIds.length,
+    vane:         vane,
+  };
+}
+
+// ── SALVEAZĂ DRAFT ────────────────────────────────────
+function salvezDraft() {
+  const date = colecteazaDate();
+  const drafturi = getDrafturi();
+
+  if (currentDraftId) {
+    // Actualizează draft existent
+    const idx = drafturi.findIndex(d => d.id === currentDraftId);
+    if (idx >= 0) {
+      drafturi[idx] = { ...drafturi[idx], ...date, updatedAt: new Date().toLocaleString('ro-RO') };
+    }
+  } else {
+    // Draft nou
+    currentDraftId = Date.now().toString();
+    drafturi.push({
+      id: currentDraftId,
+      ...date,
+      createdAt: new Date().toLocaleString('ro-RO'),
+      updatedAt: new Date().toLocaleString('ro-RO'),
+      trimis: false,
+    });
+  }
+
+  salvezDrafturi(drafturi);
+  showToast('Draft salvat! Poți continua mai târziu.', 'success');
+}
+
+// ── ARATĂ LISTA DRAFTURI ──────────────────────────────
+function arataDrafturi() {
+  const drafturi = getDrafturi();
+  const panel = document.getElementById('drafturiPanel');
+  const list  = document.getElementById('drafturiList');
+
+  document.getElementById('formView').style.display    = 'none';
+  document.getElementById('successView').classList.remove('show');
+  panel.style.display = 'block';
+
+  if (drafturi.length === 0) {
+    list.innerHTML = '<div style="text-align:center; color:var(--gray-4); padding:24px; font-size:14px;">Nu există drafturi salvate</div>';
+    return;
+  }
+
+  list.innerHTML = drafturi.slice().reverse().map(d => `
+    <div class="draft-item" id="draft_item_${d.id}">
+      <div class="draft-header">
+        <div>
+          <div class="draft-title">📅 ${d.data} · ${d.preparator || '—'}</div>
+          <div class="draft-meta">${d.nr_vane} vane · Salvat: ${d.updatedAt}</div>
+        </div>
+        <span class="draft-badge ${d.trimis ? 'salvat' : 'nesalvat'}">${d.trimis ? '✓ Trimis' : 'Draft'}</span>
+      </div>
+      <div style="font-size:12px; color:var(--gray-4); margin-bottom:8px;">
+        ${d.vane.map(v => v.tip ? v.tip.split(' ').slice(0,3).join(' ') : '—').join(' · ')}
+      </div>
+      <div class="draft-actions">
+        <button class="btn-draft-edit" onclick="incarcaDraft('${d.id}')">✏️ Editează</button>
+        ${!d.trimis ? `<button class="btn-draft-send" onclick="trimiteDraftDirect('${d.id}')">📤 Trimite</button>` : ''}
+        <button class="btn-draft-delete" onclick="stergeDraft('${d.id}')">🗑</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function ascundeDrafturi() {
+  document.getElementById('drafturiPanel').style.display = 'none';
+  document.getElementById('formView').style.display = '';
+}
+
+// ── ÎNCARCĂ DRAFT ÎN FORMULAR ─────────────────────────
+function incarcaDraft(id) {
+  const drafturi = getDrafturi();
+  const d = drafturi.find(x => x.id === id);
+  if (!d) return;
+
+  // Reset formular
+  document.getElementById('vaneContainer').innerHTML = '';
+  vaneIds = []; vanaCounter = 0;
+
+  // Info generală
+  document.getElementById('g_data').value       = d.data || '';
+  document.getElementById('g_preparator').value = d.preparator || '';
+  document.getElementById('g_obs').value        = d.obs_generale || '';
+
+  // Reconstruiește văne
+  d.vane.forEach(v => {
+    adaugaVana();
+    const id2 = vaneIds[vaneIds.length - 1];
+    // Populează câmpuri
+    const fields = ['tip','tanc','t_tanc','ph_tanc','gr','pr','nr_vana','litri',
+      'ph_lapte','t_lapte','a_lactic','cacl2','ph_dupa','ora_ad',
+      'ferm_tip','ferm_uc','ferm_lot','cheag_tip','cheag_lot','cheag_ml','cheag_ora',
+      'prindere','intarire','taiere','obs'];
+    fields.forEach(f => {
+      const el = document.getElementById('v'+id2+'_'+f);
+      if (el && v[f] !== undefined) el.value = v[f];
+    });
+    updateTipLabel(id2);
+  });
+
+  currentDraftId = id;
+  document.getElementById('drafturiPanel').style.display = 'none';
+  document.getElementById('formView').style.display = '';
+  window.scrollTo(0,0);
+  showToast('Draft încărcat — poți edita și trimite!', 'success');
+}
+
+// ── ȘTERGE DRAFT ──────────────────────────────────────
+function stergeDraft(id) {
+  if (!confirm('Ștergi acest draft?')) return;
+  let drafturi = getDrafturi().filter(d => d.id !== id);
+  salvezDrafturi(drafturi);
+  if (currentDraftId === id) currentDraftId = null;
+  arataDrafturi();
+  showToast('Draft șters', '');
+}
+
+// ── TRIMITE DIRECT DIN LISTA DRAFTURI ────────────────
+async function trimiteDraftDirect(id) {
+  const drafturi = getDrafturi();
+  const d = drafturi.find(x => x.id === id);
+  if (!d) return;
+  await trimiteLaSheets(d, id);
+}
+
+// ── VALIDARE ──────────────────────────────────────────
+function validate() {
+  let ok = true;
+
+  if (!document.getElementById('g_data').value) {
+    document.getElementById('g_data').classList.add('error'); ok = false;
+  } else document.getElementById('g_data').classList.remove('error');
+
+  if (!document.getElementById('g_preparator').value.trim()) {
+    document.getElementById('g_preparator').classList.add('error'); ok = false;
+  } else document.getElementById('g_preparator').classList.remove('error');
+
+  vaneIds.forEach(id => {
+    const tip   = document.getElementById('v' + id + '_tip');
+    const tanc  = document.getElementById('v' + id + '_tanc');
+    const litri = document.getElementById('v' + id + '_litri');
+
+    if (!tip.value)   { tip.classList.add('error');   document.getElementById('err_v'+id+'_tip').classList.add('show');   ok = false; }
+    else              { tip.classList.remove('error'); document.getElementById('err_v'+id+'_tip').classList.remove('show'); }
+
+    if (!tanc.value)  { tanc.classList.add('error');  document.getElementById('err_v'+id+'_tanc').classList.add('show');  ok = false; }
+    else              { tanc.classList.remove('error'); document.getElementById('err_v'+id+'_tanc').classList.remove('show'); }
+
+    if (!litri.value) { litri.classList.add('error'); document.getElementById('err_v'+id+'_litri').classList.add('show'); ok = false; }
+    else              { litri.classList.remove('error'); document.getElementById('err_v'+id+'_litri').classList.remove('show'); }
+  });
+
+  return ok;
+}
+
+// ── TRIMITE ÎN GOOGLE SHEETS ──────────────────────────
+async function trimiteGSheets() {
+  if (!validate()) { showToast('Completați câmpurile obligatorii', 'error'); return; }
+
+  // Salvează automat draft-ul înainte de trimitere
+  salvezDraft();
+
+  const date = colecteazaDate();
+  date.timestamp = new Date().toLocaleString('ro-RO');
+  await trimiteLaSheets(date, currentDraftId);
+}
+
+async function trimiteLaSheets(payload, draftId) {
+  const scriptUrl = localStorage.getItem(SCRIPT_KEY) || SCRIPT_URL_DEFAULT;
+  setLoading(true);
+
+  payload.timestamp = payload.timestamp || new Date().toLocaleString('ro-RO');
+
+  try {
+    const resp = await fetch(scriptUrl, { method: 'POST', body: JSON.stringify(payload) });
+    const result = await resp.json();
+    if (result.status === 'success') {
+      // Marchează draft ca trimis
+      if (draftId) {
+        let drafturi = getDrafturi();
+        const idx = drafturi.findIndex(d => d.id === draftId);
+        if (idx >= 0) { drafturi[idx].trimis = true; drafturi[idx].trimisAt = new Date().toLocaleString('ro-RO'); }
+        salvezDrafturi(drafturi);
+      }
+      setLoading(false);
+      showSuccess(payload);
+    } else throw new Error(result.message || 'Eroare server');
+  } catch(err) {
+    setLoading(false);
+    showToast('Eroare: ' + err.message, 'error');
+  }
+}
+
+function setLoading(on) {
+  document.getElementById('submitBtn').disabled = on;
+  document.getElementById('btnText').textContent = on ? 'Se trimite...' : '📤 Trimite în Google Sheets';
+  document.getElementById('btnSpinner').classList.toggle('show', on);
+}
+
+function showSuccess(payload) {
+  document.getElementById('formView').style.display    = 'none';
+  document.getElementById('drafturiPanel').style.display = 'none';
+  document.getElementById('successView').classList.add('show');
+  document.getElementById('successSub').textContent =
+    payload.data + ' · ' + payload.preparator + ' · ' + payload.nr_vane + ' vane trimise';
+
+  const rows = payload.vane.map((v, i) =>
+    `<div class="summary-row"><span>Vana ${i+1} — ${(v.tip||'—').split(' ').slice(0,3).join(' ')}...</span><strong>${v.litri} L · Tanc ${v.tanc}</strong></div>`
+  ).join('');
+  document.getElementById('summaryTable').innerHTML = '<h3>Sumar văne</h3>' + rows;
+  window.scrollTo(0, 0);
+}
+
+function resetForm() {
+  document.getElementById('formView').style.display    = '';
+  document.getElementById('drafturiPanel').style.display = 'none';
+  document.getElementById('successView').classList.remove('show');
+  document.getElementById('vaneContainer').innerHTML = '';
+  vaneIds = []; vanaCounter = 0; currentDraftId = null;
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('g_data').value       = today;
+  document.getElementById('g_preparator').value = '';
+  document.getElementById('g_obs').value        = '';
+  adaugaVana();
+  window.scrollTo(0, 0);
+}
+
+// ── ADAUGĂ VANĂ ───────────────────────────────────────
+function adaugaVana() {
+  vanaCounter++;
+  const id = vanaCounter;
+  vaneIds.push(id);
+
+  const optiuni = TIPURI_BRANZA.map(t => `<option value="${t}">${t}</option>`).join('');
+
+  const html = `
+  <div class="vana-block active" id="vana_${id}">
+    <div class="vana-header" onclick="toggleVana(${id})">
+      <div class="vana-title">
+        <div class="vana-num">${id}</div>
+        Vana ${id}
+        <span class="vana-tip-label" id="vana_tip_label_${id}">— selectează tip</span>
+      </div>
+      <div class="vana-actions" onclick="event.stopPropagation()">
+        ${vaneIds.length > 1 ? `<button class="btn-icon btn-remove" onclick="stergeVana(${id})" title="Șterge vana">🗑</button>` : ''}
+        <button class="btn-icon btn-toggle" id="toggle_${id}">▲</button>
+      </div>
+    </div>
+    <div class="vana-body" id="vana_body_${id}">
+
+      <div class="grid-2" style="margin-bottom:12px;">
+        <div class="field">
+          <label>Tip brânză <span class="req">*</span></label>
+          <div class="select-wrap">
+            <select id="v${id}_tip" onchange="updateTipLabel(${id})">
+              <option value="">— Selectează —</option>
+              ${optiuni}
+            </select>
+          </div>
+          <span class="field-err" id="err_v${id}_tip">Selectați tipul</span>
+        </div>
+        <div class="field">
+          <label>Nr. Tanc <span class="req">*</span></label>
+          <input type="number" id="v${id}_tanc" placeholder="1" min="1" max="20" />
+          <span class="field-err" id="err_v${id}_tanc">Completați</span>
+        </div>
+      </div>
+
+      <div class="section-label">🐄 Parametri tanc lapte</div>
+      <div class="grid-3">
+        <div class="field"><label>T °C tanc</label><input type="number" id="v${id}_t_tanc" placeholder="4.0" step="0.1" /></div>
+        <div class="field"><label>pH tanc</label><input type="number" id="v${id}_ph_tanc" placeholder="6.8" step="0.01" /></div>
+        <div class="field"><label>Grăsime %</label><input type="number" id="v${id}_gr" placeholder="3.5" step="0.1" /></div>
+        <div class="field"><label>Proteină %</label><input type="number" id="v${id}_pr" placeholder="3.3" step="0.01" /></div>
+      </div>
+
+      <div class="section-label">🪣 Lapte vană</div>
+      <div class="grid-3">
+        <div class="field"><label>Nr. vană</label><input type="number" id="v${id}_nr_vana" placeholder="1" min="1" /></div>
+        <div class="field"><label>Litri <span class="req">*</span></label><input type="number" id="v${id}_litri" placeholder="1000" min="0" /><span class="field-err" id="err_v${id}_litri">Completați</span></div>
+        <div class="field"><label>pH lapte</label><input type="number" id="v${id}_ph_lapte" placeholder="6.5" step="0.01" /></div>
+        <div class="field"><label>T °C lapte</label><input type="number" id="v${id}_t_lapte" placeholder="41" step="0.1" /></div>
+        <div class="field"><label>A. Lactic (ml)</label><input type="number" id="v${id}_a_lactic" placeholder="400" /></div>
+        <div class="field"><label>CaCl₂ (g)</label><input type="number" id="v${id}_cacl2" placeholder="200" /></div>
+        <div class="field"><label>pH după ad.</label><input type="number" id="v${id}_ph_dupa" placeholder="6.4" step="0.01" /></div>
+        <div class="field"><label>Ora adăugare</label><input type="time" id="v${id}_ora_ad" /></div>
+      </div>
+
+      <div class="section-label">🧫 Ferment</div>
+      <div class="grid-3">
+        <div class="field"><label>Tip ferment</label><input type="text" id="v${id}_ferm_tip" placeholder="ex: MM100" /></div>
+        <div class="field"><label>U.C.</label><input type="number" id="v${id}_ferm_uc" placeholder="50" step="0.1" /></div>
+        <div class="field"><label>Lot ferment</label><input type="text" id="v${id}_ferm_lot" placeholder="LOT..." /></div>
+      </div>
+
+      <div class="section-label">🔬 Cheag</div>
+      <div class="grid-4">
+        <div class="field"><label>Tip cheag</label><input type="text" id="v${id}_cheag_tip" placeholder="ex: CHY-MAX" /></div>
+        <div class="field"><label>Lot cheag</label><input type="text" id="v${id}_cheag_lot" placeholder="LOT..." /></div>
+        <div class="field"><label>ml cheag</label><input type="number" id="v${id}_cheag_ml" placeholder="35" step="0.1" /></div>
+        <div class="field"><label>Ora cheag</label><input type="time" id="v${id}_cheag_ora" /></div>
+      </div>
+
+      <div class="section-label">⏱ Coagulare</div>
+      <div class="grid-3">
+        <div class="field"><label>Prindere (h)</label><input type="time" id="v${id}_prindere" /></div>
+        <div class="field"><label>Întărire (min)</label><input type="number" id="v${id}_intarire" placeholder="35" /></div>
+        <div class="field"><label>Tăiere (h)</label><input type="time" id="v${id}_taiere" /></div>
+      </div>
+
+      <div class="section-label">💬 Observații vană</div>
+      <div class="field">
+        <textarea id="v${id}_obs" placeholder="Observații specifice acestei văne..." style="min-height:60px; resize:vertical;"></textarea>
+      </div>
+    </div>
+  </div>`;
+
+  document.getElementById('vaneContainer').insertAdjacentHTML('beforeend', html);
+}
+
+function stergeVana(id) {
+  if (vaneIds.length <= 1) { showToast('Trebuie să existe cel puțin o vână', 'error'); return; }
+  document.getElementById('vana_' + id)?.remove();
+  vaneIds = vaneIds.filter(v => v !== id);
+}
+
+function toggleVana(id) {
+  const body = document.getElementById('vana_body_' + id);
+  const btn  = document.getElementById('toggle_' + id);
+  const isOpen = body.style.display !== 'none';
+  body.style.display = isOpen ? 'none' : '';
+  btn.textContent = isOpen ? '▼' : '▲';
+}
+
+function updateTipLabel(id) {
+  const val   = document.getElementById('v' + id + '_tip').value;
+  const label = document.getElementById('vana_tip_label_' + id);
+  label.textContent = val ? '— ' + val.split(' ').slice(0,3).join(' ') + '...' : '— selectează tip';
+}
+
+// ── CONFIG ────────────────────────────────────────────
+function openConfig()  { document.getElementById('configOverlay').classList.add('open'); }
+function closeConfig(e){ if (e.target === document.getElementById('configOverlay')) document.getElementById('configOverlay').classList.remove('open'); }
+function saveConfig()  {
+  const url = document.getElementById('configUrl').value.trim();
+  if (!url.startsWith('https://script.google.com')) { showToast('URL invalid', 'error'); return; }
+  localStorage.setItem(SCRIPT_KEY, url);
+  updateStatus(true);
+  document.getElementById('configOverlay').classList.remove('open');
+  showToast('URL salvat!', 'success');
+}
+function updateStatus(c) {
+  document.getElementById('statusDot').classList.toggle('connected', c);
+  document.getElementById('statusLabel').textContent = c ? 'Conectat la Google Sheets' : 'Neconectat';
+}
+
+// ── TOAST ─────────────────────────────────────────────
+let toastTimer;
+function showToast(msg, type = '') {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = 'toast show ' + type;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 3500);
+}
+</script>
+</body>
+</html>
