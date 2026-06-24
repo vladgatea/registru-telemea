@@ -1674,8 +1674,9 @@ function renderQtyCols(key, lotOptim, um, saved) {
     : '—';
   const qtyTd = `<td><input class="monit-input" type="text" inputmode="numeric" pattern="[0-9]*"
     placeholder="ex: 650" value="${qty}"
-    style="width:88px;font-family:'JetBrains Mono',monospace;text-align:right;-moz-appearance:textfield"
-    oninput="updateMonit('${key}','cantitate',this.value.replace(/[^0-9]/g,''))">
+    style="width:88px;font-family:'JetBrains Mono',monospace;text-align:right"
+    oninput="updateMonitNoRefresh('${key}','cantitate',this.value)"
+    onblur="updateMonit('${key}','cantitate',this.value)">
     <span style="font-size:10px;color:var(--ink-muted);margin-left:2px">${um}</span>
   </td>`;
   return { lotDisplay, qtyTd, badge };
@@ -1788,7 +1789,8 @@ function buildMonitAmb(zi, dayLabel) {
       <td><input class="monit-input" type="text" inputmode="decimal" placeholder="ex: 3.5"
         value="${timpReal}"
         style="width:58px;font-family:'JetBrains Mono',monospace;text-align:right"
-        oninput="updateMonit('${row.key}','timpReal',this.value)"> <span style="font-size:10px;color:var(--ink-muted)">h</span></td>
+        oninput="updateMonitNoRefresh('${row.key}','timpReal',this.value)"
+        onblur="updateMonit('${row.key}','timpReal',this.value)"> <span style="font-size:10px;color:var(--ink-muted)">h</span></td>
       <td class="${ab.cls}">${ab.text}</td>
       <td><input class="monit-input" type="text" placeholder="Motiv / observații..." value="${(saved.motiv||'').replace(/"/g,'&quot;')}" oninput="updateMonitNoRefresh('${row.key}','motiv',this.value)"></td>`;
     tbody.appendChild(tr);
