@@ -582,6 +582,11 @@ function colecteazaDate() {
     prindere:  document.getElementById('v'+id+'_prindere').value,
     intarire:  document.getElementById('v'+id+'_intarire').value,
     taiere:    document.getElementById('v'+id+'_taiere').value,
+    ora_evac:  document.getElementById('v'+id+'_ora_evac').value,
+    ph_evac:   document.getElementById('v'+id+'_ph_evac').value,
+    ora_pres:  document.getElementById('v'+id+'_ora_pres').value,
+    timp_pres: document.getElementById('v'+id+'_timp_pres').value,
+    ph_pres:   document.getElementById('v'+id+'_ph_pres').value,
     obs:       document.getElementById('v'+id+'_obs').value,
   }));
 
@@ -686,7 +691,9 @@ function incarcaDraft(id) {
     const fields = ['tip','tanc','t_tanc','ph_tanc','gr','pr','nr_vana','litri',
       'ph_lapte','t_lapte','a_lactic','cacl2','ph_dupa','ora_ad',
       'ferm_tip','ferm_uc','ferm_lot','cheag_tip','cheag_lot','cheag_ml','cheag_ora',
-      'prindere','intarire','taiere','obs'];
+      'prindere','intarire','taiere',
+      'ora_evac','ph_evac','ora_pres','timp_pres','ph_pres',
+      'obs'];
     fields.forEach(f => {
       const el = document.getElementById('v'+id2+'_'+f);
       if (el && v[f] !== undefined) el.value = v[f];
@@ -902,6 +909,15 @@ function adaugaVana() {
         <div class="field"><label>Prindere (h)</label><input type="time" id="v${id}_prindere" /></div>
         <div class="field"><label>Întărire (min)</label><input type="number" id="v${id}_intarire" placeholder="35" /></div>
         <div class="field"><label>Tăiere (h)</label><input type="time" id="v${id}_taiere" /></div>
+      </div>
+
+      <div class="section-label">🪤 Evacuare & Presare</div>
+      <div class="grid-3">
+        <div class="field"><label>Ora evacuare coagul</label><input type="time" id="v${id}_ora_evac" /></div>
+        <div class="field"><label>pH la evacuare</label><input type="number" id="v${id}_ph_evac" placeholder="6.2" step="0.01" /></div>
+        <div class="field"><label>Ora START presare</label><input type="time" id="v${id}_ora_pres" /></div>
+        <div class="field"><label>Timp presare în crință (min)</label><input type="number" id="v${id}_timp_pres" placeholder="30" /></div>
+        <div class="field"><label>pH după presare</label><input type="number" id="v${id}_ph_pres" placeholder="5.8" step="0.01" /></div>
       </div>
 
       <div class="section-label">💬 Observații vană</div>
