@@ -915,12 +915,14 @@
             <th style="min-width:80px">Lot optim</th>
             <th style="min-width:110px">Cant. realizată</th>
             <th style="min-width:90px">vs Lot optim</th>
+            <th style="min-width:90px">Rand. std %</th>
+            <th style="min-width:90px">Rand. real %</th>
             <th style="min-width:80px">Abatere</th>
             <th style="min-width:190px">Motiv / Observații</th>
           </tr>
         </thead>
         <tbody id="tbodyMonitProc">
-          <tr><td colspan="8" style="text-align:center;padding:20px;color:var(--ink-muted)">Selectează o zi</td></tr>
+          <tr><td colspan="10" style="text-align:center;padding:20px;color:var(--ink-muted)">Selectează o zi</td></tr>
         </tbody>
       </table>
     </div>
@@ -976,6 +978,8 @@
             <th style="min-width:80px">Lot optim</th>
             <th style="min-width:110px">Cant. realizată</th>
             <th style="min-width:90px">vs Lot optim</th>
+            <th style="min-width:90px">Rand. std %</th>
+            <th style="min-width:90px">Rand. real %</th>
             <th style="min-width:75px">Timp plan.</th>
             <th style="min-width:75px">Timp real.</th>
             <th style="min-width:80px">Abatere</th>
@@ -983,7 +987,7 @@
           </tr>
         </thead>
         <tbody id="tbodyMonitAmb">
-          <tr><td colspan="10" style="text-align:center;padding:20px;color:var(--ink-muted)">Selectează o zi</td></tr>
+          <tr><td colspan="12" style="text-align:center;padding:20px;color:var(--ink-muted)">Selectează o zi</td></tr>
         </tbody>
       </table>
     </div>
@@ -1009,12 +1013,14 @@
             <th style="min-width:80px">Lot optim</th>
             <th style="min-width:110px">Cant. realizată</th>
             <th style="min-width:90px">vs Lot optim</th>
+            <th style="min-width:90px">Rand. std %</th>
+            <th style="min-width:90px">Rand. real %</th>
             <th style="min-width:80px">Abatere</th>
             <th style="min-width:190px">Motiv / Observații</th>
           </tr>
         </thead>
         <tbody id="tbodyMonitEtic">
-          <tr><td colspan="8" style="text-align:center;padding:20px;color:var(--ink-muted)">Selectează o zi</td></tr>
+          <tr><td colspan="10" style="text-align:center;padding:20px;color:var(--ink-muted)">Selectează o zi</td></tr>
         </tbody>
       </table>
     </div>
@@ -1152,14 +1158,14 @@ const PRODUSE_BURDUF = [
   'BB Oaie 300G - 600','Bulgaraș','Pecorino'
 ];
 
-// Date din sheet-ul Procesare (DENUMIRE -> {lot, buc, lv, lc, lo, ld})
-const PROCESARE_REF = {
+// Date din sheet-ul Procesare — se încarcă din Google Sheets la pornire
+let PROCESARE_REF = {
   'TVPS 4KG':         {lot:650, buc:162, lv:3000, lc:0, lo:0, ld:0, um:'KG'},
   'TV MOLD 4KG':      {lot:600, buc:150, lv:3000, lc:0, lo:0, ld:0, um:'KG'},
   'TV+O 4KG':         {lot:650, buc:162, lv:3000, lc:0, lo:0, ld:0, um:'KG'},
   'TV+C 4KG':         {lot:650, buc:162, lv:2400, lc:600, lo:0, ld:0, um:'KG'},
   'BV 5KG':           {lot:550, buc:110, lv:3000, lc:0, lo:0, ld:0, um:'KG'},
-  'BV 400G':          {lot:1375, buc:0,  lv:3000, lc:0, lo:0, ld:0, um:'BUC'},
+  'BV 400G':          {lot:550, buc:1375, lv:3000, lc:0, lo:0, ld:0, um:'BUC'},
   'CAS V 300G':       {lot:195, buc:650, lv:3000, lc:0, lo:0, ld:0, um:'BUC'},
   'CAS V MV':         {lot:200, buc:200, lv:3000, lc:0, lo:0, ld:0, um:'KG'},
   'CAS V MP':         {lot:450, buc:0,   lv:3000, lc:0, lo:0, ld:0, um:'KG'},
@@ -1173,8 +1179,8 @@ const PROCESARE_REF = {
   'CAS V+O MP DLF':   {lot:450, buc:0,   lv:2400, lc:0, lo:600, ld:0, um:'KG'},
 };
 
-// Date din sheet-ul Ambalare (DENUMIRE -> timp ore)
-const AMBALARE_REF = {
+// Date din sheet-ul Ambalare — se încarcă din Google Sheets la pornire
+let AMBALARE_REF = {
   'DLF 350G':      3.0,  'PDA 300G':      4.0,  'BB FRA':        2.75,
   'MARUNȚITA - 86':1.25, 'BB 4X60DLF':    4.0,  'BB PDA 2KG':    2.0,
   'DLF 250G':      4.0,  'BB DLF 2KG':    2.0,  'BB Oaie 300G - 600': 1.25,
@@ -1660,6 +1666,58 @@ function getLotOptim(prod) {
   return { lotOptim, um };
 }
 
+// Extrage greutatea unitară din denumire (ex: "CAS V 300G" → 0.3, "BV 5KG" → 5, "BV 400G" → 0.4)
+function getUnitWeightKg(prod) {
+  const m5kg = prod.match(/(\d+(?:\.\d+)?)\s*KG/i);
+  if (m5kg) return parseFloat(m5kg[1]);
+  const mg = prod.match(/(\d+)\s*G\b/i);
+  if (mg) return parseFloat(mg[1]) / 1000;
+  return null; // produs în KG direct
+}
+
+// Convertește cantitate realizată în KG
+function toKg(cantitate, prod, ref) {
+  if (!cantitate || cantitate === '') return null;
+  const qty = parseFloat(cantitate);
+  if (isNaN(qty)) return null;
+  if (ref && ref.buc > 0) {
+    // BUC → KG via greutatea unitară
+    const unitKg = getUnitWeightKg(prod);
+    if (unitKg) return qty * unitKg;
+    // fallback: lot KG / buc optim
+    if (ref.lot && ref.buc) return qty * (ref.lot / ref.buc);
+    return null;
+  }
+  return qty; // deja în KG
+}
+
+// Calculează randament standard și realizat
+// randStd = lotKg / totalLapte * 100
+// randReal = cantRealizataKg / totalLapte * 100
+function calcRandament(prod, cantitate) {
+  const ref = PROCESARE_REF[prod];
+  if (!ref) return { std: null, real: null, lapte: null };
+  const totalLapte = (ref.lv || 0) + (ref.lc || 0) + (ref.lo || 0) + (ref.ld || 0);
+  if (!totalLapte) return { std: null, real: null, lapte: null };
+  const lotKg = ref.lot; // lotul optim e mereu în KG în PROCESARE_REF
+  const stdPct = lotKg ? Math.round((lotKg / totalLapte) * 1000) / 10 : null; // 1 zecimală
+  const cantKg = toKg(cantitate, prod, ref);
+  const realPct = cantKg ? Math.round((cantKg / totalLapte) * 1000) / 10 : null;
+  return { std: stdPct, real: realPct, lapte: totalLapte };
+}
+
+// Celula randament cu badge colorat
+function randBadge(pct, std) {
+  if (pct === null) return '—';
+  const diff = std ? pct - std : 0;
+  let cls, icon;
+  if (diff >= -1) { cls = 'abatere-pos'; icon = '✓'; }
+  else if (diff >= -3) { cls = ''; icon = '~'; }
+  else { cls = 'abatere-neg'; icon = '⚠'; }
+  const style = (!cls && diff < 0) ? 'color:var(--gold);font-weight:600' : '';
+  return `<span class="${cls}" style="${style}">${icon} ${pct}%</span>`;
+}
+
 function renderQtyCols(key, lotOptim, um, saved) {
   const qty = saved.cantitate || '';
   const pct = (lotOptim && qty !== '') ? Math.round((parseFloat(qty) / lotOptim) * 100) : null;
@@ -1702,6 +1760,7 @@ function buildMonitProc(zi, dayLabel) {
     const refProd = (saved.realizat && saved.realizat !== '—') ? saved.realizat : row.planificat;
     const { lotOptim, um } = getLotOptim(refProd);
     const { lotDisplay, qtyTd, badge } = renderQtyCols(row.key, lotOptim, um, saved);
+    const { std, real } = calcRandament(refProd, saved.cantitate);
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td><strong>${row.slot}</strong></td>
@@ -1710,6 +1769,8 @@ function buildMonitProc(zi, dayLabel) {
       <td style="text-align:center">${lotDisplay}</td>
       ${qtyTd}
       <td style="text-align:center">${badge}</td>
+      <td style="text-align:center;font-size:11px">${std !== null ? `<span style="color:var(--ink-soft)">${std}%</span>` : '—'}</td>
+      <td style="text-align:center">${randBadge(real, std)}</td>
       <td class="${ab.cls}">${ab.text}</td>
       <td><input class="monit-input" type="text" placeholder="Motiv / observații..." value="${(saved.motiv||'').replace(/"/g,'&quot;')}" oninput="updateMonitNoRefresh('${row.key}','motiv',this.value)"></td>`;
     tbody.appendChild(tr);
@@ -1777,6 +1838,7 @@ function buildMonitAmb(zi, dayLabel) {
     const { lotOptim, um } = getLotOptim(refProdA);
     const { lotDisplay, qtyTd, badge } = renderQtyCols(row.key, lotOptim, um, saved);
     const timpReal = saved.timpReal || '';
+    const { std, real } = calcRandament(refProdA, saved.cantitate);
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td><strong>${row.slot}</strong></td>
@@ -1785,6 +1847,8 @@ function buildMonitAmb(zi, dayLabel) {
       <td style="text-align:center">${lotDisplay}</td>
       ${qtyTd}
       <td style="text-align:center">${badge}</td>
+      <td style="text-align:center;font-size:11px">${std !== null ? `<span style="color:var(--ink-soft)">${std}%</span>` : '—'}</td>
+      <td style="text-align:center">${randBadge(real, std)}</td>
       <td style="text-align:center;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--info);font-weight:600">${row.timpPlan > 0 ? row.timpPlan.toFixed(2)+'h' : '—'}</td>
       <td><input class="monit-input" type="text" inputmode="decimal" placeholder="ex: 3.5"
         value="${timpReal}"
@@ -1801,11 +1865,11 @@ function buildMonitAmb(zi, dayLabel) {
   const trTotal = document.createElement('tr');
   trTotal.style.cssText = 'background:var(--info-pale);font-weight:700;font-size:11px';
   trTotal.innerHTML = `
-    <td colspan="6" style="text-align:right;color:var(--info);padding:6px 10px">TOTAL TIMP:</td>
+    <td colspan="8" style="text-align:right;color:var(--info);padding:6px 10px">TOTAL TIMP:</td>
     <td style="text-align:center;font-family:'JetBrains Mono',monospace;color:var(--info)">${totalPlan.toFixed(2)}h</td>
     <td style="text-align:center;font-family:'JetBrains Mono',monospace">${totalReal > 0 ? totalReal.toFixed(2)+'h' : '—'}</td>
     <td class="${totalReal > 0 ? (Math.abs(diff)<0.05 ? 'abatere-pos' : diff>0 ? 'abatere-neg' : 'abatere-pos') : ''}" style="text-align:center">${totalReal > 0 ? (Math.abs(diff)<0.05 ? '✓ Exact' : diff>0 ? '⚠ +'+diff.toFixed(2)+'h' : '✓ -'+Math.abs(diff).toFixed(2)+'h') : ''}</td>
-    <td colspan="2"></td>`;
+    <td colspan="1"></td>`;
   tbody.appendChild(trTotal);
 }
 
@@ -1845,6 +1909,7 @@ function buildMonitEtic(zi, dayLabel) {
       const info = getLotOptim(refProdE); lotOptim = info.lotOptim; um = info.um;
     }
     const { lotDisplay, qtyTd, badge } = renderQtyCols(row.key, lotOptim, um, saved);
+    const { std, real } = calcRandament(refProdE, saved.cantitate);
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td>
@@ -1856,6 +1921,8 @@ function buildMonitEtic(zi, dayLabel) {
       <td style="text-align:center">${lotDisplay}</td>
       ${qtyTd}
       <td style="text-align:center">${badge}</td>
+      <td style="text-align:center;font-size:11px">${std !== null ? `<span style="color:var(--ink-soft)">${std}%</span>` : '—'}</td>
+      <td style="text-align:center">${randBadge(real, std)}</td>
       <td class="${ab.cls}">${ab.text}</td>
       <td><input class="monit-input" type="text" placeholder="Motiv / observații..." value="${(saved.motiv||'').replace(/"/g,'&quot;')}" oninput="updateMonitNoRefresh('${row.key}','motiv',this.value)"></td>`;
     tbody.appendChild(tr);
@@ -2022,7 +2089,59 @@ function planifSheetKey() { return `S${state.week}_${state.year}`; }
 function monitSheetKey()  { return `M${state.week}_${state.year}`; }
 function indexSheetKey()  { return 'Istoric'; }
 
-// ── SELECTOR SĂPTĂMÂNI ──────────────────────────────────────────
+// ── ÎNCĂRCARE DATE REFERINȚĂ DIN SHEETS ─────────────────────────
+
+async function loadRefData() {
+  try {
+    setSyncStatus('loading', 'Se încarcă date referință...');
+
+    // Încarcă Procesare_Ref
+    const procData = await sheetsRead('Procesare_Ref');
+    if (procData.data && procData.data.length > 1) {
+      const newRef = {};
+      // Header: DENUMIRE, Lot OPTIM, BUC OPTIM, LAPTE VACA, LAPTE CAPRA, LAPTE OAIE, LAPTE DEG
+      procData.data.slice(1).forEach(row => {
+        const denumire = String(row[0] || '').trim();
+        if (!denumire) return;
+        const lot  = parseFloat(row[1]) || 0;
+        const buc  = parseFloat(row[2]) || 0;
+        const lv   = parseFloat(row[3]) || 0;
+        const lc   = parseFloat(row[4]) || 0;
+        const lo   = parseFloat(row[5]) || 0;
+        const ld   = parseFloat(row[6]) || 0;
+        const um   = buc > 0 ? 'BUC' : 'KG';
+        newRef[denumire] = { lot, buc, lv, lc, lo, ld, um };
+      });
+      if (Object.keys(newRef).length > 0) {
+        PROCESARE_REF = newRef;
+        console.log('Procesare_Ref încărcat:', Object.keys(newRef).length, 'produse');
+      }
+    }
+
+    // Încarcă Ambalare_Ref
+    const ambData = await sheetsRead('Ambalare_Ref');
+    if (ambData.data && ambData.data.length > 1) {
+      const newAmb = {};
+      // Header: DENUMIRE, Lot OPTIM UM, Timp necesar (h)
+      ambData.data.slice(1).forEach(row => {
+        const denumire = String(row[0] || '').trim();
+        if (!denumire) return;
+        const timp = parseFloat(row[2]) || 0;
+        if (timp > 0) newAmb[denumire] = timp;
+      });
+      if (Object.keys(newAmb).length > 0) {
+        AMBALARE_REF = newAmb;
+        console.log('Ambalare_Ref încărcat:', Object.keys(newAmb).length, 'produse');
+      }
+    }
+
+    setSyncStatus('ok', 'Date referință actualizate');
+  } catch(e) {
+    // Dacă pică, folosim datele hardcodate — nu blocăm aplicația
+    setSyncStatus('ok', 'Configurat (date locale)');
+    console.warn('Nu s-au putut încărca datele din Sheets, se folosesc valorile implicite:', e);
+  }
+}
 
 async function loadWeekList() {
   if (!config.sheetsUrl) { alert('Configurează URL-ul Google Sheets mai întâi (⚙)'); return; }
@@ -2660,7 +2779,7 @@ function rebuildAll() {
 // INIT
 // ═══════════════════════════════════════════════════════════════
 
-window.onload = function() {
+window.onload = async function() {
   const now = new Date();
   const startOfYear = new Date(now.getFullYear(), 0, 1);
   const weekNr = Math.ceil(((now - startOfYear) / 86400000 + startOfYear.getDay() + 1) / 7);
@@ -2668,15 +2787,16 @@ window.onload = function() {
   state.year = now.getFullYear();
   document.getElementById('firstLot').value = state.firstLot;
 
-  // Dacă nu e URL în localStorage, folosim default-ul hardcodat
   if (!localStorage.getItem('sheetsUrl')) {
     localStorage.setItem('sheetsUrl', SHEETS_URL_DEFAULT);
   }
   config.sheetsUrl = localStorage.getItem('sheetsUrl') || SHEETS_URL_DEFAULT;
 
   if (config.sheetsUrl) {
-    setSyncStatus('ok', 'Configurat');
-    loadWeekList();
+    // Încarcă date referință din Sheets (Procesare_Ref + Ambalare_Ref)
+    await loadRefData();
+    // Apoi încarcă istoricul săptămânilor
+    await loadWeekList();
   }
 
   recalcDates();
