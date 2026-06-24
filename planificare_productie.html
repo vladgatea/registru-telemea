@@ -1067,16 +1067,59 @@ function doGet(e) {
 }
 
 function doPost(e) {
-  const ss = SpreadsheetApp.openById(SHEET_ID);
-  const data = JSON.parse(e.postData.contents);
-  let sheet = ss.getSheetByName(data.sheet);
-  if (!sheet) sheet = ss.insertSheet(data.sheet);
-  sheet.clearContents();
-  if (data.rows && data.rows.length > 0) {
-    sheet.getRange(1, 1, data.rows.length, data.rows[0].length).setValues(data.rows);
+  try {
+    const ss = SpreadsheetApp.openById(SHEET_ID);
+    const req = JSON.parse(e.postData.contents);
+
+    if (req.action === 'saveFull') {
+      // 1. Salvează planificarea
+      writeSheet(ss, req.planifSheet, req.planifRows);
+
+      // 2. Salvează monitorizarea
+      writeSheet(ss, req.monitSheet, req.monitRows);
+
+      // 3. Actualizează Istoric
+      const istoricSheet = ss.getSheetByName('Istoric') || ss.insertSheet('Istoric');
+      const now = new Date().toLocaleString('ro-RO');
+      const existing = istoricSheet.getDataRange().getValues();
+      const idx = existing.findIndex(r => r[0] === req.planifSheet);
+      if (idx >= 1) {
+        istoricSheet.getRange(idx + 1, 1, 1, 3).setValues([[req.planifSheet, req.istoricLabel, now]]);
+      } else if (idx === -1 || existing.length <= 1) {
+        if (existing.length === 0 || (existing.length === 1 && !existing[0][0])) {
+          istoricSheet.clearContents();
+          istoricSheet.getRange(1, 1, 1, 3).setValues([['key', 'label', 'savedAt']]);
+        }
+        istoricSheet.appendRow([req.planifSheet, req.istoricLabel, now]);
+      }
+
+      return ContentService.createTextOutput(JSON.stringify({status:'ok'}))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // Scriere simplă (monitorizare individuală)
+    if (req.action === 'write') {
+      writeSheet(ss, req.sheet, req.rows);
+      return ContentService.createTextOutput(JSON.stringify({status:'ok'}))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    return ContentService.createTextOutput(JSON.stringify({status:'error', error:'unknown action'}))
+      .setMimeType(ContentService.MimeType.JSON);
+
+  } catch(err) {
+    return ContentService.createTextOutput(JSON.stringify({status:'error', error: err.toString()}))
+      .setMimeType(ContentService.MimeType.JSON);
   }
-  return ContentService.createTextOutput(JSON.stringify({status:'ok'}))
-    .setMimeType(ContentService.MimeType.JSON);
+}
+
+function writeSheet(ss, name, rows) {
+  let sheet = ss.getSheetByName(name);
+  if (!sheet) sheet = ss.insertSheet(name);
+  sheet.clearContents();
+  if (rows && rows.length > 0) {
+    sheet.getRange(1, 1, rows.length, rows[0].length).setValues(rows);
+  }
 }</pre>
     </div>
 
@@ -1988,23 +2031,35 @@ async function loadWeekList() {
   if (!config.sheetsUrl) { alert('Configurează URL-ul Google Sheets mai întâi (⚙)'); return; }
   setSyncStatus('loading', 'Se încarcă istoricul...');
   try {
-    const data = await sheetsRead(indexSheetKey());
+    const data = await sheetsRead('__listSheets__');
     const sel = document.getElementById('weekSelector');
     const currentVal = sel.value;
     sel.innerHTML = '<option value="">— selectează —</option>';
-    if (data.data && data.data.length > 1) {
-      data.data.slice(1).forEach(row => {
-        if (!row[0]) return;
-        const opt = document.createElement('option');
-        opt.value = row[0]; opt.textContent = row[1] || row[0];
-        if (row[0] === currentVal) opt.selected = true;
-        sel.appendChild(opt);
+
+    const sheets = data.sheets || [];
+    const planifSheets = sheets
+      .filter(s => /^S\d+_\d{4}$/.test(s))
+      .sort((a, b) => {
+        const [wa, ya] = a.replace('S','').split('_').map(Number);
+        const [wb, yb] = b.replace('S','').split('_').map(Number);
+        return yb !== ya ? yb - ya : wb - wa;
       });
-    }
-    setSyncStatus('ok', `Istoric: ${sel.options.length - 1} săptămâni`);
+
+    planifSheets.forEach(key => {
+      const parts = key.replace('S','').split('_');
+      const w = parseInt(parts[0]), y = parseInt(parts[1]);
+      const dates = getWeekDates(w, y);
+      const label = `S${w} / ${y} · ${formatDate(dates[0])}–${formatDate(dates[6])}`;
+      const opt = document.createElement('option');
+      opt.value = key; opt.textContent = label;
+      if (key === currentVal) opt.selected = true;
+      sel.appendChild(opt);
+    });
+
+    const cnt = sel.options.length - 1;
+    setSyncStatus('ok', cnt > 0 ? `Istoric: ${cnt} săptămâni` : 'Nicio săptămână salvată');
   } catch(e) {
-    setSyncStatus('error', 'Eroare încărcare istoric');
-    console.error(e);
+    setSyncStatus('error', 'Eroare încărcare istoric: ' + e.message);
   }
 }
 
@@ -2073,23 +2128,27 @@ function parseSheetRows(rows) {
 
 // ── SALVARE ─────────────────────────────────────────────────────
 
-// Scriere prin POST (Apps Script acceptă POST, CORS e ok cu redirect follow)
-async function sheetsWrite(sheetName, rows) {
-  const body = JSON.stringify({ sheet: sheetName, action: 'write', rows });
-  // Trimitem ca form-encoded — Apps Script nu are CORS issues cu form POST
+async function sheetsPost(payload) {
   const resp = await fetch(config.sheetsUrl, {
     method: 'POST',
-    headers: { 'Content-Type': 'text/plain' },
-    body: body,
+    redirect: 'follow',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify(payload),
   });
   const text = await resp.text();
-  try { return JSON.parse(text); } catch(e) { return { status: 'ok' }; }
+  const clean = text.replace(/^\)\]\}\'/, '').trim();
+  try { return JSON.parse(clean); } catch(e) { return { status: 'ok' }; }
 }
 
-// Citire prin GET
 async function sheetsRead(sheetName) {
-  const resp = await fetch(`${config.sheetsUrl}?sheet=${encodeURIComponent(sheetName)}`);
-  return await resp.json();
+  const url = sheetName === '__listSheets__'
+    ? `${config.sheetsUrl}?action=listSheets`
+    : `${config.sheetsUrl}?sheet=${encodeURIComponent(sheetName)}`;
+  const resp = await fetch(url, { redirect: 'follow' });
+  const text = await resp.text();
+  // Apps Script returnează uneori cu prefix )]}' — curățăm
+  const clean = text.replace(/^\)\]\}\'/, '').trim();
+  return JSON.parse(clean);
 }
 
 async function saveToSheets() {
@@ -2097,18 +2156,21 @@ async function saveToSheets() {
   setSyncStatus('loading', 'Se salvează...');
   try {
     const sheetKey = planifSheetKey();
+    const monitKey = monitSheetKey();
 
-    // 1. Salvează planificarea
-    const r1 = await sheetsWrite(sheetKey, buildPlanifRows());
-    if (r1.status !== 'ok') { setSyncStatus('error', 'Eroare salvare planificare'); return; }
+    // POST 1: planificare
+    await sheetsPost({ action: 'write', sheet: sheetKey, rows: buildPlanifRows() });
 
-    // 2. Actualizează indexul Istoric
-    await updateIstoricIndex(sheetKey);
-
-    // 3. Salvează monitorizarea
-    await saveMonitToSheet(monitSheetKey());
+    // POST 2: monitorizare
+    const monitRows = [['key','realizat','cantitate','timpReal','motiv','status']];
+    Object.entries(state.monitorizare).forEach(([key, val]) => {
+      monitRows.push([key, val.realizat||'', val.cantitate||'', val.timpReal||'', val.motiv||'', val.status||'']);
+    });
+    await sheetsPost({ action: 'write', sheet: monitKey, rows: monitRows });
 
     setSyncStatus('ok', `Salvat S${state.week}_${state.year} · ${new Date().toLocaleTimeString('ro-RO')}`);
+
+    // Refresh lista săptămâni (citește sheet-urile existente direct)
     await loadWeekList();
     const sel = document.getElementById('weekSelector');
     for (let i = 0; i < sel.options.length; i++) {
@@ -2132,35 +2194,16 @@ function buildPlanifRows() {
   return rows;
 }
 
-async function updateIstoricIndex(sheetKey) {
-  // Citim indexul existent
-  let existingRows = [['key','label','savedAt']];
-  try {
-    const d = await sheetsRead(indexSheetKey());
-    if (d.data && d.data.length > 0) existingRows = d.data;
-  } catch(e) {}
-
-  const dates = getWeekDates(state.week, state.year);
-  const label = `S${state.week} / ${state.year} · ${formatDate(dates[0])}–${formatDate(dates[6])}`;
-  const now = new Date().toLocaleString('ro-RO');
-
-  const idx = existingRows.findIndex(r => r[0] === sheetKey);
-  if (idx >= 1) {
-    existingRows[idx] = [sheetKey, label, now];
-  } else {
-    existingRows.push([sheetKey, label, now]);
-  }
-
-  // Payload mic — doar indexul, nu datele planificării
-  await sheetsWrite(indexSheetKey(), existingRows);
-}
-
 // ── MONITORIZARE ─────────────────────────────────────────────────
 
 async function saveMonitorizare() {
   if (!config.sheetsUrl) { alert('Configurează URL-ul Google Sheets mai întâi'); return; }
   setSyncStatus('loading', 'Se salvează monitorizare...');
-  await saveMonitToSheet(monitSheetKey());
+  const rows = [['key','realizat','cantitate','timpReal','motiv','status']];
+  Object.entries(state.monitorizare).forEach(([key, val]) => {
+    rows.push([key, val.realizat||'', val.cantitate||'', val.timpReal||'', val.motiv||'', val.status||'']);
+  });
+  await sheetsPost({ action: 'write', sheet: monitSheetKey(), rows });
   setSyncStatus('ok', `Realizat salvat · ${new Date().toLocaleTimeString('ro-RO')}`);
 }
 
@@ -2169,7 +2212,7 @@ async function saveMonitToSheet(sheetKey) {
   Object.entries(state.monitorizare).forEach(([key, val]) => {
     rows.push([key, val.realizat||'', val.cantitate||'', val.timpReal||'', val.motiv||'', val.status||'']);
   });
-  await sheetsWrite(sheetKey, rows);
+  await sheetsPost({ action: 'write', sheet: sheetKey, rows });
 }
 
 async function loadCurrentMonit() {
