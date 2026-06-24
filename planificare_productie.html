@@ -1,0 +1,2244 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Planificare Producție — Ferma cu Omenie</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  :root {
+    --cream: #F7F4EE;
+    --ink: #1A1A18;
+    --ink-soft: #4A4A45;
+    --ink-muted: #8A8A82;
+    --milk: #FFFFFF;
+    --border: #E2DDD5;
+    --accent: #2D5016;
+    --accent-light: #4A7C28;
+    --accent-pale: #EEF4E8;
+    --warn: #C4501A;
+    --warn-pale: #FDF0EA;
+    --info: #1A4A7A;
+    --info-pale: #EAF0F8;
+    --gold: #C49A2D;
+    --gold-pale: #FBF5E8;
+    --tab-active: #2D5016;
+    --radius: 6px;
+    --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06);
+    --shadow-md: 0 4px 12px rgba(0,0,0,0.1);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background: var(--cream);
+    color: var(--ink);
+    font-size: 13px;
+    line-height: 1.5;
+    min-height: 100vh;
+  }
+
+  /* ── HEADER ── */
+  .app-header {
+    background: var(--accent);
+    color: white;
+    padding: 0 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 52px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  }
+  .app-header h1 {
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: -0.2px;
+  }
+  .app-header .subtitle {
+    font-size: 11px;
+    opacity: 0.7;
+    font-weight: 400;
+  }
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .sync-status {
+    font-size: 11px;
+    padding: 3px 10px;
+    border-radius: 20px;
+    background: rgba(255,255,255,0.15);
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .sync-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: #7FD44B;
+  }
+  .sync-dot.loading { background: var(--gold); animation: pulse 1s infinite; }
+  .sync-dot.error { background: #E05A3A; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+  /* ── TABS ── */
+  .tab-bar {
+    background: var(--milk);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    padding: 0 24px;
+    gap: 0;
+  }
+  .tab-btn {
+    padding: 10px 20px;
+    border: none;
+    background: none;
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--ink-muted);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .tab-btn:hover { color: var(--accent); }
+  .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .tab-icon { font-size: 14px; }
+
+  /* ── MAIN CONTENT ── */
+  .tab-content { display: none; padding: 20px 24px; max-width: 1400px; }
+  .tab-content.active { display: block; }
+
+  /* ── SECTION HEADERS ── */
+  .section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+  }
+  .section-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--ink);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .section-title::before {
+    content: '';
+    display: block;
+    width: 3px;
+    height: 16px;
+    background: var(--accent);
+    border-radius: 2px;
+  }
+
+  /* ── WEEK SETUP ── */
+  .week-setup {
+    background: var(--milk);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px 20px;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    flex-wrap: wrap;
+    box-shadow: var(--shadow);
+  }
+  .week-setup label { font-size: 11px; color: var(--ink-muted); font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 4px; }
+  .week-setup input, .week-setup select {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 6px 10px;
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    color: var(--ink);
+    background: var(--cream);
+    outline: none;
+  }
+  .week-setup input:focus, .week-setup select:focus { border-color: var(--accent); }
+  .week-days-display {
+    flex: 1;
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .day-chip {
+    background: var(--accent-pale);
+    border: 1px solid #C8DEB8;
+    border-radius: 4px;
+    padding: 4px 10px;
+    font-size: 11px;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--accent);
+    font-weight: 500;
+  }
+
+  /* ── CARDS ── */
+  .card {
+    background: var(--milk);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    margin-bottom: 16px;
+  }
+  .card-header {
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .card-title {
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--ink-soft);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .stage-badge {
+    font-size: 10px;
+    padding: 1px 7px;
+    border-radius: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+  .badge-procesare { background: var(--accent-pale); color: var(--accent); }
+  .badge-ambalare { background: var(--info-pale); color: var(--info); }
+  .badge-etichetare { background: var(--gold-pale); color: #8A6A1A; }
+  .badge-burduf { background: var(--warn-pale); color: var(--warn); }
+
+  /* ── PLANNING GRID ── */
+  .planning-grid {
+    width: 100%;
+    overflow-x: auto;
+  }
+  .planning-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+  }
+  .planning-table th {
+    background: var(--cream);
+    padding: 8px 10px;
+    text-align: center;
+    font-weight: 600;
+    font-size: 11px;
+    color: var(--ink-soft);
+    border: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    white-space: nowrap;
+  }
+  .planning-table th.day-header {
+    min-width: 140px;
+  }
+  .planning-table th.row-label {
+    min-width: 110px;
+    text-align: left;
+  }
+  .planning-table td {
+    border: 1px solid var(--border);
+    padding: 4px 6px;
+    vertical-align: middle;
+  }
+  .planning-table td.row-label {
+    background: var(--cream);
+    font-weight: 500;
+    color: var(--ink-soft);
+    font-size: 11px;
+    padding: 6px 10px;
+    white-space: nowrap;
+  }
+  .lot-cell {
+    background: #F0F7EA;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--accent);
+    font-weight: 600;
+    text-align: center;
+    padding: 6px 10px;
+  }
+
+  select.cell-select {
+    width: 100%;
+    border: none;
+    background: transparent;
+    font-family: 'Inter', sans-serif;
+    font-size: 12px;
+    color: var(--ink);
+    outline: none;
+    cursor: pointer;
+    padding: 2px 0;
+  }
+  select.cell-select:focus { background: var(--accent-pale); }
+  
+  .auto-cell {
+    background: var(--info-pale);
+    font-size: 11px;
+    color: var(--info);
+    text-align: center;
+    font-weight: 500;
+  }
+  .auto-cell.etichetare {
+    background: var(--gold-pale);
+    color: #8A6A1A;
+  }
+  .timp-cell {
+    background: var(--cream);
+    text-align: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--ink-soft);
+    font-weight: 500;
+  }
+  .timp-total {
+    background: var(--info-pale);
+    color: var(--info);
+    font-weight: 600;
+  }
+
+  /* ── PERSONAL SECTION ── */
+  .personal-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    padding: 12px 16px;
+  }
+  .schimb-box {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  .schimb-header {
+    background: var(--cream);
+    padding: 6px 10px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--ink-soft);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid var(--border);
+  }
+  .schimb-body { padding: 8px; display: flex; flex-direction: column; gap: 6px; }
+  .person-select {
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 5px 8px;
+    font-family: 'Inter', sans-serif;
+    font-size: 12px;
+    color: var(--ink);
+    background: var(--milk);
+    outline: none;
+    width: 100%;
+  }
+  .person-select:focus { border-color: var(--accent); }
+
+  /* ── BURDUF SECTION ── */
+  .burduf-input {
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 5px 8px;
+    font-family: 'Inter', sans-serif;
+    font-size: 12px;
+    width: 100%;
+    outline: none;
+    background: var(--milk);
+  }
+  .burduf-input:focus { border-color: var(--accent); }
+
+  /* ── BUTTONS ── */
+  .btn {
+    padding: 7px 16px;
+    border-radius: var(--radius);
+    border: none;
+    font-family: 'Inter', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.15s;
+  }
+  .btn-primary { background: var(--accent); color: white; }
+  .btn-primary:hover { background: var(--accent-light); }
+  .btn-secondary { background: var(--milk); color: var(--ink); border: 1px solid var(--border); }
+  .btn-secondary:hover { background: var(--cream); }
+  .btn-warn { background: var(--warn); color: white; }
+  .btn-sm { padding: 5px 10px; font-size: 11px; }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* ── REZULTAT CENTRALIZARE ── */
+  .rezultat-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  .rezultat-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+  }
+  .rezultat-table th {
+    background: var(--accent);
+    color: white;
+    padding: 7px 10px;
+    text-align: center;
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .rezultat-table td {
+    padding: 6px 10px;
+    border: 1px solid var(--border);
+    text-align: center;
+  }
+  .rezultat-table tr:nth-child(even) td { background: var(--cream); }
+  .rezultat-table .total-row td { background: var(--accent-pale); font-weight: 700; color: var(--accent); }
+
+  /* ── MONITORIZARE ── */
+  .monit-day-selector {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+  }
+  .day-btn {
+    padding: 6px 14px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--milk);
+    font-family: 'Inter', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    color: var(--ink-soft);
+    transition: all 0.15s;
+  }
+  .day-btn.active { background: var(--accent); color: white; border-color: var(--accent); }
+  .day-btn:hover:not(.active) { background: var(--cream); }
+
+  .monit-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+  }
+  .monit-table th {
+    background: var(--ink);
+    color: white;
+    padding: 8px 12px;
+    text-align: left;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+  }
+  .monit-table td {
+    padding: 6px 8px;
+    border: 1px solid var(--border);
+    vertical-align: middle;
+  }
+  .monit-table tr:nth-child(even) td { background: var(--cream); }
+  .monit-input {
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 4px 8px;
+    font-size: 12px;
+    font-family: 'Inter', sans-serif;
+    width: 100%;
+    background: var(--milk);
+    outline: none;
+  }
+  .monit-input:focus { border-color: var(--accent); }
+  .monit-textarea {
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 5px 8px;
+    font-size: 12px;
+    font-family: 'Inter', sans-serif;
+    width: 100%;
+    background: var(--milk);
+    outline: none;
+    resize: vertical;
+    min-height: 38px;
+    line-height: 1.4;
+    color: var(--ink);
+    display: block;
+  }
+  .monit-textarea:focus { border-color: var(--accent); }
+  .qty-cell { display: flex; align-items: center; gap: 4px; white-space: nowrap; }
+  .qty-input {
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 4px 6px;
+    font-size: 12px;
+    font-family: 'JetBrains Mono', monospace;
+    width: 72px;
+    background: var(--milk);
+    outline: none;
+    text-align: right;
+  }
+  .qty-input:focus { border-color: var(--accent); }
+  .qty-um { font-size: 10px; font-weight: 600; color: var(--ink-muted); text-transform: uppercase; min-width: 24px; }
+  .qty-vs { font-size: 10px; color: var(--ink-muted); white-space: nowrap; }
+  .qty-ok { color: var(--accent); font-weight: 600; font-size: 11px; }
+  .qty-warn { color: var(--warn); font-weight: 600; font-size: 11px; }
+  .qty-partial { color: var(--gold); font-weight: 600; font-size: 11px; }
+  .abatere-pos { color: var(--accent); font-weight: 600; }
+  .abatere-neg { color: var(--warn); font-weight: 600; }
+
+  /* ── PRINT ── */
+  .print-preview {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+    box-shadow: var(--shadow-md);
+    font-family: 'Inter', sans-serif;
+  }
+  .print-header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid var(--accent);
+  }
+  .print-title { font-size: 16px; font-weight: 700; color: var(--accent); }
+  .print-meta { font-size: 11px; color: var(--ink-soft); text-align: right; line-height: 1.8; }
+  .print-section-label {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--accent);
+    margin: 12px 0 6px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .print-section-label::after { content:''; flex:1; height:1px; background: var(--border); }
+  .print-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 10px;
+    margin-bottom: 10px;
+  }
+  .print-table th {
+    background: var(--accent);
+    color: white;
+    padding: 5px 8px;
+    text-align: center;
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+  .print-table td {
+    border: 1px solid #D0D0C8;
+    padding: 4px 6px;
+    text-align: center;
+    font-size: 10px;
+  }
+  .print-table .label-col {
+    text-align: left;
+    background: #F5F5F0;
+    font-weight: 600;
+    color: #333;
+  }
+  .print-table .lot-col {
+    background: #EEF5E8;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    color: var(--accent);
+    font-weight: 700;
+  }
+  .print-table .amb-col { background: #EAF0F8; color: #1A4A7A; font-weight: 500; }
+  .print-table .etic-col { background: #FBF5E8; color: #8A6A1A; font-weight: 500; }
+  .print-table .timp-row td { background: var(--info-pale); color: var(--info); font-weight: 700; }
+  .print-semnatura {
+    display: flex;
+    justify-content: flex-end;
+    gap: 40px;
+    margin-top: 16px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+    font-size: 10px;
+    color: var(--ink-muted);
+  }
+  .sign-box { text-align: center; }
+  .sign-line { width: 120px; border-bottom: 1px solid var(--ink); margin: 20px auto 4px; }
+
+  /* ── ALERTS ── */
+  .alert {
+    padding: 10px 14px;
+    border-radius: var(--radius);
+    font-size: 12px;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .alert-info { background: var(--info-pale); border: 1px solid #B8CDE0; color: var(--info); }
+  .alert-warn { background: var(--warn-pale); border: 1px solid #E0C0B0; color: var(--warn); }
+  .alert-success { background: var(--accent-pale); border: 1px solid #C0D8A8; color: var(--accent); }
+
+  /* ── SETUP MODAL ── */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--milk);
+    border-radius: 8px;
+    padding: 24px;
+    width: 480px;
+    box-shadow: var(--shadow-md);
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+  .modal h2 { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
+  .modal .modal-sub { font-size: 12px; color: var(--ink-muted); margin-bottom: 20px; }
+  .form-group { margin-bottom: 14px; }
+  .form-group label { display: block; font-size: 11px; font-weight: 600; color: var(--ink-soft); margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.4px; }
+  .form-group input {
+    width: 100%;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 8px 10px;
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    outline: none;
+    background: var(--cream);
+  }
+  .form-group input:focus { border-color: var(--accent); background: white; }
+  .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 20px; }
+  .step-list { list-style: none; counter-reset: step; }
+  .step-list li {
+    counter-increment: step;
+    padding: 8px 12px 8px 36px;
+    position: relative;
+    font-size: 12px;
+    border-bottom: 1px solid var(--border);
+    color: var(--ink-soft);
+    line-height: 1.6;
+  }
+  .step-list li:last-child { border-bottom: none; }
+  .step-list li::before {
+    content: counter(step);
+    position: absolute;
+    left: 8px;
+    top: 10px;
+    width: 18px;
+    height: 18px;
+    background: var(--accent);
+    color: white;
+    border-radius: 50%;
+    font-size: 10px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  code {
+    background: var(--cream);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 1px 5px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--accent);
+  }
+
+  @media print {
+    .app-header, .tab-bar, .no-print { display: none !important; }
+    .tab-content { display: block !important; padding: 0; }
+    #tab-print { display: block !important; }
+    #tab-plan, #tab-monit { display: none !important; }
+    .print-preview { border: none; box-shadow: none; padding: 0; }
+    body { background: white; }
+    @page { margin: 10mm; }
+  }
+
+  .gap-8 { gap: 8px; }
+  .flex { display: flex; }
+  .items-center { align-items: center; }
+  .justify-between { justify-content: space-between; }
+  .mt-4 { margin-top: 4px; }
+  .mb-12 { margin-bottom: 12px; }
+  .text-muted { color: var(--ink-muted); }
+  .font-mono { font-family: 'JetBrains Mono', monospace; }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="app-header">
+  <div>
+    <h1>Planificare Producție</h1>
+    <div class="subtitle">Ferma cu Omenie SRL</div>
+  </div>
+  <div class="header-right">
+    <div class="sync-status" id="syncStatus">
+      <div class="sync-dot" id="syncDot"></div>
+      <span id="syncText">Neconectat</span>
+    </div>
+    <button class="btn btn-secondary btn-sm" onclick="openSetup()">⚙ Configurare</button>
+  </div>
+</header>
+
+<!-- TABS -->
+<nav class="tab-bar">
+  <button class="tab-btn active" onclick="showTab('plan')" id="tabBtn-plan">
+    <span class="tab-icon">📋</span> Planificare
+  </button>
+  <button class="tab-btn" onclick="showTab('print')" id="tabBtn-print">
+    <span class="tab-icon">🖨</span> Fișă Print
+  </button>
+  <button class="tab-btn" onclick="showTab('monit')" id="tabBtn-monit">
+    <span class="tab-icon">📊</span> Monitorizare
+  </button>
+</nav>
+
+<!-- ═══════════════════════════════════ TAB: PLANIFICARE ═══════════════════════════════════ -->
+<div class="tab-content active" id="tab-plan">
+
+  <!-- Week Setup -->
+  <div class="week-setup">
+    <div>
+      <label>Săptămâna</label>
+      <input type="number" id="weekNr" min="1" max="53" value="" placeholder="27" style="width:70px" oninput="recalcDates()">
+    </div>
+    <div>
+      <label>Primul Lot (Luni)</label>
+      <input type="text" id="firstLot" placeholder="27173" style="width:90px; font-family:'JetBrains Mono',monospace" oninput="recalcLots()">
+    </div>
+    <div>
+      <label>An</label>
+      <input type="number" id="year" value="2026" style="width:70px" oninput="recalcDates()">
+    </div>
+    <div class="week-days-display" id="weekDaysDisplay"></div>
+    <div style="margin-left:auto; display:flex; gap:8px; align-items:center">
+      <button class="btn btn-secondary btn-sm" onclick="loadFromSheets()">↓ Încarcă</button>
+      <button class="btn btn-primary btn-sm" onclick="saveToSheets()">↑ Salvează în Sheets</button>
+    </div>
+  </div>
+
+  <!-- PROCESARE -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">
+        <span class="stage-badge badge-procesare">Etapa 1</span>
+        Procesare Lapte
+      </div>
+      <div class="text-muted" style="font-size:11px">8 procesări/zi · Slot 7 rezervat BV</div>
+    </div>
+    <div class="planning-grid">
+      <table class="planning-table" id="tblProcesare">
+        <thead id="tblProcHead"></thead>
+        <tbody id="tblProcBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- BURDUF -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">
+        <span class="stage-badge badge-burduf">Burduf</span>
+        Planificare Burduf
+        <span style="font-size:11px; font-weight:400; color:var(--ink-muted)">→ sare direct la Etichetare (+1 zi)</span>
+      </div>
+    </div>
+    <div class="planning-grid">
+      <table class="planning-table" id="tblBurduf">
+        <thead id="tblBurdufHead"></thead>
+        <tbody id="tblBurdufBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- AMBALARE AUTO -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">
+        <span class="stage-badge badge-ambalare">Etapa 2</span>
+        Ambalare
+        <span style="font-size:11px; font-weight:400; color:var(--ink-muted)">calculat automat (+1 zi față de Procesare)</span>
+      </div>
+    </div>
+    <div class="planning-grid">
+      <table class="planning-table" id="tblAmbalare">
+        <thead id="tblAmbHead"></thead>
+        <tbody id="tblAmbBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ETICHETARE AUTO -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">
+        <span class="stage-badge badge-etichetare">Etapa 3</span>
+        Etichetare
+        <span style="font-size:11px; font-weight:400; color:var(--ink-muted)">calculat automat (+1 zi față de Ambalare · +1 zi față de Burduf)</span>
+      </div>
+    </div>
+    <div class="planning-grid">
+      <table class="planning-table" id="tblEtichetare">
+        <thead id="tblEticHead"></thead>
+        <tbody id="tblEticBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- PERSONAL -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">👷 Personal planificat</div>
+      <span style="font-size:11px; color:var(--ink-muted)">max. 3 persoane/schimb</span>
+    </div>
+    <div id="personalSection"></div>
+  </div>
+
+  <!-- REZULTAT CENTRALIZARE -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">📈 Rezultat Planificare — Centralizare</div>
+    </div>
+    <div style="padding:16px; display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+      <div>
+        <div class="print-section-label">Necesar Lapte / Zi (L)</div>
+        <table class="rezultat-table" id="tblLapte">
+          <thead><tr><th>Zi</th><th>Vacă</th><th>Capră</th><th>Oaie</th><th>Degresat</th><th>Total</th></tr></thead>
+          <tbody id="tbodyLapte"></tbody>
+        </table>
+      </div>
+      <div>
+        <div class="print-section-label">Cantități Rezultate (procesare)</div>
+        <table class="rezultat-table" id="tblRezultat">
+          <thead><tr><th>Produs</th><th>UM</th><th>Cantitate</th><th>Nr. proc.</th></tr></thead>
+          <tbody id="tbodyRezultat"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ═══════════════════════════════════ TAB: PRINT ═══════════════════════════════════ -->
+<div class="tab-content" id="tab-print">
+  <div class="section-header no-print">
+    <div class="section-title">Fișă Planificare</div>
+    <div style="display:flex; gap:8px;">
+      <button class="btn btn-secondary btn-sm" onclick="generatePrint()">↻ Actualizează</button>
+      <button class="btn btn-primary btn-sm" onclick="window.print()">🖨 Printează</button>
+    </div>
+  </div>
+  <div class="print-preview" id="printArea"></div>
+</div>
+
+<!-- ═══════════════════════════════════ TAB: MONITORIZARE ═══════════════════════════════════ -->
+<div class="tab-content" id="tab-monit">
+
+  <div class="section-header">
+    <div class="section-title">Monitorizare Zilnică — Realizat vs Planificat</div>
+    <div style="display:flex; gap:8px; align-items:center">
+      <button class="btn btn-secondary btn-sm" onclick="loadMonitorizare()">↓ Încarcă realizat</button>
+      <button class="btn btn-primary btn-sm" onclick="saveMonitorizare()">↑ Salvează realizat</button>
+    </div>
+  </div>
+
+  <div class="monit-day-selector" id="monitDaySelector"></div>
+
+  <!-- PROCESARE -->
+  <div class="card" style="margin-bottom:16px">
+    <div class="card-header">
+      <div class="card-title">
+        <span class="stage-badge badge-procesare">Etapa 1</span>
+        Procesare — <span id="monitTitleProc" style="font-weight:400;color:var(--ink-muted)">Selectează o zi</span>
+      </div>
+      <div id="monitSummaryProc" style="font-size:11px;color:var(--ink-muted)"></div>
+    </div>
+    <div style="padding:12px; overflow-x:auto">
+      <table class="monit-table">
+        <thead>
+          <tr>
+            <th style="min-width:120px">Slot</th>
+            <th style="min-width:130px">Planificat</th>
+            <th style="min-width:130px">Lot optim planificat</th>
+            <th style="min-width:150px">Cantitate realizată</th>
+            <th style="min-width:110px">vs Lot optim</th>
+            <th style="min-width:90px">Abatere produs</th>
+            <th style="min-width:220px">Motiv / Observații</th>
+            <th style="min-width:100px">Status</th>
+          </tr>
+        </thead>
+        <tbody id="tbodyMonitProc">
+          <tr><td colspan="8" style="text-align:center;padding:20px;color:var(--ink-muted)">Selectează o zi</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- BURDUF -->
+  <div class="card" style="margin-bottom:16px">
+    <div class="card-header">
+      <div class="card-title">
+        <span class="stage-badge badge-burduf">Burduf</span>
+        Burduf — <span id="monitTitleBurduf" style="font-weight:400;color:var(--ink-muted)">Selectează o zi</span>
+      </div>
+      <div id="monitSummaryBurduf" style="font-size:11px;color:var(--ink-muted)"></div>
+    </div>
+    <div style="padding:12px; overflow-x:auto">
+      <table class="monit-table">
+        <thead>
+          <tr>
+            <th style="min-width:120px">Rând</th>
+            <th style="min-width:130px">Planificat</th>
+            <th style="min-width:130px">Lot optim planificat</th>
+            <th style="min-width:150px">Cantitate realizată</th>
+            <th style="min-width:110px">vs Lot optim</th>
+            <th style="min-width:90px">Abatere produs</th>
+            <th style="min-width:220px">Motiv / Observații</th>
+            <th style="min-width:100px">Status</th>
+          </tr>
+        </thead>
+        <tbody id="tbodyMonitBurduf">
+          <tr><td colspan="8" style="text-align:center;padding:20px;color:var(--ink-muted)">Selectează o zi</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- AMBALARE -->
+  <div class="card" style="margin-bottom:16px">
+    <div class="card-header">
+      <div class="card-title">
+        <span class="stage-badge badge-ambalare">Etapa 2</span>
+        Ambalare — <span id="monitTitleAmb" style="font-weight:400;color:var(--ink-muted)">Selectează o zi</span>
+        <span style="font-size:11px;font-weight:400;color:var(--ink-muted)">(provine din Procesare ziua anterioară)</span>
+      </div>
+      <div id="monitSummaryAmb" style="font-size:11px;color:var(--ink-muted)"></div>
+    </div>
+    <div style="padding:12px; overflow-x:auto">
+      <table class="monit-table">
+        <thead>
+          <tr>
+            <th style="min-width:120px">Slot</th>
+            <th style="min-width:130px">Planificat</th>
+            <th style="min-width:90px">Timp plan. (h)</th>
+            <th style="min-width:130px">Lot optim planificat</th>
+            <th style="min-width:150px">Cantitate realizată</th>
+            <th style="min-width:110px">vs Lot optim</th>
+            <th style="min-width:80px">Timp real. (h)</th>
+            <th style="min-width:90px">Abatere produs</th>
+            <th style="min-width:220px">Motiv / Observații</th>
+            <th style="min-width:100px">Status</th>
+          </tr>
+        </thead>
+        <tbody id="tbodyMonitAmb">
+          <tr><td colspan="10" style="text-align:center;padding:20px;color:var(--ink-muted)">Selectează o zi</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ETICHETARE -->
+  <div class="card" style="margin-bottom:16px">
+    <div class="card-header">
+      <div class="card-title">
+        <span class="stage-badge badge-etichetare">Etapa 3</span>
+        Etichetare — <span id="monitTitleEtic" style="font-weight:400;color:var(--ink-muted)">Selectează o zi</span>
+        <span style="font-size:11px;font-weight:400;color:var(--ink-muted)">(din Ambalare + Burduf ziua anterioară)</span>
+      </div>
+      <div id="monitSummaryEtic" style="font-size:11px;color:var(--ink-muted)"></div>
+    </div>
+    <div style="padding:12px; overflow-x:auto">
+      <table class="monit-table">
+        <thead>
+          <tr>
+            <th style="min-width:120px">Slot</th>
+            <th style="min-width:130px">Planificat</th>
+            <th style="min-width:130px">Lot optim planificat</th>
+            <th style="min-width:150px">Cantitate realizată</th>
+            <th style="min-width:110px">vs Lot optim</th>
+            <th style="min-width:90px">Abatere produs</th>
+            <th style="min-width:220px">Motiv / Observații</th>
+            <th style="min-width:100px">Status</th>
+          </tr>
+        </thead>
+        <tbody id="tbodyMonitEtic">
+          <tr><td colspan="8" style="text-align:center;padding:20px;color:var(--ink-muted)">Selectează o zi</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<!-- SETUP MODAL -->
+<div class="modal-overlay" id="setupModal">
+  <div class="modal">
+    <h2>⚙ Configurare Google Sheets</h2>
+    <div class="modal-sub">Conectează aplicația la Google Sheets pentru salvarea datelor</div>
+
+    <div class="form-group">
+      <label>URL Web App (Apps Script)</label>
+      <input type="url" id="sheetsUrl" placeholder="https://script.google.com/macros/s/..." oninput="saveConfig()">
+    </div>
+
+    <div style="margin-bottom:16px;">
+      <div style="font-size:12px; font-weight:600; color:var(--ink-soft); margin-bottom:8px;">Pași configurare Google Sheets:</div>
+      <ol class="step-list">
+        <li>Creează un Google Sheet nou și adaugă 4 foi: <code>Planificare</code>, <code>Monitorizare</code>, <code>Ambalare_Ref</code>, <code>Procesare_Ref</code></li>
+        <li>În foaia <code>Procesare_Ref</code> copiază datele din sheet-ul PROCESARE din Excel (coloanele: DENUMIRE, Lot OPTIM, BUC OPTIM, LAPTE VACA, LAPTE CAPRA, LAPTE OAIE, LAPTE DEG)</li>
+        <li>În foaia <code>Ambalare_Ref</code> copiază datele din sheet-ul Ambalare (coloanele: DENUMIRE, Lot OPTIM UM, Timp necesar)</li>
+        <li>Deschide <code>Extensions → Apps Script</code> și copiază codul de mai jos</li>
+        <li>Click <code>Deploy → New deployment → Web App</code>, setează acces <code>Anyone</code></li>
+        <li>Copiază URL-ul generat și lipește-l mai sus</li>
+      </ol>
+    </div>
+
+    <div style="background:var(--cream); border:1px solid var(--border); border-radius:var(--radius); padding:12px; margin-bottom:16px;">
+      <div style="font-size:11px; font-weight:600; color:var(--ink-soft); margin-bottom:6px;">📋 Cod Apps Script (copiază în Extensions → Apps Script):</div>
+      <pre style="font-size:10px; font-family:'JetBrains Mono',monospace; color:var(--ink-soft); overflow-x:auto; line-height:1.6; white-space:pre-wrap">const SHEET_ID = SpreadsheetApp.getActiveSpreadsheet().getId();
+
+function doPost(e) {
+  const data = JSON.parse(e.postData.contents);
+  const ss = SpreadsheetApp.openById(SHEET_ID);
+  const sheet = ss.getSheetByName(data.sheet);
+  
+  if (data.action === 'write') {
+    const rows = data.rows;
+    sheet.clearContents();
+    if (rows.length > 0) {
+      sheet.getRange(1, 1, rows.length, rows[0].length).setValues(rows);
+    }
+    return ContentService.createTextOutput(JSON.stringify({status:'ok'}))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+  return ContentService.createTextOutput(JSON.stringify({status:'error'}))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+function doGet(e) {
+  const ss = SpreadsheetApp.openById(SHEET_ID);
+  const sheetName = e.parameter.sheet;
+  const sheet = ss.getSheetByName(sheetName);
+  if (!sheet) {
+    return ContentService.createTextOutput(JSON.stringify({error:'Sheet not found'}))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+  const data = sheet.getDataRange().getValues();
+  return ContentService.createTextOutput(JSON.stringify({data: data}))
+    .setMimeType(ContentService.MimeType.JSON);
+}</pre>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeSetup()">Închide</button>
+      <button class="btn btn-primary" onclick="testConnection()">Testează conexiunea</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+// DATA
+// ═══════════════════════════════════════════════════════════════
+
+const PERSONAL = ['—', 'Stefan', 'Toader', 'Crisan', 'Raul', 'Muresan', 'Marcus'];
+
+const ZILE = ['Luni', 'Marți', 'Miercuri', 'Joi', 'Vineri', 'Sâmbătă', 'Duminică'];
+
+const PROCESARI = [
+  'Procesare 1','Procesare 2','Procesare 3','Procesare 4',
+  'Procesare 5','Procesare 6','Procesare 7','Procesare 8'
+];
+
+const PRODUSE_PROCESARE = [
+  '—','TVPS 4KG','TV MOLD 4KG','TV+O 4KG','TV+C 4KG','BV 5KG','BV 400G',
+  'CAS V 300G','CAS V MV','CAS V MP','TOPS','TCPS','CAS V+O 300G/MV',
+  'TV DEG 4KG','TV','CAS V+O MV','CAS O 100%','CAS V+O MP DLF'
+];
+
+const PRODUSE_BURDUF = [
+  '—','DLF 350G - 1500','PDA 300G - 2000','BB FRA - 600','MARUNȚITA - 86',
+  'BB 4X60DLF - 2000','BB PDA 2KG - 300','DLF 250G - 2000','BB DLF 2KG - 300',
+  'BB Oaie 300G - 600','Bulgaraș','Pecorino'
+];
+
+// Date din sheet-ul Procesare (DENUMIRE -> {lot, buc, lv, lc, lo, ld})
+const PROCESARE_REF = {
+  'TVPS 4KG':         {lot:650, buc:162, lv:3000, lc:0, lo:0, ld:0, um:'KG'},
+  'TV MOLD 4KG':      {lot:600, buc:150, lv:3000, lc:0, lo:0, ld:0, um:'KG'},
+  'TV+O 4KG':         {lot:650, buc:162, lv:3000, lc:0, lo:0, ld:0, um:'KG'},
+  'TV+C 4KG':         {lot:650, buc:162, lv:2400, lc:600, lo:0, ld:0, um:'KG'},
+  'BV 5KG':           {lot:550, buc:110, lv:3000, lc:0, lo:0, ld:0, um:'KG'},
+  'BV 400G':          {lot:1375, buc:0,  lv:3000, lc:0, lo:0, ld:0, um:'BUC'},
+  'CAS V 300G':       {lot:195, buc:650, lv:3000, lc:0, lo:0, ld:0, um:'BUC'},
+  'CAS V MV':         {lot:200, buc:200, lv:3000, lc:0, lo:0, ld:0, um:'KG'},
+  'CAS V MP':         {lot:450, buc:0,   lv:3000, lc:0, lo:0, ld:0, um:'KG'},
+  'TOPS':             {lot:600, buc:150, lv:0,    lc:0, lo:3000, ld:0, um:'KG'},
+  'TCPS':             {lot:600, buc:150, lv:0,    lc:3000, lo:0, ld:0, um:'KG'},
+  'CAS V+O 300G/MV':  {lot:195, buc:650, lv:3000, lc:0, lo:0, ld:0, um:'BUC'},
+  'TV DEG 4KG':       {lot:500, buc:0,   lv:1500, lc:0, lo:0, ld:1500, um:'KG'},
+  'TV':               {lot:650, buc:0,   lv:3000, lc:0, lo:0, ld:0, um:'KG'},
+  'CAS V+O MV':       {lot:200, buc:200, lv:3000, lc:0, lo:0, ld:0, um:'KG'},
+  'CAS O 100%':       {lot:550, buc:0,   lv:0,    lc:0, lo:3000, ld:0, um:'KG'},
+  'CAS V+O MP DLF':   {lot:450, buc:0,   lv:2400, lc:0, lo:600, ld:0, um:'KG'},
+};
+
+// Date din sheet-ul Ambalare (DENUMIRE -> timp ore)
+const AMBALARE_REF = {
+  'DLF 350G':      3.0,  'PDA 300G':      4.0,  'BB FRA':        2.75,
+  'MARUNȚITA - 86':1.25, 'BB 4X60DLF':    4.0,  'BB PDA 2KG':    2.0,
+  'DLF 250G':      4.0,  'BB DLF 2KG':    2.0,  'BB Oaie 300G - 600': 1.25,
+  'BV 400G':       2.5,  'TVPS 375 G':    2.0,  'TVPS 800G':     1.75,
+  'CAS V 300G':    1.5,  'CAS V+O 300G':  1.5,  'CAS V MV':      1.0,
+  'CAS V+O MV':    1.0,  'BULGARAS':      2.0,  'TV MOLD 800G':  1.75,
+  'TOPS 800G':     1.75, 'TCPS 800G':     1.75, 'BV 5KG':        1.0,
+  'CAS V MP':      1.25, 'TOPS':          1.5,  'TCPS':          1.2,
+  'TV DEG 4KG':    1.16, 'TV':            1.16, 'BB 5X60DLF':    4.0,
+  'TVPS 4KG':      1.16, 'TV MOLD 4KG':   1.16, 'TV+O 4KG':      1.16,
+  'TV+C 4KG':      1.16, 'CAS O 100%':    1.5,  'CAS V+O MP':    1.25,
+};
+
+// State
+let state = {
+  week: 27,
+  year: 2026,
+  firstLot: '27173',
+  procesare: Array(8).fill(null).map(() => Array(7).fill('—')),  // [procesare][zi]
+  burduf: Array(3).fill(null).map(() => Array(7).fill('—')),     // 3 randuri burduf
+  personal: {
+    schimb1: Array(7).fill(null).map(() => ['—','—','—']),
+    schimb2: Array(7).fill(null).map(() => ['—','—','—']),
+    schimb3: Array(7).fill(null).map(() => ['—','—','—']),
+  },
+  monitorizare: {}
+};
+
+let config = {
+  sheetsUrl: localStorage.getItem('sheetsUrl') || ''
+};
+
+// ═══════════════════════════════════════════════════════════════
+// UTILS
+// ═══════════════════════════════════════════════════════════════
+
+function getWeekDates(week, year) {
+  const jan4 = new Date(year, 0, 4);
+  const dayOfWeek = jan4.getDay() || 7;
+  const monday = new Date(jan4);
+  monday.setDate(jan4.getDate() - dayOfWeek + 1 + (week - 1) * 7);
+  return Array(7).fill(0).map((_, i) => {
+    const d = new Date(monday);
+    d.setDate(monday.getDate() + i);
+    return d;
+  });
+}
+
+function formatDate(d) {
+  return `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}`;
+}
+
+function getLots() {
+  const base = parseInt(state.firstLot) || 0;
+  return ZILE.map((_, i) => i === 0 ? state.firstLot : String(base + i));
+}
+
+function makeSelect(options, value, onchange, cls='cell-select') {
+  const s = document.createElement('select');
+  s.className = cls;
+  options.forEach(o => {
+    const opt = document.createElement('option');
+    opt.value = o; opt.textContent = o;
+    if (o === value) opt.selected = true;
+    s.appendChild(opt);
+  });
+  s.onchange = onchange;
+  return s;
+}
+
+function getAmbalareFromProcesare() {
+  // Ambalare[zi] = ce a fost la procesare[zi-1]
+  const amb = Array(7).fill(null).map(() => []);
+  for (let z = 1; z < 7; z++) {
+    for (let p = 0; p < 8; p++) {
+      const prod = state.procesare[p][z - 1];
+      if (prod && prod !== '—') amb[z].push(prod);
+    }
+  }
+  return amb;
+}
+
+function getBurdufEtichetareFromBurduf() {
+  // Burduf planificat zi X → Etichetare zi X+1
+  const etic = Array(7).fill(null).map(() => []);
+  for (let z = 0; z < 6; z++) {
+    for (let r = 0; r < 3; r++) {
+      const prod = state.burduf[r][z];
+      if (prod && prod !== '—') etic[z + 1].push(prod + ' ★');
+    }
+  }
+  return etic;
+}
+
+function getEtichetareFromAmbalare() {
+  const amb = getAmbalareFromProcesare();
+  // Etichetare[zi] = ce a fost la ambalare[zi-1]
+  const etic = Array(7).fill(null).map(() => []);
+  for (let z = 1; z < 7; z++) {
+    etic[z].push(...amb[z - 1]);
+  }
+  return etic;
+}
+
+function calcTimpAmbalare(produse) {
+  let total = 0;
+  produse.forEach(prod => {
+    // Cauta un match partial in AMBALARE_REF
+    for (const key of Object.keys(AMBALARE_REF)) {
+      if (prod.toUpperCase().includes(key.toUpperCase()) || key.toUpperCase().includes(prod.toUpperCase())) {
+        total += AMBALARE_REF[key];
+        break;
+      }
+    }
+  });
+  return total;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// UI BUILDERS
+// ═══════════════════════════════════════════════════════════════
+
+function recalcDates() {
+  state.week = parseInt(document.getElementById('weekNr').value) || 27;
+  state.year = parseInt(document.getElementById('year').value) || 2026;
+  const dates = getWeekDates(state.week, state.year);
+  const display = document.getElementById('weekDaysDisplay');
+  display.innerHTML = '';
+  dates.forEach((d, i) => {
+    const chip = document.createElement('div');
+    chip.className = 'day-chip';
+    chip.textContent = `${ZILE[i].substring(0,3)} ${formatDate(d)}`;
+    display.appendChild(chip);
+  });
+  rebuildAll();
+}
+
+function recalcLots() {
+  state.firstLot = document.getElementById('firstLot').value;
+  rebuildAll();
+}
+
+function buildTableHeader(tableHead) {
+  const dates = getWeekDates(state.week, state.year);
+  const lots = getLots();
+  tableHead.innerHTML = '';
+  const tr1 = document.createElement('tr');
+  const th0 = document.createElement('th');
+  th0.className = 'row-label';
+  th0.textContent = '';
+  tr1.appendChild(th0);
+  ZILE.forEach((z, i) => {
+    const th = document.createElement('th');
+    th.className = 'day-header';
+    th.innerHTML = `<div style="font-size:12px;font-weight:700">${z}</div><div style="font-size:10px;color:var(--ink-muted);font-weight:400">${formatDate(dates[i])}</div>`;
+    tr1.appendChild(th);
+  });
+  tableHead.appendChild(tr1);
+
+  const tr2 = document.createElement('tr');
+  const thLot = document.createElement('th');
+  thLot.className = 'row-label';
+  thLot.textContent = 'Nr. Lot';
+  tr2.appendChild(thLot);
+  lots.forEach(lot => {
+    const td = document.createElement('th');
+    td.className = 'lot-cell';
+    td.style.cssText = 'background:#EEF5E8;font-family:JetBrains Mono,monospace;font-size:11px;color:var(--accent);font-weight:700;border:1px solid var(--border)';
+    td.textContent = lot;
+    tr2.appendChild(td);
+  });
+  tableHead.appendChild(tr2);
+}
+
+function buildProcesareTable() {
+  const head = document.getElementById('tblProcHead');
+  const body = document.getElementById('tblProcBody');
+  buildTableHeader(head);
+  body.innerHTML = '';
+
+  PROCESARI.forEach((proc, pi) => {
+    const tr = document.createElement('tr');
+    const tdLabel = document.createElement('td');
+    tdLabel.className = 'row-label';
+    tdLabel.textContent = proc;
+    if (pi === 6) tdLabel.style.cssText += 'color:var(--info);font-weight:600'; // slot 7 BV
+    tr.appendChild(tdLabel);
+
+    ZILE.forEach((_, zi) => {
+      const td = document.createElement('td');
+      const sel = makeSelect(PRODUSE_PROCESARE, state.procesare[pi][zi], (e) => {
+        state.procesare[pi][zi] = e.target.value;
+        updateAutoTables();
+        updateCentralizare();
+      });
+      td.appendChild(sel);
+      tr.appendChild(td);
+    });
+    body.appendChild(tr);
+  });
+}
+
+function buildBurdufTable() {
+  const head = document.getElementById('tblBurdufHead');
+  const body = document.getElementById('tblBurdufBody');
+  buildTableHeader(head);
+  body.innerHTML = '';
+
+  ['Burduf Rând 1', 'Burduf Rând 2', 'Burduf Rând 3'].forEach((label, ri) => {
+    const tr = document.createElement('tr');
+    const tdLabel = document.createElement('td');
+    tdLabel.className = 'row-label';
+    tdLabel.style.color = 'var(--warn)';
+    tdLabel.textContent = label;
+    tr.appendChild(tdLabel);
+
+    ZILE.forEach((_, zi) => {
+      const td = document.createElement('td');
+      const sel = makeSelect(PRODUSE_BURDUF, state.burduf[ri][zi], (e) => {
+        state.burduf[ri][zi] = e.target.value;
+        updateAutoTables();
+        updateCentralizare();
+      });
+      td.appendChild(sel);
+      tr.appendChild(td);
+    });
+    body.appendChild(tr);
+  });
+}
+
+function updateAutoTables() {
+  buildAmbalareTable();
+  buildEtichetareTable();
+  buildMonitDaySelector();
+}
+
+function buildAmbalareTable() {
+  const head = document.getElementById('tblAmbHead');
+  const body = document.getElementById('tblAmbBody');
+  buildTableHeader(head);
+  body.innerHTML = '';
+
+  const amb = getAmbalareFromProcesare();
+  const maxRows = Math.max(...amb.map(a => a.length), 1);
+
+  for (let r = 0; r < maxRows; r++) {
+    const tr = document.createElement('tr');
+    const tdLabel = document.createElement('td');
+    tdLabel.className = 'row-label';
+    tdLabel.textContent = r === 0 ? 'Ambalare' : '';
+    tr.appendChild(tdLabel);
+    ZILE.forEach((_, zi) => {
+      const td = document.createElement('td');
+      td.className = 'auto-cell';
+      td.textContent = amb[zi][r] || '';
+      tr.appendChild(td);
+    });
+    body.appendChild(tr);
+  }
+
+  // Timp necesar row
+  const trTimp = document.createElement('tr');
+  const tdTimpLabel = document.createElement('td');
+  tdTimpLabel.className = 'row-label';
+  tdTimpLabel.style.fontWeight = '700';
+  tdTimpLabel.textContent = 'Timp necesar (h)';
+  trTimp.appendChild(tdTimpLabel);
+  ZILE.forEach((_, zi) => {
+    const td = document.createElement('td');
+    td.className = 'timp-cell timp-total';
+    const timp = calcTimpAmbalare(amb[zi]);
+    td.textContent = timp > 0 ? timp.toFixed(2) : '—';
+    trTimp.appendChild(td);
+  });
+  body.appendChild(trTimp);
+}
+
+function buildEtichetareTable() {
+  const head = document.getElementById('tblEticHead');
+  const body = document.getElementById('tblEticBody');
+  buildTableHeader(head);
+  body.innerHTML = '';
+
+  const eticFromAmb = getEtichetareFromAmbalare();
+  const eticFromBurduf = getBurdufEtichetareFromBurduf();
+  const combined = eticFromAmb.map((a, i) => [...a, ...eticFromBurduf[i]]);
+  const maxRows = Math.max(...combined.map(a => a.length), 1);
+
+  for (let r = 0; r < maxRows; r++) {
+    const tr = document.createElement('tr');
+    const tdLabel = document.createElement('td');
+    tdLabel.className = 'row-label';
+    tdLabel.textContent = r === 0 ? 'Etichetare' : '';
+    tr.appendChild(tdLabel);
+    ZILE.forEach((_, zi) => {
+      const td = document.createElement('td');
+      td.className = 'auto-cell etichetare';
+      const val = combined[zi][r] || '';
+      td.textContent = val;
+      if (val.includes('★')) td.style.color = 'var(--warn)'; // burduf marker
+      tr.appendChild(td);
+    });
+    body.appendChild(tr);
+  }
+}
+
+function buildPersonalSection() {
+  const container = document.getElementById('personalSection');
+  container.innerHTML = '';
+
+  const grid = document.createElement('div');
+  grid.style.cssText = 'overflow-x:auto; padding:12px 16px;';
+
+  // Build one table for all shifts across all days
+  const table = document.createElement('table');
+  table.className = 'planning-table';
+  
+  const head = document.createElement('thead');
+  const tr0 = document.createElement('tr');
+  const th0 = document.createElement('th');
+  th0.className = 'row-label';
+  th0.textContent = 'Schimb / Persoană';
+  tr0.appendChild(th0);
+  const dates = getWeekDates(state.week, state.year);
+  ZILE.forEach((z, i) => {
+    const th = document.createElement('th');
+    th.className = 'day-header';
+    th.innerHTML = `<div style="font-weight:700">${z}</div><div style="font-size:10px;color:var(--ink-muted);font-weight:400">${formatDate(dates[i])}</div>`;
+    tr0.appendChild(th);
+  });
+  head.appendChild(tr0);
+  table.appendChild(head);
+
+  const tbody = document.createElement('tbody');
+  ['schimb1','schimb2','schimb3'].forEach((schimb, si) => {
+    for (let p = 0; p < 3; p++) {
+      const tr = document.createElement('tr');
+      const tdLabel = document.createElement('td');
+      tdLabel.className = 'row-label';
+      if (p === 0) {
+        tdLabel.innerHTML = `<strong>Schimb ${si+1}</strong><br><span style="font-size:10px;color:var(--ink-muted)">Pers. ${p+1}</span>`;
+      } else {
+        tdLabel.innerHTML = `<span style="font-size:10px;color:var(--ink-muted); padding-left:8px">Pers. ${p+1}</span>`;
+      }
+      tr.appendChild(tdLabel);
+
+      ZILE.forEach((_, zi) => {
+        const td = document.createElement('td');
+        const sel = makeSelect(PERSONAL, state.personal[schimb][zi][p], (e) => {
+          state.personal[schimb][zi][p] = e.target.value;
+        }, 'cell-select');
+        td.appendChild(sel);
+        tr.appendChild(td);
+      });
+      tbody.appendChild(tr);
+    }
+    // divider row
+    const trDiv = document.createElement('tr');
+    const tdDiv = document.createElement('td');
+    tdDiv.colSpan = 8;
+    tdDiv.style.cssText = 'height:4px;background:var(--border);padding:0;border:none;';
+    trDiv.appendChild(tdDiv);
+    tbody.appendChild(trDiv);
+  });
+
+  table.appendChild(tbody);
+  grid.appendChild(table);
+  container.appendChild(grid);
+}
+
+function updateCentralizare() {
+  // Lapte table
+  const tbodyL = document.getElementById('tbodyLapte');
+  tbodyL.innerHTML = '';
+  let totLv=0, totLc=0, totLo=0, totLd=0;
+
+  ZILE.forEach((z, zi) => {
+    let lv=0, lc=0, lo=0, ld=0;
+    for (let p = 0; p < 8; p++) {
+      const prod = state.procesare[p][zi];
+      if (prod && prod !== '—' && PROCESARE_REF[prod]) {
+        const ref = PROCESARE_REF[prod];
+        lv += ref.lv; lc += ref.lc; lo += ref.lo; ld += ref.ld;
+      }
+    }
+    totLv+=lv; totLc+=lc; totLo+=lo; totLd+=ld;
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${z}</td><td>${lv||'—'}</td><td>${lc||'—'}</td><td>${lo||'—'}</td><td>${ld||'—'}</td><td><strong>${lv+lc+lo+ld||'—'}</strong></td>`;
+    tbodyL.appendChild(tr);
+  });
+  const trTot = document.createElement('tr');
+  trTot.className = 'total-row';
+  trTot.innerHTML = `<td>TOTAL</td><td>${totLv}</td><td>${totLc}</td><td>${totLo}</td><td>${totLd}</td><td>${totLv+totLc+totLo+totLd}</td>`;
+  tbodyL.appendChild(trTot);
+
+  // Rezultat procesare
+  const tbodyR = document.getElementById('tbodyRezultat');
+  tbodyR.innerHTML = '';
+  const counter = {};
+  for (let p = 0; p < 8; p++) {
+    for (let z = 0; z < 7; z++) {
+      const prod = state.procesare[p][z];
+      if (prod && prod !== '—') {
+        counter[prod] = (counter[prod] || 0) + 1;
+      }
+    }
+  }
+  Object.entries(counter).forEach(([prod, cnt]) => {
+    const ref = PROCESARE_REF[prod];
+    const cantitate = ref ? (ref.buc > 0 ? ref.buc * cnt : ref.lot * cnt) : '—';
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td style="text-align:left">${prod}</td><td>${ref?.um||'KG'}</td><td>${cantitate}</td><td>${cnt}</td>`;
+    tbodyR.appendChild(tr);
+  });
+  const totalProc = Object.values(counter).reduce((a,b)=>a+b, 0);
+  if (totalProc > 0) {
+    const trTot = document.createElement('tr');
+    trTot.className = 'total-row';
+    trTot.innerHTML = `<td colspan="3" style="text-align:right">Total procesări:</td><td>${totalProc}</td>`;
+    tbodyR.appendChild(trTot);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// MONITORIZARE
+// ═══════════════════════════════════════════════════════════════
+
+let currentMonitDay = 0;
+
+function buildMonitDaySelector() {
+  const dates = getWeekDates(state.week, state.year);
+  const container = document.getElementById('monitDaySelector');
+  container.innerHTML = '';
+  ZILE.forEach((z, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'day-btn' + (i === currentMonitDay ? ' active' : '');
+    btn.textContent = `${z} ${formatDate(dates[i])}`;
+    btn.onclick = () => { currentMonitDay = i; buildMonitDaySelector(); buildMonitTable(); };
+    container.appendChild(btn);
+  });
+  buildMonitTable();
+}
+
+function buildMonitTable() {
+  const zi = currentMonitDay;
+  const dates = getWeekDates(state.week, state.year);
+  const dayLabel = `${ZILE[zi]} ${formatDate(dates[zi])}`;
+
+  buildMonitProc(zi, dayLabel);
+  buildMonitBurduf(zi, dayLabel);
+  buildMonitAmb(zi, dayLabel);
+  buildMonitEtic(zi, dayLabel);
+}
+
+function abatereCell(planif, realiz) {
+  if (!realiz || realiz === '—') return { text: '', cls: '' };
+  if (realiz === planif) return { text: '✓ Conform', cls: 'abatere-pos' };
+  return { text: '⚠ Modificat', cls: 'abatere-neg' };
+}
+
+function statusSummary(rows) {
+  const total = rows.length;
+  if (total === 0) return '';
+  let realizat = 0, partial = 0, anulat = 0;
+  rows.forEach(r => {
+    const s = (state.monitorizare[r.key] || {}).status || 'Necompletat';
+    if (s === 'Realizat') realizat++;
+    else if (s === 'Parțial') partial++;
+    else if (s === 'Anulat') anulat++;
+  });
+  const necompletat = total - realizat - partial - anulat;
+  return `${realizat}/${total} realizat · ${partial} parțial · ${necompletat} necompletat`;
+}
+
+function prodSelectOptions(saved, field) {
+  const all = PRODUSE_PROCESARE.concat(PRODUSE_BURDUF).filter((v,i,a) => a.indexOf(v) === i);
+  return all.map(p => `<option value="${p}" ${(saved[field]||'') === p ? 'selected' : ''}>${p}</option>`).join('');
+}
+
+function statusOptions(saved) {
+  return ['Necompletat','Realizat','Parțial','Anulat'].map(s =>
+    `<option value="${s}" ${(saved.status||'Necompletat') === s ? 'selected' : ''}>${s}</option>`
+  ).join('');
+}
+
+// Returnează lotul optim și UM pentru un produs planificat
+function getLotOptim(prod) {
+  const ref = PROCESARE_REF[prod];
+  if (!ref) return { lotOptim: null, um: '—' };
+  // BUC dacă există buc > 0, altfel KG
+  const um = ref.buc > 0 ? 'BUC' : 'KG';
+  const lotOptim = ref.buc > 0 ? ref.buc : ref.lot;
+  return { lotOptim, um };
+}
+
+// Returnează lotul optim ambalare pentru un produs
+function getLotOptimAmb(prod) {
+  for (const key of Object.keys(AMBALARE_REF)) {
+    if (prod.toUpperCase().includes(key.toUpperCase()) || key.toUpperCase().includes(prod.toUpperCase())) {
+      // Lot optim din AMBALARE_REF nu e stocat direct, il luam din PROCESARE_REF
+      break;
+    }
+  }
+  const ref = PROCESARE_REF[prod];
+  if (!ref) return { lotOptim: null, um: '—' };
+  const um = ref.buc > 0 ? 'BUC' : 'KG';
+  const lotOptim = ref.buc > 0 ? ref.buc : ref.lot;
+  return { lotOptim, um };
+}
+
+// Celula cantitate realizată + comparație vs lot optim
+function qtyCell(key, lotOptim, um, saved) {
+  const qty = saved.cantitate || '';
+  const pct = lotOptim && qty ? Math.round((parseFloat(qty) / lotOptim) * 100) : null;
+  let vsHtml = '';
+  if (pct !== null && !isNaN(pct)) {
+    let cls = pct >= 95 ? 'qty-ok' : pct >= 70 ? 'qty-partial' : 'qty-warn';
+    let icon = pct >= 95 ? '✓' : pct >= 70 ? '~' : '⚠';
+    vsHtml = `<span class="${cls}">${icon} ${pct}%</span>`;
+  }
+  return {
+    qtyInputHtml: `<div class="qty-cell">
+      <input class="qty-input" type="number" min="0" step="1" placeholder="0"
+        value="${qty}"
+        oninput="updateMonit('${key}','cantitate',this.value)"
+      />
+      <span class="qty-um">${um}</span>
+    </div>`,
+    vsHtml: lotOptim
+      ? `<div style="line-height:1.6">${vsHtml}<div class="qty-vs">Optim: ${lotOptim} ${um}</div></div>`
+      : '—'
+  };
+}
+
+function motivTd(key, saved) {
+  return `<td style="min-width:220px;vertical-align:top;padding:4px 6px">
+    <textarea class="monit-textarea" rows="2"
+      placeholder="Motiv abatere / observații..."
+      oninput="updateMonitText('${key}','motiv',this.value)"
+    >${(saved.motiv||'').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</textarea>
+  </td>`;
+}
+
+function buildMonitProc(zi, dayLabel) {
+  document.getElementById('monitTitleProc').textContent = dayLabel;
+  const tbody = document.getElementById('tbodyMonitProc');
+  tbody.innerHTML = '';
+
+  const rows = [];
+  for (let p = 0; p < 8; p++) {
+    const prod = state.procesare[p][zi];
+    if (prod && prod !== '—') rows.push({ slot: `Procesare ${p+1}`, planificat: prod, key: `proc_${p}_${zi}` });
+  }
+
+  if (rows.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:16px;color:var(--ink-muted)">Nicio procesare planificată pentru această zi</td></tr>';
+    document.getElementById('monitSummaryProc').textContent = '';
+    return;
+  }
+  document.getElementById('monitSummaryProc').textContent = statusSummary(rows);
+
+  rows.forEach(row => {
+    const saved = state.monitorizare[row.key] || {};
+    const ab = abatereCell(row.planificat, saved.realizatProd);
+    const { lotOptim, um } = getLotOptim(row.planificat);
+    const { qtyInputHtml, vsHtml } = qtyCell(row.key, lotOptim, um, saved);
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><strong>${row.slot}</strong></td>
+      <td style="font-weight:500;color:var(--accent)">${row.planificat}</td>
+      <td style="text-align:center;font-family:'JetBrains Mono',monospace;color:var(--accent);font-weight:600">${lotOptim ? `${lotOptim} ${um}` : '—'}</td>
+      <td>${qtyInputHtml}</td>
+      <td>${vsHtml}</td>
+      <td>
+        <select class="monit-input" onchange="updateMonit('${row.key}','realizatProd',this.value)" style="width:100%">
+          ${prodSelectOptions(saved,'realizatProd')}
+        </select>
+        <div class="${ab.cls}" style="font-size:10px;margin-top:2px">${ab.text}</div>
+      </td>
+      ${motivTd(row.key, saved)}
+      <td><select class="monit-input" onchange="updateMonit('${row.key}','status',this.value)" style="width:100%">${statusOptions(saved)}</select></td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+function buildMonitBurduf(zi, dayLabel) {
+  document.getElementById('monitTitleBurduf').textContent = dayLabel;
+  const tbody = document.getElementById('tbodyMonitBurduf');
+  tbody.innerHTML = '';
+
+  const rows = [];
+  for (let r = 0; r < 3; r++) {
+    const prod = state.burduf[r][zi];
+    if (prod && prod !== '—') rows.push({ slot: `Rând ${r+1}`, planificat: prod, key: `burduf_${r}_${zi}` });
+  }
+
+  if (rows.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:16px;color:var(--ink-muted)">Niciun burduf planificat pentru această zi</td></tr>';
+    document.getElementById('monitSummaryBurduf').textContent = '';
+    return;
+  }
+  document.getElementById('monitSummaryBurduf').textContent = statusSummary(rows);
+
+  rows.forEach(row => {
+    const saved = state.monitorizare[row.key] || {};
+    const ab = abatereCell(row.planificat, saved.realizatProd);
+    // Burduf — lot optim din denumire (conține cantitatea, ex: "PDA 300G - 2000")
+    const match = row.planificat.match(/[-–]\s*(\d+)\s*$/);
+    const lotOptim = match ? parseInt(match[1]) : null;
+    const um = 'BUC';
+    const { qtyInputHtml, vsHtml } = qtyCell(row.key, lotOptim, um, saved);
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><strong>${row.slot}</strong></td>
+      <td style="font-weight:500;color:var(--warn)">${row.planificat}</td>
+      <td style="text-align:center;font-family:'JetBrains Mono',monospace;color:var(--warn);font-weight:600">${lotOptim ? `${lotOptim} ${um}` : '—'}</td>
+      <td>${qtyInputHtml}</td>
+      <td>${vsHtml}</td>
+      <td>
+        <select class="monit-input" onchange="updateMonit('${row.key}','realizatProd',this.value)" style="width:100%">
+          ${prodSelectOptions(saved,'realizatProd')}
+        </select>
+        <div class="${ab.cls}" style="font-size:10px;margin-top:2px">${ab.text}</div>
+      </td>
+      ${motivTd(row.key, saved)}
+      <td><select class="monit-input" onchange="updateMonit('${row.key}','status',this.value)" style="width:100%">${statusOptions(saved)}</select></td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+function buildMonitAmb(zi, dayLabel) {
+  document.getElementById('monitTitleAmb').textContent = dayLabel;
+  const tbody = document.getElementById('tbodyMonitAmb');
+  tbody.innerHTML = '';
+
+  const rows = [];
+  if (zi > 0) {
+    for (let p = 0; p < 8; p++) {
+      const prod = state.procesare[p][zi - 1];
+      if (prod && prod !== '—') {
+        const timpPlan = calcTimpAmbalare([prod]);
+        rows.push({ slot: `Slot ${p+1}`, planificat: prod, timpPlan, key: `amb_${p}_${zi}` });
+      }
+    }
+  }
+
+  if (rows.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:16px;color:var(--ink-muted)">' + (zi === 0 ? 'Luni nu are ambalare planificată (nu există ziua anterioară)' : 'Nicio ambalare planificată pentru această zi') + '</td></tr>';
+    document.getElementById('monitSummaryAmb').textContent = '';
+    return;
+  }
+  document.getElementById('monitSummaryAmb').textContent = statusSummary(rows);
+
+  rows.forEach(row => {
+    const saved = state.monitorizare[row.key] || {};
+    const ab = abatereCell(row.planificat, saved.realizatProd);
+    const timpReal = saved.timpReal || '';
+    const { lotOptim, um } = getLotOptimAmb(row.planificat);
+    const { qtyInputHtml, vsHtml } = qtyCell(row.key, lotOptim, um, saved);
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><strong>${row.slot}</strong></td>
+      <td style="font-weight:500;color:var(--info)">${row.planificat}</td>
+      <td style="text-align:center;font-family:'JetBrains Mono',monospace;color:var(--info);font-weight:600">${row.timpPlan > 0 ? row.timpPlan.toFixed(2) : '—'}</td>
+      <td style="text-align:center;font-family:'JetBrains Mono',monospace;color:var(--info);font-weight:600">${lotOptim ? `${lotOptim} ${um}` : '—'}</td>
+      <td>${qtyInputHtml}</td>
+      <td>${vsHtml}</td>
+      <td><input class="qty-input" type="number" step="0.25" min="0" placeholder="0.00"
+        value="${timpReal}"
+        oninput="updateMonit('${row.key}','timpReal',this.value)"
+        style="width:64px"> <span class="qty-um">h</span>
+      </td>
+      <td>
+        <select class="monit-input" onchange="updateMonit('${row.key}','realizatProd',this.value)" style="width:100%">
+          ${prodSelectOptions(saved,'realizatProd')}
+        </select>
+        <div class="${ab.cls}" style="font-size:10px;margin-top:2px">${ab.text}</div>
+      </td>
+      ${motivTd(row.key, saved)}
+      <td><select class="monit-input" onchange="updateMonit('${row.key}','status',this.value)" style="width:100%">${statusOptions(saved)}</select></td>`;
+    tbody.appendChild(tr);
+  });
+
+  // Total timp row
+  const totalPlan = rows.reduce((s,r) => s + r.timpPlan, 0);
+  const totalReal = rows.reduce((s,r) => {
+    const v = parseFloat((state.monitorizare[r.key]||{}).timpReal || 0);
+    return s + (isNaN(v) ? 0 : v);
+  }, 0);
+  const trTotal = document.createElement('tr');
+  trTotal.style.cssText = 'background:var(--info-pale);font-weight:700';
+  const diff = totalReal - totalPlan;
+  const diffStr = totalReal > 0
+    ? (Math.abs(diff) < 0.05 ? '✓ Exact' : diff > 0 ? `⚠ +${diff.toFixed(2)}h` : `✓ -${Math.abs(diff).toFixed(2)}h`)
+    : '';
+  const diffCls = Math.abs(diff) < 0.05 ? 'qty-ok' : diff > 0 ? 'qty-warn' : 'qty-ok';
+  trTotal.innerHTML = `
+    <td colspan="2" style="text-align:right;color:var(--info);padding:6px 10px">TOTAL TIMP:</td>
+    <td style="text-align:center;font-family:'JetBrains Mono',monospace;color:var(--info)">${totalPlan.toFixed(2)} h</td>
+    <td></td><td></td><td></td>
+    <td style="text-align:center;font-family:'JetBrains Mono',monospace;color:${totalReal > 0 ? 'var(--ink)' : 'var(--ink-muted)'}">
+      ${totalReal > 0 ? totalReal.toFixed(2) + ' h' : '—'}
+      ${totalReal > 0 ? `<div class="${diffCls}" style="font-size:10px">${diffStr}</div>` : ''}
+    </td>
+    <td colspan="3"></td>`;
+  tbody.appendChild(trTotal);
+}
+
+function buildMonitEtic(zi, dayLabel) {
+  document.getElementById('monitTitleEtic').textContent = dayLabel;
+  const tbody = document.getElementById('tbodyMonitEtic');
+  tbody.innerHTML = '';
+
+  const rows = [];
+  if (zi > 1) {
+    for (let p = 0; p < 8; p++) {
+      const prod = state.procesare[p][zi - 2];
+      if (prod && prod !== '—') rows.push({ slot: `Slot ${p+1}`, planificat: prod, key: `etic_proc_${p}_${zi}`, sursa: 'Ambalare' });
+    }
+  }
+  if (zi > 0) {
+    for (let r = 0; r < 3; r++) {
+      const prod = state.burduf[r][zi - 1];
+      if (prod && prod !== '—') rows.push({ slot: `Burduf R${r+1}`, planificat: prod, key: `etic_burduf_${r}_${zi}`, sursa: 'Burduf' });
+    }
+  }
+
+  if (rows.length === 0) {
+    const msg = zi < 2
+      ? 'Primele zile nu au etichetare planificată (nu există zile anterioare suficiente)'
+      : 'Nicio etichetare planificată pentru această zi';
+    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:16px;color:var(--ink-muted)">${msg}</td></tr>`;
+    document.getElementById('monitSummaryEtic').textContent = '';
+    return;
+  }
+  document.getElementById('monitSummaryEtic').textContent = statusSummary(rows);
+
+  rows.forEach(row => {
+    const saved = state.monitorizare[row.key] || {};
+    const ab = abatereCell(row.planificat, saved.realizatProd);
+    const isBurduf = row.sursa === 'Burduf';
+    // Lot optim etichetare = același cu procesare/ambalare (bucăți finite)
+    let lotOptim = null, um = '—';
+    if (isBurduf) {
+      const match = row.planificat.match(/[-–]\s*(\d+)\s*$/);
+      lotOptim = match ? parseInt(match[1]) : null;
+      um = 'BUC';
+    } else {
+      const info = getLotOptim(row.planificat);
+      lotOptim = info.lotOptim; um = info.um;
+    }
+    const { qtyInputHtml, vsHtml } = qtyCell(row.key, lotOptim, um, saved);
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>
+        <strong>${row.slot}</strong>
+        <span style="font-size:10px;padding:1px 5px;border-radius:8px;margin-left:4px;${isBurduf ? 'background:var(--warn-pale);color:var(--warn)' : 'background:var(--info-pale);color:var(--info)'}">${row.sursa}</span>
+      </td>
+      <td style="font-weight:500;color:${isBurduf ? 'var(--warn)' : '#8A6A1A'}">${row.planificat}</td>
+      <td style="text-align:center;font-family:'JetBrains Mono',monospace;font-weight:600;color:#8A6A1A">${lotOptim ? `${lotOptim} ${um}` : '—'}</td>
+      <td>${qtyInputHtml}</td>
+      <td>${vsHtml}</td>
+      <td>
+        <select class="monit-input" onchange="updateMonit('${row.key}','realizatProd',this.value)" style="width:100%">
+          ${prodSelectOptions(saved,'realizatProd')}
+        </select>
+        <div class="${ab.cls}" style="font-size:10px;margin-top:2px">${ab.text}</div>
+      </td>
+      ${motivTd(row.key, saved)}
+      <td><select class="monit-input" onchange="updateMonit('${row.key}','status',this.value)" style="width:100%">${statusOptions(saved)}</select></td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+function updateMonit(key, field, value) {
+  if (!state.monitorizare[key]) state.monitorizare[key] = {};
+  state.monitorizare[key][field] = value;
+  const zi = currentMonitDay;
+  const dates = getWeekDates(state.week, state.year);
+  const dayLabel = `${ZILE[zi]} ${formatDate(dates[zi])}`;
+  if (key.startsWith('proc_')) buildMonitProc(zi, dayLabel);
+  else if (key.startsWith('burduf_')) buildMonitBurduf(zi, dayLabel);
+  else if (key.startsWith('amb_')) buildMonitAmb(zi, dayLabel);
+  else if (key.startsWith('etic_')) buildMonitEtic(zi, dayLabel);
+}
+
+// Textarea nu re-renderează (ar pierde focusul/cursorul)
+function updateMonitText(key, field, value) {
+  if (!state.monitorizare[key]) state.monitorizare[key] = {};
+  state.monitorizare[key][field] = value;
+  // Nu reconstruim tabelul — doar salvăm în state
+}
+
+// ═══════════════════════════════════════════════════════════════
+// PRINT GENERATION
+// ═══════════════════════════════════════════════════════════════
+
+function generatePrint() {
+  const dates = getWeekDates(state.week, state.year);
+  const lots = getLots();
+  const amb = getAmbalareFromProcesare();
+  const eticFromAmb = getEtichetareFromAmbalare();
+  const eticFromBurduf = getBurdufEtichetareFromBurduf();
+  const combined = eticFromAmb.map((a,i) => [...a, ...eticFromBurduf[i]]);
+
+  let html = `
+    <div class="print-header-row">
+      <div>
+        <div class="print-title">Planificare Producție Săptămânală</div>
+        <div style="font-size:12px;color:var(--ink-soft);margin-top:4px">Ferma cu Omenie SRL &nbsp;·&nbsp; Săptămâna ${state.week} / ${state.year}</div>
+      </div>
+      <div class="print-meta">
+        <div>PO 19 F 08 · Ediția 1/Revizia 2</div>
+        <div>Data planificării: ${new Date().toLocaleDateString('ro-RO')}</div>
+        <div>Lot inițial: <strong>${state.firstLot}</strong></div>
+      </div>
+    </div>
+
+    <div class="print-section-label">Etapa 1 — Procesare Lapte</div>
+    <table class="print-table">
+      <thead>
+        <tr>
+          <th class="label-col" style="text-align:left;min-width:90px">Procesare</th>
+          ${ZILE.map((z,i)=>`<th>${z}<br><span style="font-weight:400;font-size:8px">${formatDate(dates[i])}</span></th>`).join('')}
+        </tr>
+        <tr>
+          <th class="label-col" style="text-align:left">Nr. Lot</th>
+          ${lots.map(l=>`<th class="lot-col">${l}</th>`).join('')}
+        </tr>
+      </thead>
+      <tbody>
+        ${PROCESARI.map((proc, pi) => `
+          <tr>
+            <td class="label-col">${proc}</td>
+            ${ZILE.map((_,zi) => `<td>${state.procesare[pi][zi] !== '—' ? state.procesare[pi][zi] : ''}</td>`).join('')}
+          </tr>`).join('')}
+      </tbody>
+    </table>
+
+    <div class="print-section-label">Burduf (→ direct Etichetare)</div>
+    <table class="print-table">
+      <thead><tr>
+        <th class="label-col" style="text-align:left">Burduf</th>
+        ${ZILE.map((z,i)=>`<th>${z}<br><span style="font-weight:400;font-size:8px">${formatDate(dates[i])}</span></th>`).join('')}
+      </tr></thead>
+      <tbody>
+        ${[0,1,2].map(ri=>`<tr><td class="label-col">Rând ${ri+1}</td>${ZILE.map((_,zi)=>`<td style="color:var(--warn)">${state.burduf[ri][zi]!=='—'?state.burduf[ri][zi]:''}</td>`).join('')}</tr>`).join('')}
+      </tbody>
+    </table>
+
+    <div class="print-section-label">Etapa 2 — Ambalare (automat +1 zi)</div>
+    <table class="print-table">
+      <thead><tr>
+        <th class="label-col" style="text-align:left">Produs</th>
+        ${ZILE.map((z,i)=>`<th>${z}<br><span style="font-weight:400;font-size:8px">${formatDate(dates[i])}</span></th>`).join('')}
+      </tr></thead>
+      <tbody>
+        ${Array(Math.max(...amb.map(a=>a.length),1)).fill(0).map((_,r)=>`
+          <tr>
+            <td class="label-col">${r===0?'Ambalare':''}</td>
+            ${ZILE.map((_,zi)=>`<td class="amb-col">${amb[zi][r]||''}</td>`).join('')}
+          </tr>`).join('')}
+        <tr class="timp-row">
+          <td class="label-col" style="font-weight:700;background:var(--info-pale);color:var(--info)">Timp (h)</td>
+          ${ZILE.map((_,zi)=>`<td style="background:var(--info-pale);color:var(--info);font-weight:700">${calcTimpAmbalare(amb[zi])>0?calcTimpAmbalare(amb[zi]).toFixed(2):''}</td>`).join('')}
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="print-section-label">Etapa 3 — Etichetare (automat +1 zi după Ambalare / Burduf)</div>
+    <table class="print-table">
+      <thead><tr>
+        <th class="label-col" style="text-align:left">Produs</th>
+        ${ZILE.map((z,i)=>`<th>${z}<br><span style="font-weight:400;font-size:8px">${formatDate(dates[i])}</span></th>`).join('')}
+      </tr></thead>
+      <tbody>
+        ${Array(Math.max(...combined.map(a=>a.length),1)).fill(0).map((_,r)=>`
+          <tr>
+            <td class="label-col">${r===0?'Etichetare':''}</td>
+            ${ZILE.map((_,zi)=>`<td class="etic-col" style="${combined[zi][r]?.includes('★')?'color:var(--warn)':''}">${(combined[zi][r]||'').replace(' ★','')}</td>`).join('')}
+          </tr>`).join('')}
+      </tbody>
+    </table>
+
+    <div class="print-section-label">Personal Planificat</div>
+    <table class="print-table">
+      <thead><tr>
+        <th class="label-col" style="text-align:left">Schimb</th>
+        ${ZILE.map((z,i)=>`<th>${z}<br><span style="font-weight:400;font-size:8px">${formatDate(dates[i])}</span></th>`).join('')}
+      </tr></thead>
+      <tbody>
+        ${['schimb1','schimb2','schimb3'].map((s,si)=>
+          [0,1,2].map(p=>`
+            <tr>
+              <td class="label-col">${p===0?`Schimb ${si+1}`:''} <span style="font-size:8px;color:#888">P${p+1}</span></td>
+              ${ZILE.map((_,zi)=>`<td>${state.personal[s][zi][p]!=='—'?state.personal[s][zi][p]:''}</td>`).join('')}
+            </tr>`).join('')).join('')}
+      </tbody>
+    </table>
+
+    <div class="print-semnatura">
+      <div class="sign-box"><div class="sign-line"></div>Responsabil producție</div>
+      <div class="sign-box"><div class="sign-line"></div>Director General</div>
+    </div>`;
+
+  document.getElementById('printArea').innerHTML = html;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// GOOGLE SHEETS INTEGRATION
+// ═══════════════════════════════════════════════════════════════
+
+function setSyncStatus(status, text) {
+  const dot = document.getElementById('syncDot');
+  const txtEl = document.getElementById('syncText');
+  dot.className = 'sync-dot' + (status === 'loading' ? ' loading' : status === 'error' ? ' error' : '');
+  txtEl.textContent = text;
+}
+
+async function saveToSheets() {
+  if (!config.sheetsUrl) { alert('Configurează URL-ul Google Sheets mai întâi (buton ⚙)'); return; }
+  setSyncStatus('loading', 'Se salvează...');
+
+  try {
+    // Build rows for Planificare sheet
+    const rows = [];
+    // Header row
+    rows.push(['week', 'year', 'firstLot', ...ZILE]);
+    rows.push([state.week, state.year, state.firstLot, ...Array(7).fill('')]);
+
+    // Procesare rows
+    PROCESARI.forEach((proc, pi) => {
+      rows.push([proc, '', '', ...state.procesare[pi]]);
+    });
+
+    // Burduf rows
+    [0,1,2].forEach(ri => {
+      rows.push([`Burduf ${ri+1}`, '', '', ...state.burduf[ri]]);
+    });
+
+    // Personal rows
+    ['schimb1','schimb2','schimb3'].forEach((s, si) => {
+      [0,1,2].forEach(p => {
+        rows.push([`Schimb${si+1}_P${p+1}`, '', '', ...state.personal[s].map(day => day[p])]);
+      });
+    });
+
+    const resp = await fetch(config.sheetsUrl, {
+      method: 'POST',
+      body: JSON.stringify({ sheet: 'Planificare', action: 'write', rows }),
+    });
+    const data = await resp.json();
+    if (data.status === 'ok') {
+      setSyncStatus('ok', `Salvat ${new Date().toLocaleTimeString('ro-RO')}`);
+    } else {
+      setSyncStatus('error', 'Eroare salvare');
+    }
+  } catch(e) {
+    setSyncStatus('error', 'Eroare conexiune');
+    console.error(e);
+  }
+}
+
+async function loadFromSheets() {
+  if (!config.sheetsUrl) { alert('Configurează URL-ul Google Sheets mai întâi (buton ⚙)'); return; }
+  setSyncStatus('loading', 'Se încarcă...');
+
+  try {
+    const resp = await fetch(config.sheetsUrl + '?sheet=Planificare');
+    const data = await resp.json();
+    if (!data.data || data.data.length < 2) {
+      setSyncStatus('error', 'Date goale');
+      return;
+    }
+
+    const rows = data.data;
+    // Row 1: week/year/firstLot
+    state.week = parseInt(rows[1][0]) || 27;
+    state.year = parseInt(rows[1][1]) || 2026;
+    state.firstLot = String(rows[1][2] || '27173');
+    document.getElementById('weekNr').value = state.week;
+    document.getElementById('year').value = state.year;
+    document.getElementById('firstLot').value = state.firstLot;
+
+    // Procesare rows (2-9)
+    for (let pi = 0; pi < 8; pi++) {
+      const row = rows[2 + pi];
+      if (row) state.procesare[pi] = ZILE.map((_, zi) => row[3 + zi] || '—');
+    }
+
+    // Burduf rows (10-12)
+    for (let ri = 0; ri < 3; ri++) {
+      const row = rows[10 + ri];
+      if (row) state.burduf[ri] = ZILE.map((_, zi) => row[3 + zi] || '—');
+    }
+
+    // Personal rows (13-21)
+    ['schimb1','schimb2','schimb3'].forEach((s, si) => {
+      [0,1,2].forEach(p => {
+        const row = rows[13 + si*3 + p];
+        if (row) {
+          ZILE.forEach((_, zi) => {
+            state.personal[s][zi][p] = row[3 + zi] || '—';
+          });
+        }
+      });
+    });
+
+    recalcDates();
+    setSyncStatus('ok', `Încărcat ${new Date().toLocaleTimeString('ro-RO')}`);
+  } catch(e) {
+    setSyncStatus('error', 'Eroare conexiune');
+    console.error(e);
+  }
+}
+
+async function saveMonitorizare() {
+  if (!config.sheetsUrl) { alert('Configurează URL-ul Google Sheets mai întâi'); return; }
+  setSyncStatus('loading', 'Se salvează monitorizare...');
+  try {
+    const rows = [['key', 'realizat', 'motiv', 'status']];
+    Object.entries(state.monitorizare).forEach(([key, val]) => {
+      rows.push([key, val.realizat||'', val.motiv||'', val.status||'']);
+    });
+    const resp = await fetch(config.sheetsUrl, {
+      method: 'POST',
+      body: JSON.stringify({ sheet: 'Monitorizare', action: 'write', rows }),
+    });
+    const data = await resp.json();
+    setSyncStatus(data.status === 'ok' ? 'ok' : 'error', data.status === 'ok' ? `Salvat ${new Date().toLocaleTimeString('ro-RO')}` : 'Eroare');
+  } catch(e) { setSyncStatus('error', 'Eroare'); }
+}
+
+async function loadMonitorizare() {
+  if (!config.sheetsUrl) { alert('Configurează URL-ul Google Sheets mai întâi'); return; }
+  setSyncStatus('loading', 'Se încarcă...');
+  try {
+    const resp = await fetch(config.sheetsUrl + '?sheet=Monitorizare');
+    const data = await resp.json();
+    if (!data.data) { setSyncStatus('error', 'Date goale'); return; }
+    state.monitorizare = {};
+    data.data.slice(1).forEach(row => {
+      if (row[0]) state.monitorizare[row[0]] = { realizat: row[1], motiv: row[2], status: row[3] };
+    });
+    buildMonitTable();
+    setSyncStatus('ok', `Încărcat ${new Date().toLocaleTimeString('ro-RO')}`);
+  } catch(e) { setSyncStatus('error', 'Eroare'); }
+}
+
+async function testConnection() {
+  if (!config.sheetsUrl) { alert('Introdu URL-ul mai întâi'); return; }
+  try {
+    const resp = await fetch(config.sheetsUrl + '?sheet=Planificare');
+    const data = await resp.json();
+    if (data.data !== undefined || data.error) {
+      alert('✅ Conexiune OK! Google Sheets răspunde corect.');
+    } else {
+      alert('⚠ Răspuns neașteptat. Verifică URL-ul și deployment-ul.');
+    }
+  } catch(e) {
+    alert('❌ Eroare conexiune. Verifică URL-ul Apps Script și că deployment-ul este public.');
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SETUP MODAL
+// ═══════════════════════════════════════════════════════════════
+
+function openSetup() {
+  document.getElementById('sheetsUrl').value = config.sheetsUrl;
+  document.getElementById('setupModal').classList.add('open');
+}
+function closeSetup() {
+  document.getElementById('setupModal').classList.remove('open');
+}
+function saveConfig() {
+  config.sheetsUrl = document.getElementById('sheetsUrl').value;
+  localStorage.setItem('sheetsUrl', config.sheetsUrl);
+  if (config.sheetsUrl) setSyncStatus('ok', 'Configurat');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// TAB NAVIGATION
+// ═══════════════════════════════════════════════════════════════
+
+function showTab(tab) {
+  document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+  document.getElementById(`tab-${tab}`).classList.add('active');
+  document.getElementById(`tabBtn-${tab}`).classList.add('active');
+  if (tab === 'print') generatePrint();
+  if (tab === 'monit') buildMonitDaySelector();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// REBUILD ALL
+// ═══════════════════════════════════════════════════════════════
+
+function rebuildAll() {
+  buildProcesareTable();
+  buildBurdufTable();
+  buildAmbalareTable();
+  buildEtichetareTable();
+  buildPersonalSection();
+  updateCentralizare();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════════════
+
+window.onload = function() {
+  // Set defaults for current week
+  const now = new Date();
+  const startOfYear = new Date(now.getFullYear(), 0, 1);
+  const weekNr = Math.ceil(((now - startOfYear) / 86400000 + startOfYear.getDay() + 1) / 7);
+  state.week = weekNr + 1;
+  state.year = now.getFullYear();
+
+  document.getElementById('weekNr').value = state.week;
+  document.getElementById('year').value = state.year;
+  document.getElementById('firstLot').value = state.firstLot;
+
+  if (config.sheetsUrl) setSyncStatus('ok', 'Configurat');
+
+  recalcDates();
+  buildMonitDaySelector();
+};
+</script>
+</body>
+</html>
