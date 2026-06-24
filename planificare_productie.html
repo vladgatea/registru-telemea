@@ -725,21 +725,47 @@
   <!-- Week Setup -->
   <div class="week-setup">
     <div>
-      <label>Săptămâna</label>
-      <input type="number" id="weekNr" min="1" max="53" value="" placeholder="27" style="width:70px" oninput="recalcDates()">
+      <label>Săptămâna activă</label>
+      <div style="display:flex;gap:6px;align-items:center">
+        <select id="weekSelector" onchange="switchWeek(this.value)" style="border:1px solid var(--border);border-radius:var(--radius);padding:6px 10px;font-family:'Inter',sans-serif;font-size:13px;background:var(--cream);outline:none;min-width:160px">
+          <option value="">— selectează —</option>
+        </select>
+        <button class="btn btn-secondary btn-sm" onclick="openNewWeekModal()" title="Săptămână nouă">＋ Săptămână nouă</button>
+      </div>
     </div>
     <div>
       <label>Primul Lot (Luni)</label>
-      <input type="text" id="firstLot" placeholder="27173" style="width:90px; font-family:'JetBrains Mono',monospace" oninput="recalcLots()">
-    </div>
-    <div>
-      <label>An</label>
-      <input type="number" id="year" value="2026" style="width:70px" oninput="recalcDates()">
+      <input type="text" id="firstLot" placeholder="27173" style="width:90px;font-family:'JetBrains Mono',monospace" oninput="recalcLots()">
     </div>
     <div class="week-days-display" id="weekDaysDisplay"></div>
-    <div style="margin-left:auto; display:flex; gap:8px; align-items:center">
-      <button class="btn btn-secondary btn-sm" onclick="loadFromSheets()">↓ Încarcă</button>
-      <button class="btn btn-primary btn-sm" onclick="saveToSheets()">↑ Salvează în Sheets</button>
+    <div style="margin-left:auto;display:flex;gap:8px;align-items:center">
+      <button class="btn btn-secondary btn-sm" onclick="loadWeekList()">↺ Istoric</button>
+      <button class="btn btn-secondary btn-sm" onclick="loadCurrentWeek()">↓ Încarcă</button>
+      <button class="btn btn-primary btn-sm" onclick="saveToSheets()">↑ Salvează</button>
+    </div>
+  </div>
+
+  <!-- New Week Modal -->
+  <div class="modal-overlay" id="newWeekModal">
+    <div class="modal" style="width:360px">
+      <h2>＋ Săptămână nouă</h2>
+      <div class="modal-sub">Creează o planificare pentru o nouă săptămână</div>
+      <div class="form-group">
+        <label>Număr săptămână</label>
+        <input type="number" id="newWeekNr" min="1" max="53" style="width:100%">
+      </div>
+      <div class="form-group">
+        <label>An</label>
+        <input type="number" id="newWeekYear" value="2026" style="width:100%">
+      </div>
+      <div class="form-group">
+        <label>Primul Lot (Luni)</label>
+        <input type="text" id="newWeekLot" placeholder="ex: 30001" style="width:100%;font-family:'JetBrains Mono',monospace">
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" onclick="closeNewWeekModal()">Anulează</button>
+        <button class="btn btn-primary" onclick="createNewWeek()">Creează</button>
+      </div>
     </div>
   </div>
 
@@ -863,7 +889,7 @@
   <div class="section-header">
     <div class="section-title">Monitorizare Zilnică — Realizat vs Planificat</div>
     <div style="display:flex; gap:8px; align-items:center">
-      <button class="btn btn-secondary btn-sm" onclick="loadMonitorizare()">↓ Încarcă realizat</button>
+      <button class="btn btn-secondary btn-sm" onclick="loadCurrentMonit()">↓ Încarcă realizat</button>
       <button class="btn btn-primary btn-sm" onclick="saveMonitorizare()">↑ Salvează realizat</button>
     </div>
   </div>
@@ -1014,7 +1040,7 @@
     <div style="margin-bottom:16px;">
       <div style="font-size:12px; font-weight:600; color:var(--ink-soft); margin-bottom:8px;">Pași configurare Google Sheets:</div>
       <ol class="step-list">
-        <li>Creează un Google Sheet nou și adaugă 4 foi: <code>Planificare</code>, <code>Monitorizare</code>, <code>Ambalare_Ref</code>, <code>Procesare_Ref</code></li>
+        <li>Creează un Google Sheet nou și adaugă foile: <code>Istoric</code>, <code>Ambalare_Ref</code>, <code>Procesare_Ref</code>. Foile <code>S26_2026</code>, <code>M26_2026</code> etc. se creează automat la prima salvare.</li>
         <li>În foaia <code>Procesare_Ref</code> copiază datele din sheet-ul PROCESARE din Excel (coloanele: DENUMIRE, Lot OPTIM, BUC OPTIM, LAPTE VACA, LAPTE CAPRA, LAPTE OAIE, LAPTE DEG)</li>
         <li>În foaia <code>Ambalare_Ref</code> copiază datele din sheet-ul Ambalare (coloanele: DENUMIRE, Lot OPTIM UM, Timp necesar)</li>
         <li>Deschide <code>Extensions → Apps Script</code> și copiază codul de mai jos</li>
@@ -1030,9 +1056,13 @@
 function doPost(e) {
   const data = JSON.parse(e.postData.contents);
   const ss = SpreadsheetApp.openById(SHEET_ID);
-  const sheet = ss.getSheetByName(data.sheet);
+  let sheet = ss.getSheetByName(data.sheet);
   
   if (data.action === 'write') {
+    // Creează sheet-ul dacă nu există
+    if (!sheet) {
+      sheet = ss.insertSheet(data.sheet);
+    }
     const rows = data.rows;
     sheet.clearContents();
     if (rows.length > 0) {
@@ -1050,7 +1080,8 @@ function doGet(e) {
   const sheetName = e.parameter.sheet;
   const sheet = ss.getSheetByName(sheetName);
   if (!sheet) {
-    return ContentService.createTextOutput(JSON.stringify({error:'Sheet not found'}))
+    // Returnează structură goală, nu eroare
+    return ContentService.createTextOutput(JSON.stringify({data:[]}))
       .setMimeType(ContentService.MimeType.JSON);
   }
   const data = sheet.getDataRange().getValues();
@@ -1238,15 +1269,14 @@ function calcTimpAmbalare(produse) {
 // ═══════════════════════════════════════════════════════════════
 
 function recalcDates() {
-  state.week = parseInt(document.getElementById('weekNr').value) || 27;
-  state.year = parseInt(document.getElementById('year').value) || 2026;
   const dates = getWeekDates(state.week, state.year);
   const display = document.getElementById('weekDaysDisplay');
   display.innerHTML = '';
   dates.forEach((d, i) => {
     const chip = document.createElement('div');
     chip.className = 'day-chip';
-    chip.textContent = `${ZILE[i].substring(0,3)} ${formatDate(d)}`;
+    chip.innerHTML = `<strong>S${state.week}/${state.year}</strong>&nbsp; ${ZILE[i].substring(0,3)} ${formatDate(d)}`;
+    if (i === 0) chip.style.background = 'var(--accent-pale)';
     display.appendChild(chip);
   });
   rebuildAll();
@@ -1639,7 +1669,8 @@ function buildMonitProc(zi, dayLabel) {
   rows.forEach(row => {
     const saved = state.monitorizare[row.key] || {};
     const ab = abatereCell(row.planificat, saved.realizat);
-    const { lotOptim, um } = getLotOptim(row.planificat);
+    const refProd = (saved.realizat && saved.realizat !== '—') ? saved.realizat : row.planificat;
+    const { lotOptim, um } = getLotOptim(refProd);
     const { lotDisplay, qtyTd, badge } = renderQtyCols(row.key, lotOptim, um, saved);
     const tr = document.createElement('tr');
     tr.innerHTML = `
@@ -1673,8 +1704,10 @@ function buildMonitBurduf(zi, dayLabel) {
   rows.forEach(row => {
     const saved = state.monitorizare[row.key] || {};
     const ab = abatereCell(row.planificat, saved.realizat);
-    const match = row.planificat.match(/[-–]\s*(\d+)\s*$/);
-    const lotOptim = match ? parseInt(match[1]) : null;
+    // Lot optim din realizat (dacă e selectat), altfel din planificat
+    const refProdB = (saved.realizat && saved.realizat !== '—') ? saved.realizat : row.planificat;
+    const matchRef = refProdB.match(/[-–]\s*(\d+)\s*$/);
+    const lotOptim = matchRef ? parseInt(matchRef[1]) : null;
     const um = 'BUC';
     const { lotDisplay, qtyTd, badge } = renderQtyCols(row.key, lotOptim, um, saved);
     const tr = document.createElement('tr');
@@ -1712,7 +1745,8 @@ function buildMonitAmb(zi, dayLabel) {
   rows.forEach(row => {
     const saved = state.monitorizare[row.key] || {};
     const ab = abatereCell(row.planificat, saved.realizat);
-    const { lotOptim, um } = getLotOptim(row.planificat);
+    const refProdA = (saved.realizat && saved.realizat !== '—') ? saved.realizat : row.planificat;
+    const { lotOptim, um } = getLotOptim(refProdA);
     const { lotDisplay, qtyTd, badge } = renderQtyCols(row.key, lotOptim, um, saved);
     const timpReal = saved.timpReal || '';
     const tr = document.createElement('tr');
@@ -1771,12 +1805,13 @@ function buildMonitEtic(zi, dayLabel) {
     const saved = state.monitorizare[row.key] || {};
     const ab = abatereCell(row.planificat, saved.realizat);
     const isBurduf = row.sursa === 'Burduf';
+    const refProdE = (saved.realizat && saved.realizat !== '—') ? saved.realizat : row.planificat;
     let lotOptim = null, um = '';
     if (isBurduf) {
-      const match = row.planificat.match(/[-–]\s*(\d+)\s*$/);
+      const match = refProdE.match(/[-–]\s*(\d+)\s*$/);
       lotOptim = match ? parseInt(match[1]) : null; um = 'BUC';
     } else {
-      const info = getLotOptim(row.planificat); lotOptim = info.lotOptim; um = info.um;
+      const info = getLotOptim(refProdE); lotOptim = info.lotOptim; um = info.um;
     }
     const { lotDisplay, qtyTd, badge } = renderQtyCols(row.key, lotOptim, um, saved);
     const tr = document.createElement('tr');
@@ -1941,140 +1976,285 @@ function setSyncStatus(status, text) {
   txtEl.textContent = text;
 }
 
-async function saveToSheets() {
-  if (!config.sheetsUrl) { alert('Configurează URL-ul Google Sheets mai întâi (buton ⚙)'); return; }
-  setSyncStatus('loading', 'Se salvează...');
+// ═══════════════════════════════════════════════════════════════
+// GOOGLE SHEETS INTEGRATION — cu istoric per săptămână
+// ═══════════════════════════════════════════════════════════════
 
+function setSyncStatus(status, text) {
+  const dot = document.getElementById('syncDot');
+  const txtEl = document.getElementById('syncText');
+  dot.className = 'sync-dot' + (status === 'loading' ? ' loading' : status === 'error' ? ' error' : '');
+  txtEl.textContent = text;
+}
+
+// Cheia sheet-ului pentru săptămâna curentă: ex. "S26_2026", "M26_2026"
+function planifSheetKey() { return `S${state.week}_${state.year}`; }
+function monitSheetKey()  { return `M${state.week}_${state.year}`; }
+function indexSheetKey()  { return 'Istoric'; }
+
+// ── SELECTOR SĂPTĂMÂNI ──────────────────────────────────────────
+
+async function loadWeekList() {
+  if (!config.sheetsUrl) { alert('Configurează URL-ul Google Sheets mai întâi (⚙)'); return; }
+  setSyncStatus('loading', 'Se încarcă istoricul...');
   try {
-    // Build rows for Planificare sheet
-    const rows = [];
-    // Header row
-    rows.push(['week', 'year', 'firstLot', ...ZILE]);
-    rows.push([state.week, state.year, state.firstLot, ...Array(7).fill('')]);
-
-    // Procesare rows
-    PROCESARI.forEach((proc, pi) => {
-      rows.push([proc, '', '', ...state.procesare[pi]]);
-    });
-
-    // Burduf rows
-    [0,1,2].forEach(ri => {
-      rows.push([`Burduf ${ri+1}`, '', '', ...state.burduf[ri]]);
-    });
-
-    // Personal rows
-    ['schimb1','schimb2','schimb3'].forEach((s, si) => {
-      [0,1,2].forEach(p => {
-        rows.push([`Schimb${si+1}_P${p+1}`, '', '', ...state.personal[s].map(day => day[p])]);
-      });
-    });
-
-    const resp = await fetch(config.sheetsUrl, {
-      method: 'POST',
-      body: JSON.stringify({ sheet: 'Planificare', action: 'write', rows }),
-    });
+    const resp = await fetch(config.sheetsUrl + '?sheet=' + indexSheetKey());
     const data = await resp.json();
-    if (data.status === 'ok') {
-      setSyncStatus('ok', `Salvat ${new Date().toLocaleTimeString('ro-RO')}`);
-    } else {
-      setSyncStatus('error', 'Eroare salvare');
+    const sel = document.getElementById('weekSelector');
+    const currentVal = sel.value;
+    // Clear old options except placeholder
+    sel.innerHTML = '<option value="">— selectează —</option>';
+    if (data.data && data.data.length > 1) {
+      data.data.slice(1).forEach(row => {
+        if (!row[0]) return;
+        const key = row[0]; // ex: "S26_2026"
+        const label = row[1] || key; // ex: "S26 / 2026 (24.06–30.06)"
+        const opt = document.createElement('option');
+        opt.value = key; opt.textContent = label;
+        if (key === currentVal) opt.selected = true;
+        sel.appendChild(opt);
+      });
     }
+    setSyncStatus('ok', `Istoric: ${sel.options.length - 1} săptămâni`);
   } catch(e) {
-    setSyncStatus('error', 'Eroare conexiune');
+    setSyncStatus('error', 'Eroare încărcare istoric');
     console.error(e);
   }
 }
 
-async function loadFromSheets() {
-  if (!config.sheetsUrl) { alert('Configurează URL-ul Google Sheets mai întâi (buton ⚙)'); return; }
-  setSyncStatus('loading', 'Se încarcă...');
-
+async function switchWeek(sheetKey) {
+  if (!sheetKey) return;
+  if (!config.sheetsUrl) { alert('Configurează URL-ul Google Sheets mai întâi (⚙)'); return; }
+  setSyncStatus('loading', 'Se încarcă săptămâna...');
   try {
-    const resp = await fetch(config.sheetsUrl + '?sheet=Planificare');
+    const resp = await fetch(config.sheetsUrl + '?sheet=' + encodeURIComponent(sheetKey));
     const data = await resp.json();
     if (!data.data || data.data.length < 2) {
-      setSyncStatus('error', 'Date goale');
+      setSyncStatus('error', 'Date goale pentru această săptămână');
       return;
     }
-
-    const rows = data.data;
-    // Row 1: week/year/firstLot
-    state.week = parseInt(rows[1][0]) || 27;
-    state.year = parseInt(rows[1][1]) || 2026;
-    state.firstLot = String(rows[1][2] || '27173');
-    document.getElementById('weekNr').value = state.week;
-    document.getElementById('year').value = state.year;
-    document.getElementById('firstLot').value = state.firstLot;
-
-    // Procesare rows (2-9)
-    for (let pi = 0; pi < 8; pi++) {
-      const row = rows[2 + pi];
-      if (row) state.procesare[pi] = ZILE.map((_, zi) => row[3 + zi] || '—');
-    }
-
-    // Burduf rows (10-12)
-    for (let ri = 0; ri < 3; ri++) {
-      const row = rows[10 + ri];
-      if (row) state.burduf[ri] = ZILE.map((_, zi) => row[3 + zi] || '—');
-    }
-
-    // Personal rows (13-21)
-    ['schimb1','schimb2','schimb3'].forEach((s, si) => {
-      [0,1,2].forEach(p => {
-        const row = rows[13 + si*3 + p];
-        if (row) {
-          ZILE.forEach((_, zi) => {
-            state.personal[s][zi][p] = row[3 + zi] || '—';
-          });
-        }
-      });
-    });
-
+    parseSheetRows(data.data);
+    // Load monitorizare for this week
+    await loadMonitForSheet(sheetKey.replace('S', 'M'));
     recalcDates();
-    setSyncStatus('ok', `Încărcat ${new Date().toLocaleTimeString('ro-RO')}`);
+    setSyncStatus('ok', `Încărcat ${sheetKey}`);
   } catch(e) {
     setSyncStatus('error', 'Eroare conexiune');
     console.error(e);
   }
 }
+
+async function loadCurrentWeek() {
+  if (!config.sheetsUrl) { alert('Configurează URL-ul Google Sheets mai întâi (⚙)'); return; }
+  setSyncStatus('loading', 'Se încarcă...');
+  try {
+    const resp = await fetch(config.sheetsUrl + '?sheet=' + encodeURIComponent(planifSheetKey()));
+    const data = await resp.json();
+    if (!data.data || data.data.length < 2) {
+      setSyncStatus('error', 'Nu există date pentru S' + state.week + '_' + state.year);
+      return;
+    }
+    parseSheetRows(data.data);
+    await loadMonitForSheet(monitSheetKey());
+    recalcDates();
+    setSyncStatus('ok', `Încărcat S${state.week}_${state.year}`);
+  } catch(e) {
+    setSyncStatus('error', 'Eroare conexiune');
+    console.error(e);
+  }
+}
+
+function parseSheetRows(rows) {
+  state.week = parseInt(rows[1][0]) || state.week;
+  state.year = parseInt(rows[1][1]) || state.year;
+  state.firstLot = String(rows[1][2] || state.firstLot);
+  document.getElementById('firstLot').value = state.firstLot;
+
+  for (let pi = 0; pi < 8; pi++) {
+    const row = rows[2 + pi];
+    if (row) state.procesare[pi] = ZILE.map((_, zi) => row[3 + zi] || '—');
+  }
+  for (let ri = 0; ri < 3; ri++) {
+    const row = rows[10 + ri];
+    if (row) state.burduf[ri] = ZILE.map((_, zi) => row[3 + zi] || '—');
+  }
+  ['schimb1','schimb2','schimb3'].forEach((s, si) => {
+    [0,1,2].forEach(p => {
+      const row = rows[13 + si*3 + p];
+      if (row) ZILE.forEach((_, zi) => { state.personal[s][zi][p] = row[3 + zi] || '—'; });
+    });
+  });
+  // Sync selector
+  const sel = document.getElementById('weekSelector');
+  const key = planifSheetKey();
+  for (let i = 0; i < sel.options.length; i++) {
+    if (sel.options[i].value === key) { sel.selectedIndex = i; break; }
+  }
+}
+
+// ── SALVARE ─────────────────────────────────────────────────────
+
+async function saveToSheets() {
+  if (!config.sheetsUrl) { alert('Configurează URL-ul Google Sheets mai întâi (⚙)'); return; }
+  setSyncStatus('loading', 'Se salvează...');
+  try {
+    const rows = buildPlanifRows();
+    const sheetKey = planifSheetKey();
+    const resp = await fetch(config.sheetsUrl, {
+      method: 'POST',
+      body: JSON.stringify({ sheet: sheetKey, action: 'write', rows }),
+    });
+    const data = await resp.json();
+    if (data.status !== 'ok') { setSyncStatus('error', 'Eroare salvare'); return; }
+
+    // Update Istoric index
+    await updateIstoricIndex(sheetKey);
+
+    // Save monitorizare
+    await saveMonitToSheet(monitSheetKey());
+
+    setSyncStatus('ok', `Salvat S${state.week}_${state.year} · ${new Date().toLocaleTimeString('ro-RO')}`);
+    // Refresh week list to show new entry
+    await loadWeekList();
+    // Keep selector on current week
+    const sel = document.getElementById('weekSelector');
+    for (let i = 0; i < sel.options.length; i++) {
+      if (sel.options[i].value === sheetKey) { sel.selectedIndex = i; break; }
+    }
+  } catch(e) {
+    setSyncStatus('error', 'Eroare conexiune');
+    console.error(e);
+  }
+}
+
+function buildPlanifRows() {
+  const rows = [];
+  rows.push(['week', 'year', 'firstLot', ...ZILE]);
+  rows.push([state.week, state.year, state.firstLot, ...Array(7).fill('')]);
+  PROCESARI.forEach((proc, pi) => { rows.push([proc, '', '', ...state.procesare[pi]]); });
+  [0,1,2].forEach(ri => { rows.push([`Burduf ${ri+1}`, '', '', ...state.burduf[ri]]); });
+  ['schimb1','schimb2','schimb3'].forEach((s, si) => {
+    [0,1,2].forEach(p => { rows.push([`Schimb${si+1}_P${p+1}`, '', '', ...state.personal[s].map(day => day[p])]); });
+  });
+  return rows;
+}
+
+async function updateIstoricIndex(sheetKey) {
+  // Read existing index
+  let existingRows = [['key','label','savedAt']];
+  try {
+    const r = await fetch(config.sheetsUrl + '?sheet=' + indexSheetKey());
+    const d = await r.json();
+    if (d.data && d.data.length > 0) existingRows = d.data;
+  } catch(e) {}
+
+  // Build label: "S26 / 2026 · 24.06–30.06"
+  const dates = getWeekDates(state.week, state.year);
+  const label = `S${state.week} / ${state.year} · ${formatDate(dates[0])}–${formatDate(dates[6])}`;
+  const now = new Date().toLocaleString('ro-RO');
+
+  // Check if key already exists → update, else append
+  const idx = existingRows.findIndex(r => r[0] === sheetKey);
+  if (idx >= 1) {
+    existingRows[idx] = [sheetKey, label, now];
+  } else {
+    existingRows.push([sheetKey, label, now]);
+  }
+
+  await fetch(config.sheetsUrl, {
+    method: 'POST',
+    body: JSON.stringify({ sheet: indexSheetKey(), action: 'write', rows: existingRows }),
+  });
+}
+
+// ── MONITORIZARE ─────────────────────────────────────────────────
 
 async function saveMonitorizare() {
   if (!config.sheetsUrl) { alert('Configurează URL-ul Google Sheets mai întâi'); return; }
   setSyncStatus('loading', 'Se salvează monitorizare...');
-  try {
-    const rows = [['key', 'realizat', 'motiv', 'status']];
-    Object.entries(state.monitorizare).forEach(([key, val]) => {
-      rows.push([key, val.realizat||'', val.motiv||'', val.status||'']);
-    });
-    const resp = await fetch(config.sheetsUrl, {
-      method: 'POST',
-      body: JSON.stringify({ sheet: 'Monitorizare', action: 'write', rows }),
-    });
-    const data = await resp.json();
-    setSyncStatus(data.status === 'ok' ? 'ok' : 'error', data.status === 'ok' ? `Salvat ${new Date().toLocaleTimeString('ro-RO')}` : 'Eroare');
-  } catch(e) { setSyncStatus('error', 'Eroare'); }
+  await saveMonitToSheet(monitSheetKey());
+  setSyncStatus('ok', `Realizat salvat · ${new Date().toLocaleTimeString('ro-RO')}`);
 }
 
-async function loadMonitorizare() {
+async function saveMonitToSheet(sheetKey) {
+  const rows = [['key','realizat','cantitate','timpReal','motiv','status']];
+  Object.entries(state.monitorizare).forEach(([key, val]) => {
+    rows.push([key, val.realizat||'', val.cantitate||'', val.timpReal||'', val.motiv||'', val.status||'']);
+  });
+  await fetch(config.sheetsUrl, {
+    method: 'POST',
+    body: JSON.stringify({ sheet: sheetKey, action: 'write', rows }),
+  });
+}
+
+async function loadCurrentMonit() {
   if (!config.sheetsUrl) { alert('Configurează URL-ul Google Sheets mai întâi'); return; }
   setSyncStatus('loading', 'Se încarcă...');
+  await loadMonitForSheet(monitSheetKey());
+  setSyncStatus('ok', `Realizat încărcat · ${new Date().toLocaleTimeString('ro-RO')}`);
+}
+
+async function loadMonitForSheet(sheetKey) {
   try {
-    const resp = await fetch(config.sheetsUrl + '?sheet=Monitorizare');
+    const resp = await fetch(config.sheetsUrl + '?sheet=' + encodeURIComponent(sheetKey));
     const data = await resp.json();
-    if (!data.data) { setSyncStatus('error', 'Date goale'); return; }
+    if (!data.data || data.data.length < 2) { state.monitorizare = {}; buildMonitTable(); return; }
     state.monitorizare = {};
     data.data.slice(1).forEach(row => {
-      if (row[0]) state.monitorizare[row[0]] = { realizat: row[1], motiv: row[2], status: row[3] };
+      if (row[0]) state.monitorizare[row[0]] = {
+        realizat: row[1]||'', cantitate: row[2]||'', timpReal: row[3]||'', motiv: row[4]||'', status: row[5]||''
+      };
     });
     buildMonitTable();
-    setSyncStatus('ok', `Încărcat ${new Date().toLocaleTimeString('ro-RO')}`);
-  } catch(e) { setSyncStatus('error', 'Eroare'); }
+  } catch(e) { state.monitorizare = {}; buildMonitTable(); }
+}
+
+// ── NEW WEEK MODAL ───────────────────────────────────────────────
+
+function openNewWeekModal() {
+  // Pre-fill with next week
+  const now = new Date();
+  const startOfYear = new Date(now.getFullYear(), 0, 1);
+  const currentWeek = Math.ceil(((now - startOfYear) / 86400000 + startOfYear.getDay() + 1) / 7);
+  document.getElementById('newWeekNr').value = state.week ? state.week + 1 : currentWeek + 1;
+  document.getElementById('newWeekYear').value = state.year || now.getFullYear();
+  document.getElementById('newWeekLot').value = state.firstLot || '';
+  document.getElementById('newWeekModal').classList.add('open');
+}
+
+function closeNewWeekModal() {
+  document.getElementById('newWeekModal').classList.remove('open');
+}
+
+function createNewWeek() {
+  const w = parseInt(document.getElementById('newWeekNr').value);
+  const y = parseInt(document.getElementById('newWeekYear').value);
+  const lot = document.getElementById('newWeekLot').value.trim();
+  if (!w || !y) { alert('Completează săptămâna și anul'); return; }
+
+  // Reset state to blank week
+  state.week = w;
+  state.year = y;
+  state.firstLot = lot || String(w * 100 + 1);
+  state.procesare = Array(8).fill(null).map(() => Array(7).fill('—'));
+  state.burduf = Array(3).fill(null).map(() => Array(7).fill('—'));
+  state.personal = {
+    schimb1: Array(7).fill(null).map(() => ['—','—','—']),
+    schimb2: Array(7).fill(null).map(() => ['—','—','—']),
+    schimb3: Array(7).fill(null).map(() => ['—','—','—']),
+  };
+  state.monitorizare = {};
+
+  document.getElementById('firstLot').value = state.firstLot;
+  closeNewWeekModal();
+  recalcDates();
+  setSyncStatus('ok', `Săptămână nouă S${w}_${y} — nesalvată`);
 }
 
 async function testConnection() {
   if (!config.sheetsUrl) { alert('Introdu URL-ul mai întâi'); return; }
   try {
-    const resp = await fetch(config.sheetsUrl + '?sheet=Planificare');
+    const resp = await fetch(config.sheetsUrl + '?sheet=' + indexSheetKey());
     const data = await resp.json();
     if (data.data !== undefined || data.error) {
       alert('✅ Conexiune OK! Google Sheets răspunde corect.');
@@ -2082,7 +2262,7 @@ async function testConnection() {
       alert('⚠ Răspuns neașteptat. Verifică URL-ul și deployment-ul.');
     }
   } catch(e) {
-    alert('❌ Eroare conexiune. Verifică URL-ul Apps Script și că deployment-ul este public.');
+    alert('❌ Eroare conexiune. Verifică URL-ul Apps Script.');
   }
 }
 
@@ -2134,18 +2314,17 @@ function rebuildAll() {
 // ═══════════════════════════════════════════════════════════════
 
 window.onload = function() {
-  // Set defaults for current week
   const now = new Date();
   const startOfYear = new Date(now.getFullYear(), 0, 1);
   const weekNr = Math.ceil(((now - startOfYear) / 86400000 + startOfYear.getDay() + 1) / 7);
   state.week = weekNr + 1;
   state.year = now.getFullYear();
-
-  document.getElementById('weekNr').value = state.week;
-  document.getElementById('year').value = state.year;
   document.getElementById('firstLot').value = state.firstLot;
 
-  if (config.sheetsUrl) setSyncStatus('ok', 'Configurat');
+  if (config.sheetsUrl) {
+    setSyncStatus('ok', 'Configurat');
+    loadWeekList(); // auto-load week list on start
+  }
 
   recalcDates();
   buildMonitDaySelector();
