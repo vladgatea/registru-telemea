@@ -1053,39 +1053,29 @@
       <div style="font-size:11px; font-weight:600; color:var(--ink-soft); margin-bottom:6px;">📋 Cod Apps Script (copiază în Extensions → Apps Script):</div>
       <pre style="font-size:10px; font-family:'JetBrains Mono',monospace; color:var(--ink-soft); overflow-x:auto; line-height:1.6; white-space:pre-wrap">const SHEET_ID = SpreadsheetApp.getActiveSpreadsheet().getId();
 
-function doPost(e) {
-  const data = JSON.parse(e.postData.contents);
-  const ss = SpreadsheetApp.openById(SHEET_ID);
-  let sheet = ss.getSheetByName(data.sheet);
-  
-  if (data.action === 'write') {
-    // Creează sheet-ul dacă nu există
-    if (!sheet) {
-      sheet = ss.insertSheet(data.sheet);
-    }
-    const rows = data.rows;
-    sheet.clearContents();
-    if (rows.length > 0) {
-      sheet.getRange(1, 1, rows.length, rows[0].length).setValues(rows);
-    }
-    return ContentService.createTextOutput(JSON.stringify({status:'ok'}))
-      .setMimeType(ContentService.MimeType.JSON);
-  }
-  return ContentService.createTextOutput(JSON.stringify({status:'error'}))
-    .setMimeType(ContentService.MimeType.JSON);
-}
-
 function doGet(e) {
   const ss = SpreadsheetApp.openById(SHEET_ID);
   const sheetName = e.parameter.sheet;
   const sheet = ss.getSheetByName(sheetName);
   if (!sheet) {
-    // Returnează structură goală, nu eroare
     return ContentService.createTextOutput(JSON.stringify({data:[]}))
       .setMimeType(ContentService.MimeType.JSON);
   }
   const data = sheet.getDataRange().getValues();
   return ContentService.createTextOutput(JSON.stringify({data: data}))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+function doPost(e) {
+  const ss = SpreadsheetApp.openById(SHEET_ID);
+  const data = JSON.parse(e.postData.contents);
+  let sheet = ss.getSheetByName(data.sheet);
+  if (!sheet) sheet = ss.insertSheet(data.sheet);
+  sheet.clearContents();
+  if (data.rows && data.rows.length > 0) {
+    sheet.getRange(1, 1, data.rows.length, data.rows[0].length).setValues(data.rows);
+  }
+  return ContentService.createTextOutput(JSON.stringify({status:'ok'}))
     .setMimeType(ContentService.MimeType.JSON);
 }</pre>
     </div>
@@ -1998,20 +1988,16 @@ async function loadWeekList() {
   if (!config.sheetsUrl) { alert('Configurează URL-ul Google Sheets mai întâi (⚙)'); return; }
   setSyncStatus('loading', 'Se încarcă istoricul...');
   try {
-    const resp = await fetch(config.sheetsUrl + '?sheet=' + indexSheetKey());
-    const data = await resp.json();
+    const data = await sheetsRead(indexSheetKey());
     const sel = document.getElementById('weekSelector');
     const currentVal = sel.value;
-    // Clear old options except placeholder
     sel.innerHTML = '<option value="">— selectează —</option>';
     if (data.data && data.data.length > 1) {
       data.data.slice(1).forEach(row => {
         if (!row[0]) return;
-        const key = row[0]; // ex: "S26_2026"
-        const label = row[1] || key; // ex: "S26 / 2026 (24.06–30.06)"
         const opt = document.createElement('option');
-        opt.value = key; opt.textContent = label;
-        if (key === currentVal) opt.selected = true;
+        opt.value = row[0]; opt.textContent = row[1] || row[0];
+        if (row[0] === currentVal) opt.selected = true;
         sel.appendChild(opt);
       });
     }
@@ -2027,20 +2013,16 @@ async function switchWeek(sheetKey) {
   if (!config.sheetsUrl) { alert('Configurează URL-ul Google Sheets mai întâi (⚙)'); return; }
   setSyncStatus('loading', 'Se încarcă săptămâna...');
   try {
-    const resp = await fetch(config.sheetsUrl + '?sheet=' + encodeURIComponent(sheetKey));
-    const data = await resp.json();
+    const data = await sheetsRead(sheetKey);
     if (!data.data || data.data.length < 2) {
-      setSyncStatus('error', 'Date goale pentru această săptămână');
-      return;
+      setSyncStatus('error', 'Date goale pentru această săptămână'); return;
     }
     parseSheetRows(data.data);
-    // Load monitorizare for this week
-    await loadMonitForSheet(sheetKey.replace('S', 'M'));
+    await loadMonitForSheet(sheetKey.replace(/^S/, 'M'));
     recalcDates();
     setSyncStatus('ok', `Încărcat ${sheetKey}`);
   } catch(e) {
-    setSyncStatus('error', 'Eroare conexiune');
-    console.error(e);
+    setSyncStatus('error', 'Eroare conexiune'); console.error(e);
   }
 }
 
@@ -2048,19 +2030,16 @@ async function loadCurrentWeek() {
   if (!config.sheetsUrl) { alert('Configurează URL-ul Google Sheets mai întâi (⚙)'); return; }
   setSyncStatus('loading', 'Se încarcă...');
   try {
-    const resp = await fetch(config.sheetsUrl + '?sheet=' + encodeURIComponent(planifSheetKey()));
-    const data = await resp.json();
+    const data = await sheetsRead(planifSheetKey());
     if (!data.data || data.data.length < 2) {
-      setSyncStatus('error', 'Nu există date pentru S' + state.week + '_' + state.year);
-      return;
+      setSyncStatus('error', 'Nu există date pentru S' + state.week + '_' + state.year); return;
     }
     parseSheetRows(data.data);
     await loadMonitForSheet(monitSheetKey());
     recalcDates();
     setSyncStatus('ok', `Încărcat S${state.week}_${state.year}`);
   } catch(e) {
-    setSyncStatus('error', 'Eroare conexiune');
-    console.error(e);
+    setSyncStatus('error', 'Eroare conexiune'); console.error(e);
   }
 }
 
@@ -2094,29 +2073,43 @@ function parseSheetRows(rows) {
 
 // ── SALVARE ─────────────────────────────────────────────────────
 
+// Scriere prin POST (Apps Script acceptă POST, CORS e ok cu redirect follow)
+async function sheetsWrite(sheetName, rows) {
+  const body = JSON.stringify({ sheet: sheetName, action: 'write', rows });
+  // Trimitem ca form-encoded — Apps Script nu are CORS issues cu form POST
+  const resp = await fetch(config.sheetsUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain' },
+    body: body,
+  });
+  const text = await resp.text();
+  try { return JSON.parse(text); } catch(e) { return { status: 'ok' }; }
+}
+
+// Citire prin GET
+async function sheetsRead(sheetName) {
+  const resp = await fetch(`${config.sheetsUrl}?sheet=${encodeURIComponent(sheetName)}`);
+  return await resp.json();
+}
+
 async function saveToSheets() {
   if (!config.sheetsUrl) { alert('Configurează URL-ul Google Sheets mai întâi (⚙)'); return; }
   setSyncStatus('loading', 'Se salvează...');
   try {
-    const rows = buildPlanifRows();
     const sheetKey = planifSheetKey();
-    const resp = await fetch(config.sheetsUrl, {
-      method: 'POST',
-      body: JSON.stringify({ sheet: sheetKey, action: 'write', rows }),
-    });
-    const data = await resp.json();
-    if (data.status !== 'ok') { setSyncStatus('error', 'Eroare salvare'); return; }
 
-    // Update Istoric index
+    // 1. Salvează planificarea
+    const r1 = await sheetsWrite(sheetKey, buildPlanifRows());
+    if (r1.status !== 'ok') { setSyncStatus('error', 'Eroare salvare planificare'); return; }
+
+    // 2. Actualizează indexul Istoric
     await updateIstoricIndex(sheetKey);
 
-    // Save monitorizare
+    // 3. Salvează monitorizarea
     await saveMonitToSheet(monitSheetKey());
 
     setSyncStatus('ok', `Salvat S${state.week}_${state.year} · ${new Date().toLocaleTimeString('ro-RO')}`);
-    // Refresh week list to show new entry
     await loadWeekList();
-    // Keep selector on current week
     const sel = document.getElementById('weekSelector');
     for (let i = 0; i < sel.options.length; i++) {
       if (sel.options[i].value === sheetKey) { sel.selectedIndex = i; break; }
@@ -2140,20 +2133,17 @@ function buildPlanifRows() {
 }
 
 async function updateIstoricIndex(sheetKey) {
-  // Read existing index
+  // Citim indexul existent
   let existingRows = [['key','label','savedAt']];
   try {
-    const r = await fetch(config.sheetsUrl + '?sheet=' + indexSheetKey());
-    const d = await r.json();
+    const d = await sheetsRead(indexSheetKey());
     if (d.data && d.data.length > 0) existingRows = d.data;
   } catch(e) {}
 
-  // Build label: "S26 / 2026 · 24.06–30.06"
   const dates = getWeekDates(state.week, state.year);
   const label = `S${state.week} / ${state.year} · ${formatDate(dates[0])}–${formatDate(dates[6])}`;
   const now = new Date().toLocaleString('ro-RO');
 
-  // Check if key already exists → update, else append
   const idx = existingRows.findIndex(r => r[0] === sheetKey);
   if (idx >= 1) {
     existingRows[idx] = [sheetKey, label, now];
@@ -2161,10 +2151,8 @@ async function updateIstoricIndex(sheetKey) {
     existingRows.push([sheetKey, label, now]);
   }
 
-  await fetch(config.sheetsUrl, {
-    method: 'POST',
-    body: JSON.stringify({ sheet: indexSheetKey(), action: 'write', rows: existingRows }),
-  });
+  // Payload mic — doar indexul, nu datele planificării
+  await sheetsWrite(indexSheetKey(), existingRows);
 }
 
 // ── MONITORIZARE ─────────────────────────────────────────────────
@@ -2181,10 +2169,7 @@ async function saveMonitToSheet(sheetKey) {
   Object.entries(state.monitorizare).forEach(([key, val]) => {
     rows.push([key, val.realizat||'', val.cantitate||'', val.timpReal||'', val.motiv||'', val.status||'']);
   });
-  await fetch(config.sheetsUrl, {
-    method: 'POST',
-    body: JSON.stringify({ sheet: sheetKey, action: 'write', rows }),
-  });
+  await sheetsWrite(sheetKey, rows);
 }
 
 async function loadCurrentMonit() {
@@ -2196,8 +2181,7 @@ async function loadCurrentMonit() {
 
 async function loadMonitForSheet(sheetKey) {
   try {
-    const resp = await fetch(config.sheetsUrl + '?sheet=' + encodeURIComponent(sheetKey));
-    const data = await resp.json();
+    const data = await sheetsRead(sheetKey);
     if (!data.data || data.data.length < 2) { state.monitorizare = {}; buildMonitTable(); return; }
     state.monitorizare = {};
     data.data.slice(1).forEach(row => {
@@ -2254,9 +2238,8 @@ function createNewWeek() {
 async function testConnection() {
   if (!config.sheetsUrl) { alert('Introdu URL-ul mai întâi'); return; }
   try {
-    const resp = await fetch(config.sheetsUrl + '?sheet=' + indexSheetKey());
-    const data = await resp.json();
-    if (data.data !== undefined || data.error) {
+    const data = await sheetsRead(indexSheetKey());
+    if (data.data !== undefined) {
       alert('✅ Conexiune OK! Google Sheets răspunde corect.');
     } else {
       alert('⚠ Răspuns neașteptat. Verifică URL-ul și deployment-ul.');
