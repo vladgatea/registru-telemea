@@ -917,11 +917,10 @@
             <th style="min-width:90px">vs Lot optim</th>
             <th style="min-width:80px">Abatere</th>
             <th style="min-width:190px">Motiv / Observații</th>
-            <th style="min-width:100px">Status</th>
           </tr>
         </thead>
         <tbody id="tbodyMonitProc">
-          <tr><td colspan="9" style="text-align:center;padding:20px;color:var(--ink-muted)">Selectează o zi</td></tr>
+          <tr><td colspan="8" style="text-align:center;padding:20px;color:var(--ink-muted)">Selectează o zi</td></tr>
         </tbody>
       </table>
     </div>
@@ -948,11 +947,10 @@
             <th style="min-width:90px">vs Lot optim</th>
             <th style="min-width:80px">Abatere</th>
             <th style="min-width:190px">Motiv / Observații</th>
-            <th style="min-width:100px">Status</th>
           </tr>
         </thead>
         <tbody id="tbodyMonitBurduf">
-          <tr><td colspan="9" style="text-align:center;padding:20px;color:var(--ink-muted)">Selectează o zi</td></tr>
+          <tr><td colspan="8" style="text-align:center;padding:20px;color:var(--ink-muted)">Selectează o zi</td></tr>
         </tbody>
       </table>
     </div>
@@ -982,11 +980,10 @@
             <th style="min-width:75px">Timp real.</th>
             <th style="min-width:80px">Abatere</th>
             <th style="min-width:190px">Motiv / Observații</th>
-            <th style="min-width:100px">Status</th>
           </tr>
         </thead>
         <tbody id="tbodyMonitAmb">
-          <tr><td colspan="11" style="text-align:center;padding:20px;color:var(--ink-muted)">Selectează o zi</td></tr>
+          <tr><td colspan="10" style="text-align:center;padding:20px;color:var(--ink-muted)">Selectează o zi</td></tr>
         </tbody>
       </table>
     </div>
@@ -1014,11 +1011,10 @@
             <th style="min-width:90px">vs Lot optim</th>
             <th style="min-width:80px">Abatere</th>
             <th style="min-width:190px">Motiv / Observații</th>
-            <th style="min-width:100px">Status</th>
           </tr>
         </thead>
         <tbody id="tbodyMonitEtic">
-          <tr><td colspan="9" style="text-align:center;padding:20px;color:var(--ink-muted)">Selectează o zi</td></tr>
+          <tr><td colspan="8" style="text-align:center;padding:20px;color:var(--ink-muted)">Selectează o zi</td></tr>
         </tbody>
       </table>
     </div>
@@ -1640,14 +1636,7 @@ function abatereCell(planif, realiz) {
 function statusSummary(rows) {
   const total = rows.length;
   if (total === 0) return '';
-  let realizat = 0, partial = 0, anulat = 0;
-  rows.forEach(r => {
-    const s = (state.monitorizare[r.key] || {}).status || 'Necompletat';
-    if (s === 'Realizat') realizat++;
-    else if (s === 'Parțial') partial++;
-    else if (s === 'Anulat') anulat++;
-  });
-  return `${realizat}/${total} realizat · ${partial} parțial · ${total - realizat - partial - anulat} necompletat`;
+  return `${total} înregistrări`;
 }
 
 function prodSelectOptions(saved, field) {
@@ -1681,7 +1670,12 @@ function renderQtyCols(key, lotOptim, um, saved) {
   const lotDisplay = lotOptim
     ? `<span style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;color:var(--ink-soft)">${lotOptim} ${um}</span>`
     : '—';
-  const qtyTd = `<td><input class="monit-input" type="number" min="0" step="1" placeholder="0" value="${qty}" style="width:78px;font-family:'JetBrains Mono',monospace;text-align:right" oninput="updateMonit('${key}','cantitate',this.value)"> <span style="font-size:10px;color:var(--ink-muted)">${um}</span></td>`;
+  const qtyTd = `<td><input class="monit-input" type="number" min="0" step="1" placeholder="0"
+    value="${qty}"
+    style="width:88px;font-family:'JetBrains Mono',monospace;text-align:right"
+    oninput="updateMonit('${key}','cantitate',this.value)">
+    <span style="font-size:10px;color:var(--ink-muted);margin-left:2px">${um}</span>
+  </td>`;
   return { lotDisplay, qtyTd, badge };
 }
 
@@ -1714,8 +1708,7 @@ function buildMonitProc(zi, dayLabel) {
       ${qtyTd}
       <td style="text-align:center">${badge}</td>
       <td class="${ab.cls}">${ab.text}</td>
-      <td><input class="monit-input" type="text" placeholder="Motiv / observații..." value="${(saved.motiv||'').replace(/"/g,'&quot;')}" oninput="updateMonitNoRefresh('${row.key}','motiv',this.value)"></td>
-      <td><select class="monit-input" onchange="updateMonit('${row.key}','status',this.value)" style="width:100%">${statusOptions(saved)}</select></td>`;
+      <td><input class="monit-input" type="text" placeholder="Motiv / observații..." value="${(saved.motiv||'').replace(/"/g,'&quot;')}" oninput="updateMonitNoRefresh('${row.key}','motiv',this.value)"></td>`;
     tbody.appendChild(tr);
   });
 }
@@ -1752,8 +1745,7 @@ function buildMonitBurduf(zi, dayLabel) {
       ${qtyTd}
       <td style="text-align:center">${badge}</td>
       <td class="${ab.cls}">${ab.text}</td>
-      <td><input class="monit-input" type="text" placeholder="Motiv / observații..." value="${(saved.motiv||'').replace(/"/g,'&quot;')}" oninput="updateMonitNoRefresh('${row.key}','motiv',this.value)"></td>
-      <td><select class="monit-input" onchange="updateMonit('${row.key}','status',this.value)" style="width:100%">${statusOptions(saved)}</select></td>`;
+      <td><input class="monit-input" type="text" placeholder="Motiv / observații..." value="${(saved.motiv||'').replace(/"/g,'&quot;')}" oninput="updateMonitNoRefresh('${row.key}','motiv',this.value)"></td>`;
     tbody.appendChild(tr);
   });
 }
@@ -1793,8 +1785,7 @@ function buildMonitAmb(zi, dayLabel) {
       <td style="text-align:center;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--info);font-weight:600">${row.timpPlan > 0 ? row.timpPlan.toFixed(2)+'h' : '—'}</td>
       <td><input class="monit-input" type="number" step="0.25" min="0" placeholder="0.00" value="${timpReal}" style="width:58px;font-family:'JetBrains Mono',monospace" oninput="updateMonit('${row.key}','timpReal',this.value)"> <span style="font-size:10px;color:var(--ink-muted)">h</span></td>
       <td class="${ab.cls}">${ab.text}</td>
-      <td><input class="monit-input" type="text" placeholder="Motiv / observații..." value="${(saved.motiv||'').replace(/"/g,'&quot;')}" oninput="updateMonitNoRefresh('${row.key}','motiv',this.value)"></td>
-      <td><select class="monit-input" onchange="updateMonit('${row.key}','status',this.value)" style="width:100%">${statusOptions(saved)}</select></td>`;
+      <td><input class="monit-input" type="text" placeholder="Motiv / observații..." value="${(saved.motiv||'').replace(/"/g,'&quot;')}" oninput="updateMonitNoRefresh('${row.key}','motiv',this.value)"></td>`;
     tbody.appendChild(tr);
   });
   const totalPlan = rows.reduce((s,r) => s + r.timpPlan, 0);
@@ -1859,8 +1850,7 @@ function buildMonitEtic(zi, dayLabel) {
       ${qtyTd}
       <td style="text-align:center">${badge}</td>
       <td class="${ab.cls}">${ab.text}</td>
-      <td><input class="monit-input" type="text" placeholder="Motiv / observații..." value="${(saved.motiv||'').replace(/"/g,'&quot;')}" oninput="updateMonitNoRefresh('${row.key}','motiv',this.value)"></td>
-      <td><select class="monit-input" onchange="updateMonit('${row.key}','status',this.value)" style="width:100%">${statusOptions(saved)}</select></td>`;
+      <td><input class="monit-input" type="text" placeholder="Motiv / observații..." value="${(saved.motiv||'').replace(/"/g,'&quot;')}" oninput="updateMonitNoRefresh('${row.key}','motiv',this.value)"></td>`;
     tbody.appendChild(tr);
   });
 }
