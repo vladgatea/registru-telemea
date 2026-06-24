@@ -1203,8 +1203,10 @@ let state = {
   monitorizare: {}
 };
 
+const SHEETS_URL_DEFAULT = 'https://script.google.com/macros/s/AKfycbwxDj763V6mK1ou0QjdwJKWK631gbVtzug50oxYtyjIeZohc1ScPj_Qvmp-yBP9gEUK/exec';
+
 let config = {
-  sheetsUrl: localStorage.getItem('sheetsUrl') || ''
+  sheetsUrl: localStorage.getItem('sheetsUrl') || SHEETS_URL_DEFAULT
 };
 
 // ═══════════════════════════════════════════════════════════════
@@ -2664,9 +2666,15 @@ window.onload = function() {
   state.year = now.getFullYear();
   document.getElementById('firstLot').value = state.firstLot;
 
+  // Dacă nu e URL în localStorage, folosim default-ul hardcodat
+  if (!localStorage.getItem('sheetsUrl')) {
+    localStorage.setItem('sheetsUrl', SHEETS_URL_DEFAULT);
+  }
+  config.sheetsUrl = localStorage.getItem('sheetsUrl') || SHEETS_URL_DEFAULT;
+
   if (config.sheetsUrl) {
     setSyncStatus('ok', 'Configurat');
-    loadWeekList(); // auto-load week list on start
+    loadWeekList();
   }
 
   recalcDates();
