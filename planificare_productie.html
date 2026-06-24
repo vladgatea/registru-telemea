@@ -1200,7 +1200,7 @@ let state = {
   year: 2026,
   firstLot: '27173',
   procesare: Array(8).fill(null).map(() => Array(7).fill('—')),  // [procesare][zi]
-  burduf: Array(3).fill(null).map(() => Array(7).fill('—')),     // 3 randuri burduf
+  burduf: Array(5).fill(null).map(() => Array(7).fill('—')),     // 5 randuri burduf
   personal: {
     schimb1: Array(7).fill(null).map(() => ['—','—','—']),
     schimb2: Array(7).fill(null).map(() => ['—','—','—']),
@@ -1269,7 +1269,7 @@ function getBurdufEtichetareFromBurduf() {
   // Burduf planificat zi X → Etichetare zi X+1
   const etic = Array(7).fill(null).map(() => []);
   for (let z = 0; z < 6; z++) {
-    for (let r = 0; r < 3; r++) {
+    for (let r = 0; r < 5; r++) {
       const prod = state.burduf[r][z];
       if (prod && prod !== '—') etic[z + 1].push(prod + ' ★');
     }
@@ -1390,7 +1390,7 @@ function buildBurdufTable() {
   buildTableHeader(head);
   body.innerHTML = '';
 
-  ['Burduf Rând 1', 'Burduf Rând 2', 'Burduf Rând 3'].forEach((label, ri) => {
+  ['Burduf Rând 1', 'Burduf Rând 2', 'Burduf Rând 3', 'Burduf Rând 4', 'Burduf Rând 5'].forEach((label, ri) => {
     const tr = document.createElement('tr');
     const tdLabel = document.createElement('td');
     tdLabel.className = 'row-label';
@@ -1782,7 +1782,7 @@ function buildMonitBurduf(zi, dayLabel) {
   const tbody = document.getElementById('tbodyMonitBurduf');
   tbody.innerHTML = '';
   const rows = [];
-  for (let r = 0; r < 3; r++) {
+  for (let r = 0; r < 5; r++) {
     const prod = state.burduf[r][zi];
     if (prod && prod !== '—') rows.push({ slot: `Rând ${r+1}`, planificat: prod, key: `burduf_${r}_${zi}` });
   }
@@ -1885,7 +1885,7 @@ function buildMonitEtic(zi, dayLabel) {
     }
   }
   if (zi > 0) {
-    for (let r = 0; r < 3; r++) {
+    for (let r = 0; r < 5; r++) {
       const prod = state.burduf[r][zi - 1];
       if (prod && prod !== '—') rows.push({ slot: `Burduf R${r+1}`, planificat: prod, key: `etic_burduf_${r}_${zi}`, sursa: 'Burduf' });
     }
@@ -2000,7 +2000,7 @@ function generatePrint() {
         ${ZILE.map((z,i)=>`<th>${z}<br><span style="font-weight:400;font-size:8px">${formatDate(dates[i])}</span></th>`).join('')}
       </tr></thead>
       <tbody>
-        ${[0,1,2].map(ri=>`<tr><td class="label-col">Rând ${ri+1}</td>${ZILE.map((_,zi)=>`<td style="color:var(--warn)">${state.burduf[ri][zi]!=='—'?state.burduf[ri][zi]:''}</td>`).join('')}</tr>`).join('')}
+        ${[0,1,2,3,4].map(ri=>`<tr><td class="label-col">Rând ${ri+1}</td>${ZILE.map((_,zi)=>`<td style="color:var(--warn)">${state.burduf[ri][zi]!=='—'?state.burduf[ri][zi]:''}</td>`).join('')}</tr>`).join('')}
       </tbody>
     </table>
 
@@ -2224,7 +2224,7 @@ function parseSheetRows(rows) {
     const row = rows[2 + pi];
     if (row) state.procesare[pi] = ZILE.map((_, zi) => row[3 + zi] || '—');
   }
-  for (let ri = 0; ri < 3; ri++) {
+  for (let ri = 0; ri < 5; ri++) {
     const row = rows[10 + ri];
     if (row) state.burduf[ri] = ZILE.map((_, zi) => row[3 + zi] || '—');
   }
@@ -2338,7 +2338,7 @@ function buildPlanifRows() {
   rows.push(['week', 'year', 'firstLot', ...ZILE]);
   rows.push([state.week, state.year, state.firstLot, ...Array(7).fill('')]);
   PROCESARI.forEach((proc, pi) => { rows.push([proc, '', '', ...state.procesare[pi]]); });
-  [0,1,2].forEach(ri => { rows.push([`Burduf ${ri+1}`, '', '', ...state.burduf[ri]]); });
+  [0,1,2,3,4].forEach(ri => { rows.push([`Burduf ${ri+1}`, '', '', ...state.burduf[ri]]); });
   ['schimb1','schimb2','schimb3'].forEach((s, si) => {
     [0,1,2].forEach(p => { rows.push([`Schimb${si+1}_P${p+1}`, '', '', ...state.personal[s].map(day => day[p])]); });
   });
@@ -2387,7 +2387,7 @@ function buildFormattedPlanif() {
   rows.push(['── BURDUF ──', ...Array(7).fill('')]);
   colors.push(Array(8).fill({ bg: '#C4501A', fg: '#FFFFFF', bold: true }));
 
-  [0,1,2].forEach(ri => {
+  [0,1,2,3,4].forEach(ri => {
     rows.push([`Burduf Rând ${ri+1}`, ...state.burduf[ri].map(v => v === '—' ? '' : v)]);
     colors.push([{ bg: '#F5F5F0', bold: true }, ...state.burduf[ri].map(v => ({
       bg: v !== '—' ? '#FDF0EA' : '#FFFFFF', fg: '#1A1A18'
@@ -2507,7 +2507,7 @@ function buildFormattedMonit() {
 
   ZILE.forEach((zi, ziIdx) => {
     const dateStr = formatDate(dates[ziIdx]);
-    for (let r = 0; r < 3; r++) {
+    for (let r = 0; r < 5; r++) {
       const prod = state.burduf[r][ziIdx];
       if (!prod || prod === '—') continue;
       const key = `burduf_${r}_${ziIdx}`;
@@ -2604,7 +2604,7 @@ function buildFormattedMonit() {
       }
     }
     if (ziIdx > 0) {
-      for (let r = 0; r < 3; r++) {
+      for (let r = 0; r < 5; r++) {
         const prod = state.burduf[r][ziIdx - 1];
         if (!prod || prod === '—') continue;
         const key = `etic_burduf_${r}_${ziIdx}`;
@@ -2704,7 +2704,7 @@ function createNewWeek() {
   state.year = y;
   state.firstLot = lot || String(w * 100 + 1);
   state.procesare = Array(8).fill(null).map(() => Array(7).fill('—'));
-  state.burduf = Array(3).fill(null).map(() => Array(7).fill('—'));
+  state.burduf = Array(5).fill(null).map(() => Array(7).fill('—'));
   state.personal = {
     schimb1: Array(7).fill(null).map(() => ['—','—','—']),
     schimb2: Array(7).fill(null).map(() => ['—','—','—']),
