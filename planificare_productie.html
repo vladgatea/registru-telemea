@@ -2447,16 +2447,44 @@ function buildFormattedMonit() {
   const dates = getWeekDates(state.week, state.year);
   const rows = [];
   const colors = [];
-
   const headerBg = '#1A1A18';
 
-  // Titlu
-  rows.push([`MONITORIZARE REALIZAT vs PLANIFICAT — S${state.week}/${state.year}`, ...Array(7).fill('')]);
-  colors.push(Array(8).fill({ bg: headerBg, fg: '#FFFFFF', bold: true, size: 12 }));
+  // Helper: randament std și real
+  function getRand(prod, cantitate) {
+    const ref = PROCESARE_REF[prod];
+    if (!ref) return { stdStr: '—', realStr: '—', stdBg: '#FFFFFF', realBg: '#FFFFFF' };
+    const totalLapte = (ref.lv||0)+(ref.lc||0)+(ref.lo||0)+(ref.ld||0);
+    if (!totalLapte) return { stdStr: '—', realStr: '—', stdBg: '#FFFFFF', realBg: '#FFFFFF' };
+    const std = ref.lot ? Math.round((ref.lot / totalLapte) * 1000) / 10 : null;
+    // Convert cantitate to KG
+    let cantKg = null;
+    if (cantitate) {
+      const qty = parseFloat(cantitate);
+      if (!isNaN(qty)) {
+        if (ref.buc > 0) {
+          const m = prod.match(/(\d+(?:\.\d+)?)\s*KG/i);
+          const mg = prod.match(/(\d+)\s*G\b/i);
+          if (m) cantKg = qty * parseFloat(m[1]);
+          else if (mg) cantKg = qty * parseFloat(mg[1]) / 1000;
+          else cantKg = qty * (ref.lot / ref.buc);
+        } else cantKg = qty;
+      }
+    }
+    const real = cantKg ? Math.round((cantKg / totalLapte) * 1000) / 10 : null;
+    const stdStr = std !== null ? `${std}%` : '—';
+    const realStr = real !== null ? `${real}%` : '—';
+    const diff = (std !== null && real !== null) ? real - std : null;
+    const realBg = diff === null ? '#FFFFFF' : diff >= -1 ? '#D4EDDA' : diff >= -3 ? '#FFF3CD' : '#F8D7DA';
+    return { stdStr, realStr, stdBg: '#F5F5F0', realBg };
+  }
 
-  // Procesare section
-  rows.push(['PROCESARE', 'Zi', 'Planificat', 'Realizat', 'Lot Optim', 'Cant. Realizată', 'vs Lot Optim %', 'Motiv / Obs.', 'Status']);
-  colors.push(Array(9).fill({ bg: '#2D5016', fg: '#FFFFFF', bold: true }));
+  // Titlu
+  rows.push([`MONITORIZARE REALIZAT vs PLANIFICAT — S${state.week}/${state.year}`, ...Array(10).fill('')]);
+  colors.push(Array(11).fill({ bg: headerBg, fg: '#FFFFFF', bold: true, size: 12 }));
+
+  // ── PROCESARE ──
+  rows.push(['PROCESARE', 'Zi', 'Planificat', 'Realizat', 'Lot Optim', 'Cant. Realizată', 'vs Lot Optim %', 'Rand. std %', 'Rand. real %', 'Motiv / Obs.', 'Status']);
+  colors.push(Array(11).fill({ bg: '#2D5016', fg: '#FFFFFF', bold: true }));
 
   ZILE.forEach((zi, ziIdx) => {
     const dateStr = formatDate(dates[ziIdx]);
@@ -2467,43 +2495,37 @@ function buildFormattedMonit() {
       const saved = state.monitorizare[key] || {};
       const realizat = saved.realizat || '';
       const cantitate = saved.cantitate || '';
-      const motiv = saved.motiv || '';
-      const status = saved.status || 'Necompletat';
-      const ref = PROCESARE_REF[realizat || prod];
+      const refProd = (realizat && realizat !== '—') ? realizat : prod;
+      const ref = PROCESARE_REF[refProd];
       const lotOptim = ref ? (ref.buc > 0 ? ref.buc : ref.lot) : '';
       const um = ref ? (ref.buc > 0 ? 'BUC' : 'KG') : '';
       const pct = lotOptim && cantitate ? Math.round((parseFloat(cantitate) / lotOptim) * 100) : '';
       const pctStr = pct !== '' ? `${pct}%` : '';
-
-      // Culoare rând bazată pe status
+      const pctBg = pct !== '' ? (pct >= 95 ? '#D4EDDA' : pct >= 70 ? '#FFF3CD' : '#F8D7DA') : '#FFFFFF';
       let rowBg = '#FFFFFF';
-      if (realizat && realizat !== prod) rowBg = '#FDF0EA'; // produs diferit — portocaliu
-      else if (realizat === prod) rowBg = '#EEF5E8';         // conform — verde pal
-      if (pct !== '' && pct < 70) rowBg = '#FDF0EA';         // sub 70% — roșu pal
-      else if (pct !== '' && pct < 95) rowBg = '#FBF5E8';    // 70-95% — galben pal
+      if (realizat && realizat !== prod) rowBg = '#FDF0EA';
+      else if (realizat === prod) rowBg = '#EEF5E8';
+      if (pct !== '' && pct < 70) rowBg = '#FDF0EA';
+      else if (pct !== '' && pct < 95) rowBg = '#FBF5E8';
+      const { stdStr, realStr, stdBg, realBg } = getRand(refProd, cantitate);
 
-      // Culoare celulă % cantitate
-      let pctBg = rowBg;
-      if (pct !== '') pctBg = pct >= 95 ? '#D4EDDA' : pct >= 70 ? '#FFF3CD' : '#F8D7DA';
-
-      rows.push([`Proc. ${p+1}`, `${zi} ${dateStr}`, prod, realizat || '—', lotOptim ? `${lotOptim} ${um}` : '—', cantitate ? `${cantitate} ${um}` : '—', pctStr, motiv, status]);
+      rows.push([`Proc. ${p+1}`, `${zi} ${dateStr}`, prod, realizat || '—', lotOptim ? `${lotOptim} ${um}` : '—', cantitate ? `${cantitate} ${um}` : '—', pctStr, stdStr, realStr, saved.motiv || '', saved.status || 'Necompletat']);
       colors.push([
-        { bg: '#F5F5F0', bold: true },
-        { bg: '#F5F5F0' },
+        { bg: '#F5F5F0', bold: true }, { bg: '#F5F5F0' },
         { bg: rowBg },
         { bg: realizat && realizat !== prod ? '#F8D7DA' : realizat === prod ? '#D4EDDA' : '#FFFFFF', bold: true },
-        { bg: rowBg },
-        { bg: rowBg },
+        { bg: rowBg }, { bg: rowBg },
         { bg: pctBg, bold: true },
+        { bg: stdBg }, { bg: realBg, bold: true },
         { bg: rowBg },
-        { bg: status === 'Realizat' ? '#D4EDDA' : status === 'Parțial' ? '#FFF3CD' : status === 'Anulat' ? '#F8D7DA' : '#FFFFFF' }
+        { bg: saved.status === 'Realizat' ? '#D4EDDA' : saved.status === 'Parțial' ? '#FFF3CD' : saved.status === 'Anulat' ? '#F8D7DA' : '#FFFFFF' }
       ]);
     }
   });
 
-  // Burduf section
-  rows.push(['BURDUF', 'Zi', 'Planificat', 'Realizat', 'Lot Optim', 'Cant. Realizată', 'vs Lot Optim %', 'Motiv / Obs.', 'Status']);
-  colors.push(Array(9).fill({ bg: '#C4501A', fg: '#FFFFFF', bold: true }));
+  // ── BURDUF ──
+  rows.push(['BURDUF', 'Zi', 'Planificat', 'Realizat', 'Lot Optim', 'Cant. Realizată', 'vs Lot Optim %', 'Rand. std %', 'Rand. real %', 'Motiv / Obs.', 'Status']);
+  colors.push(Array(11).fill({ bg: '#C4501A', fg: '#FFFFFF', bold: true }));
 
   ZILE.forEach((zi, ziIdx) => {
     const dateStr = formatDate(dates[ziIdx]);
@@ -2514,29 +2536,30 @@ function buildFormattedMonit() {
       const saved = state.monitorizare[key] || {};
       const realizat = saved.realizat || '';
       const cantitate = saved.cantitate || '';
-      const match = (realizat || prod).match(/[-–]\s*(\d+)\s*$/);
+      const refProd = (realizat && realizat !== '—') ? realizat : prod;
+      const match = refProd.match(/[-–]\s*(\d+)\s*$/);
       const lotOptim = match ? parseInt(match[1]) : '';
       const pct = lotOptim && cantitate ? Math.round((parseFloat(cantitate) / lotOptim) * 100) : '';
-      const pctStr = pct !== '' ? `${pct}%` : '';
-      let pctBg = '#FFFFFF';
-      if (pct !== '') pctBg = pct >= 95 ? '#D4EDDA' : pct >= 70 ? '#FFF3CD' : '#F8D7DA';
+      const pctBg = pct !== '' ? (pct >= 95 ? '#D4EDDA' : pct >= 70 ? '#FFF3CD' : '#F8D7DA') : '#FFFFFF';
+      const { stdStr, realStr, stdBg, realBg } = getRand(refProd, cantitate);
 
-      rows.push([`Rând ${r+1}`, `${zi} ${dateStr}`, prod, realizat || '—', lotOptim ? `${lotOptim} BUC` : '—', cantitate ? `${cantitate} BUC` : '—', pctStr, saved.motiv || '', saved.status || 'Necompletat']);
+      rows.push([`Rând ${r+1}`, `${zi} ${dateStr}`, prod, realizat || '—', lotOptim ? `${lotOptim} BUC` : '—', cantitate ? `${cantitate} BUC` : '—', pct !== '' ? `${pct}%` : '', stdStr, realStr, saved.motiv || '', saved.status || 'Necompletat']);
       colors.push([
         { bg: '#F5F5F0', bold: true }, { bg: '#F5F5F0' },
         { bg: '#FDF0EA' },
         { bg: realizat && realizat !== prod ? '#F8D7DA' : realizat === prod ? '#D4EDDA' : '#FFFFFF', bold: true },
-        { bg: '#FFFFFF' }, { bg: '#FFFFFF' },
+        { bg: '#FDF0EA' }, { bg: '#FDF0EA' },
         { bg: pctBg, bold: true },
+        { bg: stdBg }, { bg: realBg, bold: true },
         { bg: '#FFFFFF' },
         { bg: (saved.status||'') === 'Realizat' ? '#D4EDDA' : (saved.status||'') === 'Parțial' ? '#FFF3CD' : '#FFFFFF' }
       ]);
     }
   });
 
-  // Ambalare section
-  rows.push(['AMBALARE', 'Zi', 'Planificat', 'Realizat', 'Lot Optim', 'Cant. Realizată', 'vs Lot Optim %', 'Timp plan.(h)', 'Timp real.(h)', 'Motiv / Obs.', 'Status']);
-  colors.push(Array(11).fill({ bg: '#1A4A7A', fg: '#FFFFFF', bold: true }));
+  // ── AMBALARE ──
+  rows.push(['AMBALARE', 'Zi', 'Planificat', 'Realizat', 'Lot Optim', 'Cant. Realizată', 'vs Lot Optim %', 'Rand. std %', 'Rand. real %', 'Timp plan.(h)', 'Timp real.(h)', 'Motiv / Obs.', 'Status']);
+  colors.push(Array(13).fill({ bg: '#1A4A7A', fg: '#FFFFFF', bold: true }));
 
   ZILE.forEach((zi, ziIdx) => {
     if (ziIdx === 0) return;
@@ -2548,31 +2571,32 @@ function buildFormattedMonit() {
       const saved = state.monitorizare[key] || {};
       const realizat = saved.realizat || '';
       const cantitate = saved.cantitate || '';
-      const ref = PROCESARE_REF[realizat || prod];
+      const refProd = (realizat && realizat !== '—') ? realizat : prod;
+      const ref = PROCESARE_REF[refProd];
       const lotOptim = ref ? (ref.buc > 0 ? ref.buc : ref.lot) : '';
       const um = ref ? (ref.buc > 0 ? 'BUC' : 'KG') : '';
       const pct = lotOptim && cantitate ? Math.round((parseFloat(cantitate) / lotOptim) * 100) : '';
-      const pctStr = pct !== '' ? `${pct}%` : '';
+      const pctBg = pct !== '' ? (pct >= 95 ? '#D4EDDA' : pct >= 70 ? '#FFF3CD' : '#F8D7DA') : '#FFFFFF';
       const timpPlan = calcTimpAmbalare([prod]);
-      let pctBg = '#FFFFFF';
-      if (pct !== '') pctBg = pct >= 95 ? '#D4EDDA' : pct >= 70 ? '#FFF3CD' : '#F8D7DA';
+      const { stdStr, realStr, stdBg, realBg } = getRand(refProd, cantitate);
 
-      rows.push([`Slot ${p+1}`, `${zi} ${dateStr}`, prod, realizat || '—', lotOptim ? `${lotOptim} ${um}` : '—', cantitate ? `${cantitate} ${um}` : '—', pctStr, timpPlan > 0 ? timpPlan.toFixed(2) : '—', saved.timpReal || '—', saved.motiv || '', saved.status || 'Necompletat']);
+      rows.push([`Slot ${p+1}`, `${zi} ${dateStr}`, prod, realizat || '—', lotOptim ? `${lotOptim} ${um}` : '—', cantitate ? `${cantitate} ${um}` : '—', pct !== '' ? `${pct}%` : '', stdStr, realStr, timpPlan > 0 ? timpPlan.toFixed(2) : '—', saved.timpReal || '—', saved.motiv || '', saved.status || 'Necompletat']);
       colors.push([
         { bg: '#F5F5F0', bold: true }, { bg: '#F5F5F0' },
         { bg: '#EAF0F8' },
         { bg: realizat && realizat !== prod ? '#F8D7DA' : realizat === prod ? '#D4EDDA' : '#FFFFFF', bold: true },
         { bg: '#EAF0F8' }, { bg: '#EAF0F8' },
         { bg: pctBg, bold: true },
+        { bg: stdBg }, { bg: realBg, bold: true },
         { bg: '#EAF0F8' }, { bg: '#EAF0F8' }, { bg: '#FFFFFF' },
         { bg: (saved.status||'') === 'Realizat' ? '#D4EDDA' : (saved.status||'') === 'Parțial' ? '#FFF3CD' : '#FFFFFF' }
       ]);
     }
   });
 
-  // Etichetare section
-  rows.push(['ETICHETARE', 'Zi', 'Planificat', 'Realizat', 'Lot Optim', 'Cant. Realizată', 'vs Lot Optim %', 'Motiv / Obs.', 'Status']);
-  colors.push(Array(9).fill({ bg: '#8A6A1A', fg: '#FFFFFF', bold: true }));
+  // ── ETICHETARE ──
+  rows.push(['ETICHETARE', 'Zi', 'Planificat', 'Realizat', 'Lot Optim', 'Cant. Realizată', 'vs Lot Optim %', 'Rand. std %', 'Rand. real %', 'Motiv / Obs.', 'Status']);
+  colors.push(Array(11).fill({ bg: '#8A6A1A', fg: '#FFFFFF', bold: true }));
 
   ZILE.forEach((zi, ziIdx) => {
     const dateStr = formatDate(dates[ziIdx]);
@@ -2584,20 +2608,22 @@ function buildFormattedMonit() {
         const saved = state.monitorizare[key] || {};
         const realizat = saved.realizat || '';
         const cantitate = saved.cantitate || '';
-        const ref = PROCESARE_REF[realizat || prod];
+        const refProd = (realizat && realizat !== '—') ? realizat : prod;
+        const ref = PROCESARE_REF[refProd];
         const lotOptim = ref ? (ref.buc > 0 ? ref.buc : ref.lot) : '';
         const um = ref ? (ref.buc > 0 ? 'BUC' : 'KG') : '';
         const pct = lotOptim && cantitate ? Math.round((parseFloat(cantitate) / lotOptim) * 100) : '';
-        let pctBg = '#FFFFFF';
-        if (pct !== '') pctBg = pct >= 95 ? '#D4EDDA' : pct >= 70 ? '#FFF3CD' : '#F8D7DA';
+        const pctBg = pct !== '' ? (pct >= 95 ? '#D4EDDA' : pct >= 70 ? '#FFF3CD' : '#F8D7DA') : '#FFFFFF';
+        const { stdStr, realStr, stdBg, realBg } = getRand(refProd, cantitate);
 
-        rows.push([`Slot ${p+1}`, `${zi} ${dateStr}`, prod, realizat || '—', lotOptim ? `${lotOptim} ${um}` : '—', cantitate ? `${cantitate} ${um}` : '—', pct !== '' ? `${pct}%` : '', saved.motiv || '', saved.status || 'Necompletat']);
+        rows.push([`Slot ${p+1}`, `${zi} ${dateStr}`, prod, realizat || '—', lotOptim ? `${lotOptim} ${um}` : '—', cantitate ? `${cantitate} ${um}` : '—', pct !== '' ? `${pct}%` : '', stdStr, realStr, saved.motiv || '', saved.status || 'Necompletat']);
         colors.push([
           { bg: '#F5F5F0', bold: true }, { bg: '#F5F5F0' },
           { bg: '#FBF5E8' },
           { bg: realizat && realizat !== prod ? '#F8D7DA' : realizat === prod ? '#D4EDDA' : '#FFFFFF', bold: true },
           { bg: '#FBF5E8' }, { bg: '#FBF5E8' },
           { bg: pctBg, bold: true },
+          { bg: stdBg }, { bg: realBg, bold: true },
           { bg: '#FFFFFF' },
           { bg: (saved.status||'') === 'Realizat' ? '#D4EDDA' : (saved.status||'') === 'Parțial' ? '#FFF3CD' : '#FFFFFF' }
         ]);
@@ -2611,19 +2637,21 @@ function buildFormattedMonit() {
         const saved = state.monitorizare[key] || {};
         const realizat = saved.realizat || '';
         const cantitate = saved.cantitate || '';
-        const match = (realizat || prod).match(/[-–]\s*(\d+)\s*$/);
+        const refProd = (realizat && realizat !== '—') ? realizat : prod;
+        const match = refProd.match(/[-–]\s*(\d+)\s*$/);
         const lotOptim = match ? parseInt(match[1]) : '';
         const pct = lotOptim && cantitate ? Math.round((parseFloat(cantitate) / lotOptim) * 100) : '';
-        let pctBg = '#FFFFFF';
-        if (pct !== '') pctBg = pct >= 95 ? '#D4EDDA' : pct >= 70 ? '#FFF3CD' : '#F8D7DA';
+        const pctBg = pct !== '' ? (pct >= 95 ? '#D4EDDA' : pct >= 70 ? '#FFF3CD' : '#F8D7DA') : '#FFFFFF';
+        const { stdStr, realStr, stdBg, realBg } = getRand(refProd, cantitate);
 
-        rows.push([`Burduf R${r+1}`, `${zi} ${dateStr}`, prod, realizat || '—', lotOptim ? `${lotOptim} BUC` : '—', cantitate ? `${cantitate} BUC` : '—', pct !== '' ? `${pct}%` : '', saved.motiv || '', saved.status || 'Necompletat']);
+        rows.push([`Burduf R${r+1}`, `${zi} ${dateStr}`, prod, realizat || '—', lotOptim ? `${lotOptim} BUC` : '—', cantitate ? `${cantitate} BUC` : '—', pct !== '' ? `${pct}%` : '', stdStr, realStr, saved.motiv || '', saved.status || 'Necompletat']);
         colors.push([
           { bg: '#FDF0EA', bold: true }, { bg: '#F5F5F0' },
           { bg: '#FDF0EA' },
           { bg: realizat && realizat !== prod ? '#F8D7DA' : realizat === prod ? '#D4EDDA' : '#FFFFFF', bold: true },
           { bg: '#FDF0EA' }, { bg: '#FDF0EA' },
           { bg: pctBg, bold: true },
+          { bg: stdBg }, { bg: realBg, bold: true },
           { bg: '#FFFFFF' },
           { bg: (saved.status||'') === 'Realizat' ? '#D4EDDA' : (saved.status||'') === 'Parțial' ? '#FFF3CD' : '#FFFFFF' }
         ]);
