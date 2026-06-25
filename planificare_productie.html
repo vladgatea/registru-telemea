@@ -837,6 +837,23 @@
     </div>
   </div>
 
+  <!-- TOCARE -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">
+        <span class="stage-badge" style="background:#F3E8FF;color:#6B21A8">Tocare</span>
+        Tocare Caș
+        <span style="font-size:11px; font-weight:400; color:var(--ink-muted)">calculat automat (+1 zi față de Procesare · doar produse CAS)</span>
+      </div>
+    </div>
+    <div class="planning-grid">
+      <table class="planning-table" id="tblTocare">
+        <thead id="tblTocHead"></thead>
+        <tbody id="tblTocBody"></tbody>
+      </table>
+    </div>
+  </div>
+
   <!-- PERSONAL -->
   <div class="card">
     <div class="card-header">
@@ -1024,11 +1041,35 @@
         </tbody>
       </table>
     </div>
+  <!-- TOCARE -->
+  <div class="card" style="margin-bottom:16px">
+    <div class="card-header">
+      <div class="card-title">
+        <span class="stage-badge" style="background:#F3E8FF;color:#6B21A8">Tocare</span>
+        Tocare Caș — <span id="monitTitleToc" style="font-weight:400;color:var(--ink-muted)">Selectează o zi</span>
+        <span style="font-size:11px;font-weight:400;color:var(--ink-muted)">(CAS procesat ziua anterioară)</span>
+      </div>
+      <div id="monitSummaryToc" style="font-size:11px;color:var(--ink-muted)"></div>
+    </div>
+    <div style="padding:12px; overflow-x:auto">
+      <table class="monit-table">
+        <thead>
+          <tr>
+            <th style="min-width:110px">Slot</th>
+            <th style="min-width:130px">Caș planificat</th>
+            <th style="min-width:110px">Cant. tocată (KG)</th>
+            <th style="min-width:130px">Mat. primă recup. (KG)</th>
+            <th style="min-width:190px">Motiv / Observații</th>
+          </tr>
+        </thead>
+        <tbody id="tbodyMonitToc">
+          <tr><td colspan="5" style="text-align:center;padding:20px;color:var(--ink-muted)">Selectează o zi</td></tr>
+        </tbody>
+      </table>
+    </div>
   </div>
 
 </div>
-
-<!-- SETUP MODAL -->
 <div class="modal-overlay" id="setupModal">
   <div class="modal">
     <h2>⚙ Configurare Google Sheets</h2>
@@ -1254,12 +1295,12 @@ function makeSelect(options, value, onchange, cls='cell-select') {
 }
 
 function getAmbalareFromProcesare() {
-  // Ambalare[zi] = ce a fost la procesare[zi-1]
+  // Ambalare[zi] = ce a fost la procesare[zi-1], exclusiv CAS care merg doar la Tocare
   const amb = Array(7).fill(null).map(() => []);
   for (let z = 1; z < 7; z++) {
     for (let p = 0; p < 8; p++) {
       const prod = state.procesare[p][z - 1];
-      if (prod && prod !== '—') amb[z].push(prod);
+      if (prod && prod !== '—' && !CAS_DOAR_TOCARE.includes(prod)) amb[z].push(prod);
     }
   }
   return amb;
@@ -1301,9 +1342,61 @@ function calcTimpAmbalare(produse) {
   return total;
 }
 
-// ═══════════════════════════════════════════════════════════════
-// UI BUILDERS
-// ═══════════════════════════════════════════════════════════════
+// Produse CAS care merg DOAR la Tocare (nu la Ambalare/Etichetare)
+const CAS_DOAR_TOCARE = ['CAS V MP', 'CAS V+O MP DLF', 'CAS O 100%'];
+
+// Toate produsele CAS (pentru filtrul de Tocare)
+function isCas(prod) {
+  return prod && prod !== '—' && prod.toUpperCase().startsWith('CAS');
+}
+
+// Tocare[zi] = CAS-urile procesate în ziua zi-1
+function getTocareFromProcesare() {
+  const toc = Array(7).fill(null).map(() => []);
+  for (let z = 1; z < 7; z++) {
+    for (let p = 0; p < 8; p++) {
+      const prod = state.procesare[p][z - 1];
+      if (isCas(prod)) toc[z].push({ prod, slot: p });
+    }
+  }
+  return toc;
+}
+
+function buildTocareTable() {
+  const head = document.getElementById('tblTocHead');
+  const body = document.getElementById('tblTocBody');
+  buildTableHeader(head);
+  body.innerHTML = '';
+
+  const toc = getTocareFromProcesare();
+  const maxRows = Math.max(...toc.map(a => a.length), 1);
+
+  for (let r = 0; r < maxRows; r++) {
+    const tr = document.createElement('tr');
+    const tdLabel = document.createElement('td');
+    tdLabel.className = 'row-label';
+    tdLabel.style.cssText = 'color:#6B21A8;font-weight:600';
+    tdLabel.textContent = r === 0 ? 'Tocare Caș' : '';
+    tr.appendChild(tdLabel);
+
+    ZILE.forEach((_, zi) => {
+      const td = document.createElement('td');
+      td.className = 'auto-cell';
+      td.style.cssText = 'background:#F3E8FF;color:#6B21A8;font-weight:500';
+      const item = toc[zi][r];
+      if (item) {
+        td.textContent = item.prod;
+        // Marchează produsele doar-tocare
+        if (CAS_DOAR_TOCARE.includes(item.prod)) {
+          td.style.fontStyle = 'italic';
+          td.title = 'Doar Tocare — nu merge la Ambalare/Etichetare';
+        }
+      }
+      tr.appendChild(td);
+    });
+    body.appendChild(tr);
+  }
+}
 
 function recalcDates() {
   const dates = getWeekDates(state.week, state.year);
@@ -1633,6 +1726,7 @@ function buildMonitTable() {
   buildMonitBurduf(zi, dayLabel);
   buildMonitAmb(zi, dayLabel);
   buildMonitEtic(zi, dayLabel);
+  buildMonitToc(zi, dayLabel);
 }
 
 function abatereCell(planif, realiz) {
@@ -1929,6 +2023,59 @@ function buildMonitEtic(zi, dayLabel) {
   });
 }
 
+function buildMonitToc(zi, dayLabel) {
+  document.getElementById('monitTitleToc').textContent = dayLabel;
+  const tbody = document.getElementById('tbodyMonitToc');
+  tbody.innerHTML = '';
+
+  // Tocare zi = CAS procesate zi-1
+  const rows = [];
+  if (zi > 0) {
+    for (let p = 0; p < 8; p++) {
+      const prod = state.procesare[p][zi - 1];
+      if (isCas(prod)) {
+        rows.push({ slot: `Proc. ${p+1}`, prod, key: `toc_${p}_${zi}` });
+      }
+    }
+  }
+
+  if (rows.length === 0) {
+    const msg = zi === 0 ? 'Luni nu are tocare planificată' : 'Nicio tocare planificată pentru această zi';
+    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:16px;color:var(--ink-muted)">${msg}</td></tr>`;
+    document.getElementById('monitSummaryToc').textContent = '';
+    return;
+  }
+  document.getElementById('monitSummaryToc').textContent = `${rows.length} înregistrări`;
+
+  rows.forEach(row => {
+    const saved = state.monitorizare[row.key] || {};
+    const isDoapTocare = CAS_DOAR_TOCARE.includes(row.prod);
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><strong>${row.slot}</strong>
+        ${isDoapTocare ? '<span style="font-size:10px;padding:1px 6px;border-radius:8px;background:#F3E8FF;color:#6B21A8;margin-left:4px">Doar Tocare</span>' : ''}
+      </td>
+      <td style="font-weight:500;color:#6B21A8">${row.prod}</td>
+      <td><input class="monit-input" type="text" inputmode="numeric" pattern="[0-9]*"
+        placeholder="ex: 450" value="${saved.cantTocata||''}"
+        style="width:88px;font-family:'JetBrains Mono',monospace;text-align:right"
+        oninput="updateMonitNoRefresh('${row.key}','cantTocata',this.value)"
+        onblur="updateMonit('${row.key}','cantTocata',this.value)"> <span style="font-size:10px;color:var(--ink-muted)">KG</span>
+      </td>
+      <td><input class="monit-input" type="text" inputmode="numeric" pattern="[0-9]*"
+        placeholder="ex: 50" value="${saved.matPrimaRecup||''}"
+        style="width:88px;font-family:'JetBrains Mono',monospace;text-align:right"
+        oninput="updateMonitNoRefresh('${row.key}','matPrimaRecup',this.value)"
+        onblur="updateMonit('${row.key}','matPrimaRecup',this.value)"> <span style="font-size:10px;color:var(--ink-muted)">KG</span>
+      </td>
+      <td><input class="monit-input" type="text" placeholder="Motiv / observații..."
+        value="${(saved.motiv||'').replace(/"/g,'&quot;')}"
+        oninput="updateMonitNoRefresh('${row.key}','motiv',this.value)">
+      </td>`;
+    tbody.appendChild(tr);
+  });
+}
+
 function updateMonit(key, field, value) {
   if (!state.monitorizare[key]) state.monitorizare[key] = {};
   state.monitorizare[key][field] = value;
@@ -1939,6 +2086,7 @@ function updateMonit(key, field, value) {
   else if (key.startsWith('burduf_')) buildMonitBurduf(zi, dayLabel);
   else if (key.startsWith('amb_')) buildMonitAmb(zi, dayLabel);
   else if (key.startsWith('etic_')) buildMonitEtic(zi, dayLabel);
+  else if (key.startsWith('toc_')) buildMonitToc(zi, dayLabel);
 }
 
 function updateMonitNoRefresh(key, field, value) {
@@ -2278,9 +2426,9 @@ async function saveToSheets() {
     await sheetsPost({ action: 'write', sheet: sheetKey, rows: buildPlanifRows() });
 
     // POST 2: monitorizare
-    const monitRows = [['key','realizat','cantitate','timpReal','motiv','status']];
+    const monitRows = [['key','realizat','cantitate','timpReal','motiv','cantTocata','matPrimaRecup']];
     Object.entries(state.monitorizare).forEach(([key, val]) => {
-      monitRows.push([key, val.realizat||'', val.cantitate||'', val.timpReal||'', val.motiv||'', val.status||'']);
+      monitRows.push([key, val.realizat||'', val.cantitate||'', val.timpReal||'', val.motiv||'', val.cantTocata||'', val.matPrimaRecup||'']);
     });
     await sheetsPost({ action: 'write', sheet: monitKey, rows: monitRows });
 
@@ -2312,9 +2460,9 @@ async function saveToSheets() {
     await sheetsPost({ action: 'writeFormatted', sheet: sheetKey, payload: buildFormattedPlanif() });
 
     // POST 3: monitorizare date brute
-    const monitRows = [['key','realizat','cantitate','timpReal','motiv','status']];
+    const monitRows = [['key','realizat','cantitate','timpReal','motiv','cantTocata','matPrimaRecup']];
     Object.entries(state.monitorizare).forEach(([key, val]) => {
-      monitRows.push([key, val.realizat||'', val.cantitate||'', val.timpReal||'', val.motiv||'', val.status||'']);
+      monitRows.push([key, val.realizat||'', val.cantitate||'', val.timpReal||'', val.motiv||'', val.cantTocata||'', val.matPrimaRecup||'']);
     });
     await sheetsPost({ action: 'write', sheet: monitKey, rows: monitRows });
 
@@ -2667,18 +2815,18 @@ function buildFormattedMonit() {
 async function saveMonitorizare() {
   if (!config.sheetsUrl) { alert('Configurează URL-ul Google Sheets mai întâi'); return; }
   setSyncStatus('loading', 'Se salvează monitorizare...');
-  const rows = [['key','realizat','cantitate','timpReal','motiv','status']];
+  const rows = [['key','realizat','cantitate','timpReal','motiv','cantTocata','matPrimaRecup']];
   Object.entries(state.monitorizare).forEach(([key, val]) => {
-    rows.push([key, val.realizat||'', val.cantitate||'', val.timpReal||'', val.motiv||'', val.status||'']);
+    rows.push([key, val.realizat||'', val.cantitate||'', val.timpReal||'', val.motiv||'', val.cantTocata||'', val.matPrimaRecup||'']);
   });
   await sheetsPost({ action: 'write', sheet: monitSheetKey(), rows });
   setSyncStatus('ok', `Realizat salvat · ${new Date().toLocaleTimeString('ro-RO')}`);
 }
 
 async function saveMonitToSheet(sheetKey) {
-  const rows = [['key','realizat','cantitate','timpReal','motiv','status']];
+  const rows = [['key','realizat','cantitate','timpReal','motiv','cantTocata','matPrimaRecup']];
   Object.entries(state.monitorizare).forEach(([key, val]) => {
-    rows.push([key, val.realizat||'', val.cantitate||'', val.timpReal||'', val.motiv||'', val.status||'']);
+    rows.push([key, val.realizat||'', val.cantitate||'', val.timpReal||'', val.motiv||'', val.cantTocata||'', val.matPrimaRecup||'']);
   });
   await sheetsPost({ action: 'write', sheet: sheetKey, rows });
 }
@@ -2697,7 +2845,7 @@ async function loadMonitForSheet(sheetKey) {
     state.monitorizare = {};
     data.data.slice(1).forEach(row => {
       if (row[0]) state.monitorizare[row[0]] = {
-        realizat: row[1]||'', cantitate: row[2]||'', timpReal: row[3]||'', motiv: row[4]||'', status: row[5]||''
+        realizat: row[1]||'', cantitate: row[2]||'', timpReal: row[3]||'', motiv: row[4]||'', cantTocata: row[5]||'', matPrimaRecup: row[6]||''
       };
     });
     buildMonitTable();
@@ -2799,6 +2947,7 @@ function rebuildAll() {
   buildBurdufTable();
   buildAmbalareTable();
   buildEtichetareTable();
+  buildTocareTable();
   buildPersonalSection();
   updateCentralizare();
 }
