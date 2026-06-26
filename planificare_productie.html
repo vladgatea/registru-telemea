@@ -1205,41 +1205,40 @@ const PRODUSE_BURDUF = [
 
 // Date din sheet-ul Procesare — se încarcă din Google Sheets la pornire
 let PROCESARE_REF = {
-  // Materii prime cu formate multiple (lot = kg rezultat per procesare)
-  'TVPS':             {lot:650, buc:0,   lv:3000, lc:0, lo:0, ld:0, um:'KG'},
-  'TV MOLD':          {lot:600, buc:0,   lv:3000, lc:0, lo:0, ld:0, um:'KG'},
-  'BV':               {lot:550, buc:0,   lv:3000, lc:0, lo:0, ld:0, um:'KG'},
-  'TOPS':             {lot:600, buc:0,   lv:0,    lc:0, lo:3000, ld:0, um:'KG'},
-  'TCPS':             {lot:600, buc:0,   lv:0,    lc:3000, lo:0, ld:0, um:'KG'},
+  // Materii prime cu formate multiple — laptele e per procesare indiferent de ambalaj
+  'TVPS':             {lot:650, buc:0,   lv:3000, lc:0,    lo:0,   ld:0,    um:'KG'},
+  'TV MOLD':          {lot:600, buc:0,   lv:3000, lc:0,    lo:0,   ld:0,    um:'KG'},
+  'BV':               {lot:550, buc:0,   lv:3000, lc:0,    lo:0,   ld:0,    um:'KG'},
+  'TOPS':             {lot:600, buc:0,   lv:0,    lc:0,    lo:3000,ld:0,    um:'KG'},
+  'TCPS':             {lot:600, buc:0,   lv:0,    lc:3000, lo:0,   ld:0,    um:'KG'},
+  'CAS V':            {lot:195, buc:650, lv:3000, lc:0,    lo:0,   ld:0,    um:'BUC'},
+  'CAS V+O':          {lot:195, buc:650, lv:2950, lc:0,    lo:0,   ld:0,    um:'BUC'},
   // Produse finale directe
-  'TVPS 4KG':         {lot:650, buc:162, lv:3000, lc:0, lo:0, ld:0, um:'KG'},
-  'TVPS 800G':        {lot:650, buc:812, lv:3000, lc:0, lo:0, ld:0, um:'BUC'},
-  'TVPS 375 G':       {lot:650, buc:1733,lv:3000, lc:0, lo:0, ld:0, um:'BUC'},
-  'TV MOLD 4KG':      {lot:600, buc:150, lv:3000, lc:0, lo:0, ld:0, um:'KG'},
-  'TV MOLD 800G':     {lot:600, buc:750, lv:3000, lc:0, lo:0, ld:0, um:'BUC'},
-  'TV+O 4KG':         {lot:650, buc:162, lv:3000, lc:0, lo:0, ld:0, um:'KG'},
-  'TV+C 4KG':         {lot:650, buc:162, lv:2400, lc:600, lo:0, ld:0, um:'KG'},
-  'BV 5KG':           {lot:550, buc:110, lv:3000, lc:0, lo:0, ld:0, um:'KG'},
-  'BV 400G':          {lot:550, buc:1375,lv:3000, lc:0, lo:0, ld:0, um:'BUC'},
-  'TOPS 800G':        {lot:600, buc:750, lv:0,    lc:0, lo:3000, ld:0, um:'BUC'},
-  'TCPS 800G':        {lot:600, buc:750, lv:0,    lc:3000, lo:0, ld:0, um:'BUC'},
-  'CAS V':            {lot:195, buc:650, lv:3000, lc:0, lo:0, ld:0, um:'BUC'},
-  'CAS V 300G':       {lot:195, buc:650, lv:3000, lc:0, lo:0, ld:0, um:'BUC'},
-  'CAS V 800G':         {lot:128, buc:160, lv:3000, lc:0, lo:0, ld:0, um:'BUC'},
-  'CAS V MP':         {lot:450, buc:0,   lv:3000, lc:0, lo:0, ld:0, um:'KG'},
-  'CAS V+O':  {lot:195, buc:650, lv:3000, lc:0, lo:0, ld:0, um:'BUC'},
-  'TV DEG 4KG':       {lot:500, buc:0,   lv:1500, lc:0, lo:0, ld:1500, um:'KG'},
-  'TV':               {lot:650, buc:0,   lv:3000, lc:0, lo:0, ld:0, um:'KG'},
-  'CAS V+O':          {lot:195, buc:650, lv:3000, lc:0, lo:0, ld:0, um:'BUC'},
-  'CAS V+O 300G':     {lot:195, buc:650, lv:3000, lc:0, lo:0, ld:0, um:'BUC'},
-  'CAS V+O 800G':     {lot:128, buc:160, lv:3000, lc:0, lo:0, ld:0, um:'BUC'},
-  'CAS O 100%':       {lot:550, buc:0,   lv:0,    lc:0, lo:3000, ld:0, um:'KG'},
-  'CAS V+O MP DLF':   {lot:450, buc:0,   lv:2400, lc:0, lo:600, ld:0, um:'KG'},
+  'TVPS 4KG':         {lot:650, buc:162, lv:3000, lc:0,    lo:0,   ld:0,    um:'KG'},
+  'TVPS 800G':        {lot:650, buc:300, lv:3000, lc:0,    lo:0,   ld:0,    um:'BUC'},
+  'TVPS 375 G':       {lot:650, buc:650, lv:3000, lc:0,    lo:0,   ld:0,    um:'BUC'},
+  'TV MOLD 4KG':      {lot:600, buc:150, lv:3000, lc:0,    lo:0,   ld:0,    um:'KG'},
+  'TV MOLD 800G':     {lot:600, buc:300, lv:3000, lc:0,    lo:0,   ld:0,    um:'BUC'},
+  'TV+O 4KG':         {lot:650, buc:162, lv:2950, lc:0,    lo:0,   ld:0,    um:'KG'},
+  'TV+C 4KG':         {lot:650, buc:162, lv:2400, lc:600,  lo:0,   ld:0,    um:'KG'},
+  'BV 5KG':           {lot:550, buc:110, lv:3000, lc:0,    lo:0,   ld:0,    um:'KG'},
+  'BV 400G':          {lot:550, buc:1375,lv:3000, lc:0,    lo:0,   ld:0,    um:'BUC'},
+  'TOPS 800G':        {lot:600, buc:300, lv:0,    lc:0,    lo:3000,ld:0,    um:'BUC'},
+  'TCPS 800G':        {lot:600, buc:300, lv:0,    lc:3000, lo:0,   ld:0,    um:'BUC'},
+  'CAS V 300G':       {lot:195, buc:650, lv:3000, lc:0,    lo:0,   ld:0,    um:'BUC'},
+  'CAS V 800G':       {lot:128, buc:160, lv:3000, lc:0,    lo:0,   ld:0,    um:'BUC'},
+  'CAS V MP':         {lot:450, buc:0,   lv:3000, lc:0,    lo:0,   ld:0,    um:'KG'},
+  'CAS V+O 300G':     {lot:195, buc:650, lv:2950, lc:0,    lo:0,   ld:0,    um:'BUC'},
+  'CAS V+O 800G':     {lot:128, buc:160, lv:2950, lc:0,    lo:0,   ld:0,    um:'BUC'},
+  'CAS V+O MP DLF':   {lot:450, buc:0,   lv:2400, lc:0,    lo:600, ld:0,    um:'KG'},
+  'CAS O 100%':       {lot:550, buc:0,   lv:0,    lc:0,    lo:3000,ld:0,    um:'KG'},
+  'TV DEG 4KG':       {lot:500, buc:0,   lv:1500, lc:0,    lo:0,   ld:1500, um:'KG'},
+  'TV':               {lot:650, buc:0,   lv:3000, lc:0,    lo:0,   ld:0,    um:'KG'},
 };
 
 // Date din sheet-ul Ambalare — se încarcă din Google Sheets la pornire
 // AMBALARE_REF: { timp (ore per lot optim), lotOptim, um }
-const AMBALARE_REF = {
+let AMBALARE_REF = {
   'DLF 350G':           { timp: 3.0,  lotOptim: 1500, um: 'BUC' },
   'PDA 300G':           { timp: 4.0,  lotOptim: 2000, um: 'BUC' },
   'BB FRA':             { timp: 2.75, lotOptim: 600,  um: 'KG'  },
@@ -1891,14 +1890,17 @@ function updateCentralizare() {
     let lv=0, lc=0, lo=0, ld=0;
     for (let p = 0; p < 8; p++) {
       const prod = state.procesare[p][zi];
-      if (prod && prod !== '—' && PROCESARE_REF[prod]) {
-        const ref = PROCESARE_REF[prod];
-        lv += ref.lv; lc += ref.lc; lo += ref.lo; ld += ref.ld;
-      }
+      if (!prod || prod === '—') continue;
+      const ref = PROCESARE_REF[prod];
+      if (!ref) continue;
+      lv += Number(ref.lv) || 0;
+      lc += Number(ref.lc) || 0;
+      lo += Number(ref.lo) || 0;
+      ld += Number(ref.ld) || 0;
     }
     totLv+=lv; totLc+=lc; totLo+=lo; totLd+=ld;
     const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${z}</td><td>${lv||'—'}</td><td>${lc||'—'}</td><td>${lo||'—'}</td><td>${ld||'—'}</td><td><strong>${lv+lc+lo+ld||'—'}</strong></td>`;
+    tr.innerHTML = `<td>${z}</td><td>${lv||'—'}</td><td>${lc||'—'}</td><td>${lo||'—'}</td><td>${ld||'—'}</td><td><strong>${(lv+lc+lo+ld)||'—'}</strong></td>`;
     tbodyL.appendChild(tr);
   });
   const trTot = document.createElement('tr');
@@ -1920,9 +1922,9 @@ function updateCentralizare() {
   }
   Object.entries(counter).forEach(([prod, cnt]) => {
     const ref = PROCESARE_REF[prod];
-    const cantitate = ref ? (ref.buc > 0 ? ref.buc * cnt : ref.lot * cnt) : '—';
+    const cantitate = ref && ref.lot > 0 ? ref.lot * cnt : '—';
     const tr = document.createElement('tr');
-    tr.innerHTML = `<td style="text-align:left">${prod}</td><td>${ref?.um||'KG'}</td><td>${cantitate}</td><td>${cnt}</td>`;
+    tr.innerHTML = `<td style="text-align:left">${prod}</td><td>KG</td><td>${cantitate}</td><td>${cnt}</td>`;
     tbodyR.appendChild(tr);
   });
   const totalProc = Object.values(counter).reduce((a,b)=>a+b, 0);
@@ -2592,55 +2594,8 @@ function indexSheetKey()  { return 'Istoric'; }
 // ── ÎNCĂRCARE DATE REFERINȚĂ DIN SHEETS ─────────────────────────
 
 async function loadRefData() {
-  try {
-    setSyncStatus('loading', 'Se încarcă date referință...');
-
-    // Încarcă Procesare_Ref
-    const procData = await sheetsRead('Procesare_Ref');
-    if (procData.data && procData.data.length > 1) {
-      const newRef = {};
-      // Header: DENUMIRE, Lot OPTIM, BUC OPTIM, LAPTE VACA, LAPTE CAPRA, LAPTE OAIE, LAPTE DEG
-      procData.data.slice(1).forEach(row => {
-        const denumire = String(row[0] || '').trim();
-        if (!denumire) return;
-        const lot  = parseFloat(row[1]) || 0;
-        const buc  = parseFloat(row[2]) || 0;
-        const lv   = parseFloat(row[3]) || 0;
-        const lc   = parseFloat(row[4]) || 0;
-        const lo   = parseFloat(row[5]) || 0;
-        const ld   = parseFloat(row[6]) || 0;
-        const um   = buc > 0 ? 'BUC' : 'KG';
-        newRef[denumire] = { lot, buc, lv, lc, lo, ld, um };
-      });
-      if (Object.keys(newRef).length > 0) {
-        PROCESARE_REF = newRef;
-        console.log('Procesare_Ref încărcat:', Object.keys(newRef).length, 'produse');
-      }
-    }
-
-    // Încarcă Ambalare_Ref
-    const ambData = await sheetsRead('Ambalare_Ref');
-    if (ambData.data && ambData.data.length > 1) {
-      const newAmb = {};
-      // Header: DENUMIRE, Lot OPTIM UM, Timp necesar (h)
-      ambData.data.slice(1).forEach(row => {
-        const denumire = String(row[0] || '').trim();
-        if (!denumire) return;
-        const timp = parseFloat(row[2]) || 0;
-        if (timp > 0) newAmb[denumire] = timp;
-      });
-      if (Object.keys(newAmb).length > 0) {
-        AMBALARE_REF = newAmb;
-        console.log('Ambalare_Ref încărcat:', Object.keys(newAmb).length, 'produse');
-      }
-    }
-
-    setSyncStatus('ok', 'Date referință actualizate');
-  } catch(e) {
-    // Dacă pică, folosim datele hardcodate — nu blocăm aplicația
-    setSyncStatus('ok', 'Configurat (date locale)');
-    console.warn('Nu s-au putut încărca datele din Sheets, se folosesc valorile implicite:', e);
-  }
+  // Folosim datele hardcodate din cod — mai complete și corecte
+  setSyncStatus('ok', 'Configurat');
 }
 
 async function loadWeekList() {
