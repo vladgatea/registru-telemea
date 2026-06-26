@@ -1058,12 +1058,11 @@
             <th style="min-width:110px">Slot</th>
             <th style="min-width:130px">Caș planificat</th>
             <th style="min-width:110px">Cant. tocată (KG)</th>
-            <th style="min-width:130px">Mat. primă recup. (KG)</th>
             <th style="min-width:190px">Motiv / Observații</th>
           </tr>
         </thead>
         <tbody id="tbodyMonitToc">
-          <tr><td colspan="5" style="text-align:center;padding:20px;color:var(--ink-muted)">Selectează o zi</td></tr>
+          <tr><td colspan="4" style="text-align:center;padding:20px;color:var(--ink-muted)">Selectează o zi</td></tr>
         </tbody>
       </table>
     </div>
@@ -1188,52 +1187,120 @@ const PROCESARI = [
 ];
 
 const PRODUSE_PROCESARE = [
-  '—','TVPS 4KG','TV MOLD 4KG','TV+O 4KG','TV+C 4KG','BV 5KG','BV 400G',
-  'CAS V 300G','CAS V MV','CAS V MP','TOPS','TCPS','CAS V+O 300G/MV',
-  'TV DEG 4KG','TV','CAS V+O MV','CAS O 100%','CAS V+O MP DLF'
+  '—',
+  'TVPS','TV MOLD','BV','TOPS','TCPS',
+  'CAS V+O','CAS V',
+  'TV+O 4KG','TV+C 4KG',
+  'CAS V MP','CAS V+O MP DLF',
+  'CAS O 100%',
+  'TV DEG 4KG','TV'
 ];
 
 const PRODUSE_BURDUF = [
   '—','DLF 350G - 1500','PDA 300G - 2000','BB FRA - 600','MARUNȚITA - 86',
   'BB 4X60DLF - 2000','BB PDA 2KG - 300','DLF 250G - 2000','BB DLF 2KG - 300',
-  'BB Oaie 300G - 600','Bulgaraș','Pecorino'
+  'BB Oaie 300G - 600','Bulgaraș','Pecorino',
+  'BB PDA 1KG - 240','BB DLF 1KG - 240'
 ];
 
 // Date din sheet-ul Procesare — se încarcă din Google Sheets la pornire
 let PROCESARE_REF = {
+  // Materii prime cu formate multiple (lot = kg rezultat per procesare)
+  'TVPS':             {lot:650, buc:0,   lv:3000, lc:0, lo:0, ld:0, um:'KG'},
+  'TV MOLD':          {lot:600, buc:0,   lv:3000, lc:0, lo:0, ld:0, um:'KG'},
+  'BV':               {lot:550, buc:0,   lv:3000, lc:0, lo:0, ld:0, um:'KG'},
+  'TOPS':             {lot:600, buc:0,   lv:0,    lc:0, lo:3000, ld:0, um:'KG'},
+  'TCPS':             {lot:600, buc:0,   lv:0,    lc:3000, lo:0, ld:0, um:'KG'},
+  // Produse finale directe
   'TVPS 4KG':         {lot:650, buc:162, lv:3000, lc:0, lo:0, ld:0, um:'KG'},
+  'TVPS 800G':        {lot:650, buc:812, lv:3000, lc:0, lo:0, ld:0, um:'BUC'},
+  'TVPS 375 G':       {lot:650, buc:1733,lv:3000, lc:0, lo:0, ld:0, um:'BUC'},
   'TV MOLD 4KG':      {lot:600, buc:150, lv:3000, lc:0, lo:0, ld:0, um:'KG'},
+  'TV MOLD 800G':     {lot:600, buc:750, lv:3000, lc:0, lo:0, ld:0, um:'BUC'},
   'TV+O 4KG':         {lot:650, buc:162, lv:3000, lc:0, lo:0, ld:0, um:'KG'},
   'TV+C 4KG':         {lot:650, buc:162, lv:2400, lc:600, lo:0, ld:0, um:'KG'},
   'BV 5KG':           {lot:550, buc:110, lv:3000, lc:0, lo:0, ld:0, um:'KG'},
-  'BV 400G':          {lot:550, buc:1375, lv:3000, lc:0, lo:0, ld:0, um:'BUC'},
+  'BV 400G':          {lot:550, buc:1375,lv:3000, lc:0, lo:0, ld:0, um:'BUC'},
+  'TOPS 800G':        {lot:600, buc:750, lv:0,    lc:0, lo:3000, ld:0, um:'BUC'},
+  'TCPS 800G':        {lot:600, buc:750, lv:0,    lc:3000, lo:0, ld:0, um:'BUC'},
+  'CAS V':            {lot:195, buc:650, lv:3000, lc:0, lo:0, ld:0, um:'BUC'},
   'CAS V 300G':       {lot:195, buc:650, lv:3000, lc:0, lo:0, ld:0, um:'BUC'},
-  'CAS V MV':         {lot:200, buc:200, lv:3000, lc:0, lo:0, ld:0, um:'KG'},
+  'CAS V 800G':         {lot:128, buc:160, lv:3000, lc:0, lo:0, ld:0, um:'BUC'},
   'CAS V MP':         {lot:450, buc:0,   lv:3000, lc:0, lo:0, ld:0, um:'KG'},
-  'TOPS':             {lot:600, buc:150, lv:0,    lc:0, lo:3000, ld:0, um:'KG'},
-  'TCPS':             {lot:600, buc:150, lv:0,    lc:3000, lo:0, ld:0, um:'KG'},
-  'CAS V+O 300G/MV':  {lot:195, buc:650, lv:3000, lc:0, lo:0, ld:0, um:'BUC'},
+  'CAS V+O':  {lot:195, buc:650, lv:3000, lc:0, lo:0, ld:0, um:'BUC'},
   'TV DEG 4KG':       {lot:500, buc:0,   lv:1500, lc:0, lo:0, ld:1500, um:'KG'},
   'TV':               {lot:650, buc:0,   lv:3000, lc:0, lo:0, ld:0, um:'KG'},
-  'CAS V+O MV':       {lot:200, buc:200, lv:3000, lc:0, lo:0, ld:0, um:'KG'},
+  'CAS V+O':          {lot:195, buc:650, lv:3000, lc:0, lo:0, ld:0, um:'BUC'},
+  'CAS V+O 300G':     {lot:195, buc:650, lv:3000, lc:0, lo:0, ld:0, um:'BUC'},
+  'CAS V+O 800G':     {lot:128, buc:160, lv:3000, lc:0, lo:0, ld:0, um:'BUC'},
   'CAS O 100%':       {lot:550, buc:0,   lv:0,    lc:0, lo:3000, ld:0, um:'KG'},
   'CAS V+O MP DLF':   {lot:450, buc:0,   lv:2400, lc:0, lo:600, ld:0, um:'KG'},
 };
 
 // Date din sheet-ul Ambalare — se încarcă din Google Sheets la pornire
-let AMBALARE_REF = {
-  'DLF 350G':      3.0,  'PDA 300G':      4.0,  'BB FRA':        2.75,
-  'MARUNȚITA - 86':1.25, 'BB 4X60DLF':    4.0,  'BB PDA 2KG':    2.0,
-  'DLF 250G':      4.0,  'BB DLF 2KG':    2.0,  'BB Oaie 300G - 600': 1.25,
-  'BV 400G':       2.5,  'TVPS 375 G':    2.0,  'TVPS 800G':     1.75,
-  'CAS V 300G':    1.5,  'CAS V+O 300G':  1.5,  'CAS V MV':      1.0,
-  'CAS V+O MV':    1.0,  'BULGARAS':      2.0,  'TV MOLD 800G':  1.75,
-  'TOPS 800G':     1.75, 'TCPS 800G':     1.75, 'BV 5KG':        1.0,
-  'CAS V MP':      1.25, 'TOPS':          1.5,  'TCPS':          1.2,
-  'TV DEG 4KG':    1.16, 'TV':            1.16, 'BB 5X60DLF':    4.0,
-  'TVPS 4KG':      1.16, 'TV MOLD 4KG':   1.16, 'TV+O 4KG':      1.16,
-  'TV+C 4KG':      1.16, 'CAS O 100%':    1.5,  'CAS V+O MP':    1.25,
+// AMBALARE_REF: { timp (ore per lot optim), lotOptim, um }
+const AMBALARE_REF = {
+  'DLF 350G':           { timp: 3.0,  lotOptim: 1500, um: 'BUC' },
+  'PDA 300G':           { timp: 4.0,  lotOptim: 2000, um: 'BUC' },
+  'BB FRA':             { timp: 2.75, lotOptim: 600,  um: 'KG'  },
+  'MARUNȚITA - 86':     { timp: 1.25, lotOptim: 602,  um: 'KG'  },
+  'BB 4X60DLF':         { timp: 4.0,  lotOptim: 2000, um: 'BUC' },
+  'BB PDA 2KG':         { timp: 2.0,  lotOptim: 300,  um: 'KG'  },
+  'DLF 250G':           { timp: 4.0,  lotOptim: 2000, um: 'BUC' },
+  'BB DLF 2KG':         { timp: 2.0,  lotOptim: 300,  um: 'KG'  },
+  'BB Oaie 300G - 600': { timp: 1.25, lotOptim: 600,  um: 'BUC' },
+  'BV 400G':            { timp: 2.5,  lotOptim: 1375, um: 'BUC' },
+  'TVPS 375 G':         { timp: 2.0,  lotOptim: 650,  um: 'BUC' },
+  'TVPS 800G':          { timp: 1.75, lotOptim: 300,  um: 'BUC' },
+  'CAS V 300G':         { timp: 1.5,  lotOptim: 650,  um: 'BUC' },
+  'CAS V+O 300G':       { timp: 1.5,  lotOptim: 650,  um: 'BUC' },
+  'CAS V 800G':         { timp: 1.0,  lotOptim: 160,  um: 'BUC' },
+  'CAS V+O 300G':       { timp: 1.5,  lotOptim: 650,  um: 'BUC' },
+  'CAS V+O 800G':       { timp: 1.0,  lotOptim: 160,  um: 'BUC' },
+  'BULGARAS':           { timp: 2.0,  lotOptim: 60,   um: 'KG'  },
+  'TV MOLD 800G':       { timp: 1.75, lotOptim: 300,  um: 'BUC' },
+  'TOPS 800G':          { timp: 1.75, lotOptim: 300,  um: 'BUC' },
+  'TCPS 800G':          { timp: 1.75, lotOptim: 300,  um: 'BUC' },
+  'BV 5KG':             { timp: 1.0,  lotOptim: 500,  um: 'KG'  },
+  'CAS V MP':           { timp: 1.25, lotOptim: 450,  um: 'KG'  },
+  'TOPS':               { timp: 1.5,  lotOptim: 800,  um: 'KG'  },
+  'TCPS':               { timp: 1.2,  lotOptim: 600,  um: 'KG'  },
+  'TV DEG 4KG':         { timp: 1.16, lotOptim: 500,  um: 'KG'  },
+  'TV':                 { timp: 1.16, lotOptim: 550,  um: 'KG'  },
+  'BB 5X60DLF':         { timp: 4.0,  lotOptim: 1500, um: 'BUC' },
+  'TVPS 4KG':           { timp: 1.16, lotOptim: 162,  um: 'KG'  },
+  'TV MOLD 4KG':        { timp: 1.16, lotOptim: 150,  um: 'KG'  },
+  'TV+O 4KG':           { timp: 1.16, lotOptim: 162,  um: 'KG'  },
+  'TV+C 4KG':           { timp: 1.16, lotOptim: 162,  um: 'KG'  },
+  'CAS O 100%':         { timp: 1.5,  lotOptim: 550,  um: 'KG'  },
+  'CAS V+O MP DLF':     { timp: 1.25, lotOptim: 200,  um: 'KG'  },
+  'BB PDA 1KG':         { timp: 1.6,  lotOptim: 240,  um: 'KG'  },
+  'BB DLF 1KG':         { timp: 1.6,  lotOptim: 240,  um: 'KG'  },
 };
+
+// Materii prime cu formate multiple de ambalare
+const FORMATE_AMBALARE = {
+  'TVPS':    ['—', 'TVPS 375 G', 'TVPS 800G', 'TVPS 4KG'],
+  'TV MOLD': ['—', 'TV MOLD 800G', 'TV MOLD 4KG'],
+  'TOPS':    ['—', 'TOPS 800G', 'TOPS'],
+  'TCPS':    ['—', 'TCPS 800G', 'TCPS'],
+  'BV':      ['—', 'BV 400G', 'BV 5KG'],
+  'CAS V+O': ['—', 'CAS V+O 300G', 'CAS V+O 800G'],
+  'CAS V':   ['—', 'CAS V 300G', 'CAS V 800G'],
+};
+
+// Returnează materia primă din care provine un produs de procesare
+function getMateriePrivaKey(prod) {
+  if (!prod || prod === '—') return null;
+  // Sortăm cheile după lungime descrescător (cele mai specifice primul)
+  // ex: 'CAS V+O' înainte de 'CAS V' ca să nu prindă 'CAS V+O' ca 'CAS V'
+  const keys = Object.keys(FORMATE_AMBALARE).sort((a, b) => b.length - a.length);
+  for (const key of keys) {
+    if (prod === key) return key;
+    if (prod.startsWith(key + ' ') || prod.startsWith(key + '/')) return key;
+  }
+  return null;
+}
 
 // State
 let state = {
@@ -1242,6 +1309,13 @@ let state = {
   firstLot: '27173',
   procesare: Array(8).fill(null).map(() => Array(7).fill('—')),  // [procesare][zi]
   burduf: Array(5).fill(null).map(() => Array(7).fill('—')),     // 5 randuri burduf
+  // ambalareSelectii[procIdx][zi][0/1] = { format, cantitate }
+  ambalareSelectii: Array(8).fill(null).map(() =>
+    Array(7).fill(null).map(() => [
+      { format: '—', cantitate: '' },
+      { format: '—', cantitate: '' }
+    ])
+  ),
   personal: {
     schimb1: Array(7).fill(null).map(() => ['—','—','—']),
     schimb2: Array(7).fill(null).map(() => ['—','—','—']),
@@ -1294,13 +1368,29 @@ function makeSelect(options, value, onchange, cls='cell-select') {
   return s;
 }
 
+// Produse CAS care merg DOAR la Tocare (nu la Ambalare/Etichetare)
+const CAS_DOAR_TOCARE = ['CAS V MP', 'CAS V+O MP DLF', 'CAS O 100%'];
+
+// Toate produsele CAS
+function isCas(prod) {
+  return prod && prod !== '—' && prod.toUpperCase().startsWith('CAS');
+}
+
 function getAmbalareFromProcesare() {
-  // Ambalare[zi] = ce a fost la procesare[zi-1], exclusiv CAS care merg doar la Tocare
   const amb = Array(7).fill(null).map(() => []);
   for (let z = 1; z < 7; z++) {
     for (let p = 0; p < 8; p++) {
       const prod = state.procesare[p][z - 1];
-      if (prod && prod !== '—' && !CAS_DOAR_TOCARE.includes(prod)) amb[z].push(prod);
+      if (!prod || prod === '—') continue;
+      if (CAS_DOAR_TOCARE.includes(prod)) continue;
+      const matKey = getMateriePrivaKey(prod);
+      if (matKey) {
+        // Produs cu formate multiple → folosim selecțiile editabile
+        const sel = state.ambalareSelectii[p][z - 1];
+        sel.forEach(s => { if (s.format && s.format !== '—') amb[z].push(s.format); });
+      } else {
+        amb[z].push(prod);
+      }
     }
   }
   return amb;
@@ -1328,13 +1418,15 @@ function getEtichetareFromAmbalare() {
   return etic;
 }
 
+// Timp ambalare pentru lista de produse (lot complet fiecare) — folosit pentru produse simple/auto
 function calcTimpAmbalare(produse) {
   let total = 0;
   produse.forEach(prod => {
-    // Cauta un match partial in AMBALARE_REF
+    const ref = AMBALARE_REF[prod];
+    if (ref) { total += ref.timp; return; }
     for (const key of Object.keys(AMBALARE_REF)) {
       if (prod.toUpperCase().includes(key.toUpperCase()) || key.toUpperCase().includes(prod.toUpperCase())) {
-        total += AMBALARE_REF[key];
+        total += AMBALARE_REF[key].timp;
         break;
       }
     }
@@ -1342,15 +1434,45 @@ function calcTimpAmbalare(produse) {
   return total;
 }
 
-// Produse CAS care merg DOAR la Tocare (nu la Ambalare/Etichetare)
-const CAS_DOAR_TOCARE = ['CAS V MP', 'CAS V+O MP DLF', 'CAS O 100%'];
-
-// Toate produsele CAS (pentru filtrul de Tocare)
-function isCas(prod) {
-  return prod && prod !== '—' && prod.toUpperCase().startsWith('CAS');
+// Timp ambalare proporțional: (cantitate / lotOptim) × timp standard
+// cantitate e în BUC sau KG în funcție de um din AMBALARE_REF
+function calcTimpAmbalareProportional(format, cantitate) {
+  const ref = AMBALARE_REF[format];
+  if (!ref || !cantitate) return 0;
+  const cant = parseFloat(cantitate);
+  if (isNaN(cant) || cant <= 0) return 0;
+  return (cant / ref.lotOptim) * ref.timp;
 }
 
-// Tocare[zi] = CAS-urile procesate în ziua zi-1
+// Timp total ambalare pentru o zi — include și rândurile editabile proporționale
+function calcTimpAmbalareZi(zi) {
+  let total = 0;
+  // Produse simple (auto)
+  for (let p = 0; p < 8; p++) {
+    if (zi === 0) continue;
+    const prod = state.procesare[p][zi - 1];
+    if (!prod || prod === '—' || CAS_DOAR_TOCARE.includes(prod)) continue;
+    if (!getMateriePrivaKey(prod)) {
+      // Produs simplu — timp standard
+      const ref = AMBALARE_REF[prod];
+      if (ref) total += ref.timp;
+    }
+  }
+  // Rânduri editabile — proporțional
+  for (let p = 0; p < 8; p++) {
+    if (zi === 0) continue;
+    const prod = state.procesare[p][zi - 1];
+    if (!prod || prod === '—' || !getMateriePrivaKey(prod)) continue;
+    for (let row = 0; row < 2; row++) {
+      const sel = state.ambalareSelectii[p][zi - 1][row];
+      if (sel.format && sel.format !== '—') {
+        total += calcTimpAmbalareProportional(sel.format, sel.cantitate);
+      }
+    }
+  }
+  return total;
+}
+
 function getTocareFromProcesare() {
   const toc = Array(7).fill(null).map(() => []);
   for (let z = 1; z < 7; z++) {
@@ -1365,6 +1487,7 @@ function getTocareFromProcesare() {
 function buildTocareTable() {
   const head = document.getElementById('tblTocHead');
   const body = document.getElementById('tblTocBody');
+  if (!head || !body) return;
   buildTableHeader(head);
   body.innerHTML = '';
 
@@ -1508,6 +1631,7 @@ function buildBurdufTable() {
 function updateAutoTables() {
   buildAmbalareTable();
   buildEtichetareTable();
+  buildTocareTable();
   buildMonitDaySelector();
 }
 
@@ -1518,9 +1642,10 @@ function buildAmbalareTable() {
   body.innerHTML = '';
 
   const amb = getAmbalareFromProcesare();
-  const maxRows = Math.max(...amb.map(a => a.length), 1);
 
-  for (let r = 0; r < maxRows; r++) {
+  // ── Rânduri auto (produse simple) ──
+  const maxAuto = Math.max(...amb.map(a => a.length), 0);
+  for (let r = 0; r < maxAuto; r++) {
     const tr = document.createElement('tr');
     const tdLabel = document.createElement('td');
     tdLabel.className = 'row-label';
@@ -1535,7 +1660,117 @@ function buildAmbalareTable() {
     body.appendChild(tr);
   }
 
-  // Timp necesar row
+  // ── Rânduri editabile pentru formate multiple ──
+  // Afișăm 2 rânduri per slot de procesare care are format multiplu
+  // Coloana zi = ambalarea din ziua zi → produsul e procesat în zi-1
+  for (let p = 0; p < 8; p++) {
+    // Verificăm dacă în vreo zi procesare zi-1 are produs cu formate multiple
+    const hasMultInAnyDay = ZILE.some((_, zi) => {
+      if (zi === 0) return false;
+      const prod = state.procesare[p][zi - 1];
+      return prod && prod !== '—' && getMateriePrivaKey(prod);
+    });
+    if (!hasMultInAnyDay) continue;
+
+    for (let row = 0; row < 2; row++) {
+      const tr = document.createElement('tr');
+      const tdLabel = document.createElement('td');
+      tdLabel.className = 'row-label';
+      tdLabel.style.cssText = 'color:var(--info);font-size:11px;font-weight:500';
+      tdLabel.textContent = row === 0 ? `P${p+1} Format 1` : `P${p+1} Format 2`;
+      tr.appendChild(tdLabel);
+
+      ZILE.forEach((_, zi) => {
+        const td = document.createElement('td');
+        td.style.padding = '3px 4px';
+
+        if (zi === 0) {
+          // Luni nu are ambalare editabilă (nu există zi-1)
+          td.innerHTML = '';
+          tr.appendChild(td);
+          return;
+        }
+
+        const prod = state.procesare[p][zi - 1]; // produsul procesat ieri
+        const matKey = prod && prod !== '—' ? getMateriePrivaKey(prod) : null;
+
+        if (matKey) {
+          const formate = FORMATE_AMBALARE[matKey];
+          const sel = state.ambalareSelectii[p][zi - 1][row];
+          const refFormat = AMBALARE_REF[sel.format] || {};
+          const umDisplay = refFormat.um || 'BUC';
+
+          const wrapper = document.createElement('div');
+          wrapper.style.cssText = 'display:flex;gap:3px;align-items:center;flex-wrap:wrap';
+
+          const selectEl = document.createElement('select');
+          selectEl.className = 'cell-select';
+          selectEl.style.cssText = 'font-size:11px;flex:1;min-width:90px';
+          formate.forEach(f => {
+            const opt = document.createElement('option');
+            opt.value = f; opt.textContent = f;
+            if (f === sel.format) opt.selected = true;
+            selectEl.appendChild(opt);
+          });
+
+          const umLabel = document.createElement('span');
+          umLabel.style.cssText = 'font-size:10px;color:var(--ink-muted);min-width:20px';
+          umLabel.textContent = umDisplay;
+
+          const cantInput = document.createElement('input');
+          cantInput.type = 'text';
+          cantInput.inputMode = 'numeric';
+          cantInput.placeholder = umDisplay;
+          cantInput.value = sel.cantitate || '';
+          cantInput.style.cssText = 'width:52px;font-size:11px;border:1px solid var(--border);border-radius:3px;padding:2px 4px;font-family:"JetBrains Mono",monospace;text-align:right';
+
+          selectEl.onchange = (e) => {
+            state.ambalareSelectii[p][zi - 1][row].format = e.target.value;
+            const newRef = AMBALARE_REF[e.target.value] || {};
+            umLabel.textContent = newRef.um || 'BUC';
+            cantInput.placeholder = newRef.um || 'BUC';
+            buildEtichetareTable();
+            updateCentralizare();
+            const timpZi = calcTimpAmbalareZi(zi);
+            const timpCells = body.querySelectorAll('.timp-total');
+            if (timpCells[zi]) timpCells[zi].textContent = timpZi > 0 ? timpZi.toFixed(2) : '—';
+          };
+
+          cantInput.oninput = (e) => {
+            state.ambalareSelectii[p][zi - 1][row].cantitate = e.target.value;
+            const timpZi = calcTimpAmbalareZi(zi);
+            const timpCells = body.querySelectorAll('.timp-total');
+            if (timpCells[zi]) timpCells[zi].textContent = timpZi > 0 ? timpZi.toFixed(2) : '—';
+          };
+
+          wrapper.appendChild(selectEl);
+          wrapper.appendChild(cantInput);
+          wrapper.appendChild(umLabel);
+          // Lot optim hint
+          const lotHint = document.createElement('div');
+          lotHint.style.cssText = 'font-size:9px;color:var(--ink-muted);line-height:1.2;margin-top:1px;width:100%';
+          const lotVal = refFormat.lotOptim ? `Optim: ${refFormat.lotOptim} ${refFormat.um||'BUC'}` : '';
+          lotHint.textContent = lotVal;
+          lotHint.id = `lotHint_${p}_${zi}_${row}`;
+          // Update hint when format changes
+          const origOnchange = selectEl.onchange;
+          selectEl.onchange = (e) => {
+            origOnchange(e);
+            const newRef = AMBALARE_REF[e.target.value] || {};
+            lotHint.textContent = newRef.lotOptim ? `Optim: ${newRef.lotOptim} ${newRef.um||'BUC'}` : '';
+          };
+          wrapper.appendChild(lotHint);
+          td.appendChild(wrapper);
+        } else {
+          td.innerHTML = '';
+        }
+        tr.appendChild(td);
+      });
+      body.appendChild(tr);
+    }
+  }
+
+  // ── Timp necesar ──
   const trTimp = document.createElement('tr');
   const tdTimpLabel = document.createElement('td');
   tdTimpLabel.className = 'row-label';
@@ -1545,7 +1780,7 @@ function buildAmbalareTable() {
   ZILE.forEach((_, zi) => {
     const td = document.createElement('td');
     td.className = 'timp-cell timp-total';
-    const timp = calcTimpAmbalare(amb[zi]);
+    const timp = calcTimpAmbalareZi(zi);
     td.textContent = timp > 0 ? timp.toFixed(2) : '—';
     trTimp.appendChild(td);
   });
@@ -1742,8 +1977,23 @@ function statusSummary(rows) {
 }
 
 function prodSelectOptions(saved, field) {
-  const all = PRODUSE_PROCESARE.concat(PRODUSE_BURDUF).filter((v,i,a) => a.indexOf(v) === i);
-  return all.map(p => `<option value="${p}" ${(saved[field]||'') === p ? 'selected' : ''}>${p}</option>`).join('');
+  // Materiile prime cu formate multiple — nu apar ca realizat, doar formatele finale
+  const materiePrima = Object.keys(FORMATE_AMBALARE);
+  const formateAmb = Object.values(FORMATE_AMBALARE).flat().filter(f => f !== '—');
+  
+  const all = PRODUSE_PROCESARE
+    .filter(p => !materiePrima.includes(p)) // scoatem materiile prime (TVPS, BV, CAS V etc.)
+    .concat(formateAmb)                      // adăugăm formatele finale (TVPS 375G, BV 400G etc.)
+    .concat(PRODUSE_BURDUF)
+    .filter((v,i,a) => a.indexOf(v) === i);
+
+  // Dacă valoarea salvată nu e în listă (produs vechi), o adăugăm ca opțiune selectată
+  const saved_val = saved[field] || '';
+  const hasVal = !saved_val || all.includes(saved_val);
+
+  return (hasVal ? all : [saved_val, ...all])
+    .map(p => `<option value="${p}" ${saved_val === p ? 'selected' : ''}>${p}</option>`)
+    .join('');
 }
 
 function statusOptions(saved) {
@@ -1852,8 +2102,11 @@ function buildMonitProc(zi, dayLabel) {
     const saved = state.monitorizare[row.key] || {};
     const ab = abatereCell(row.planificat, saved.realizat);
     const refProd = (saved.realizat && saved.realizat !== '—') ? saved.realizat : row.planificat;
-    const { lotOptim, um } = getLotOptim(refProd);
-    const { lotDisplay, qtyTd, badge } = renderQtyCols(row.key, lotOptim, um, saved);
+    const ref = PROCESARE_REF[refProd];
+    // La Procesare afișăm mereu KG (lot optim KG, cantitate în KG)
+    const lotOptimKg = ref ? ref.lot : null;
+    const umKg = 'KG';
+    const { lotDisplay, qtyTd, badge } = renderQtyCols(row.key, lotOptimKg, umKg, saved);
     const { std, real } = calcRandament(refProd, saved.cantitate);
     const tr = document.createElement('tr');
     tr.innerHTML = `
@@ -1913,30 +2166,67 @@ function buildMonitAmb(zi, dayLabel) {
   const tbody = document.getElementById('tbodyMonitAmb');
   tbody.innerHTML = '';
   const rows = [];
+
   if (zi > 0) {
     for (let p = 0; p < 8; p++) {
       const prod = state.procesare[p][zi - 1];
-      if (prod && prod !== '—') rows.push({ slot: `Slot ${p+1}`, planificat: prod, timpPlan: calcTimpAmbalare([prod]), key: `amb_${p}_${zi}` });
+      if (!prod || prod === '—') continue;
+      if (CAS_DOAR_TOCARE.includes(prod)) continue;
+
+      const matKey = getMateriePrivaKey(prod);
+
+      if (matKey) {
+        // Produs cu formate multiple → un rând per format selectat
+        for (let row = 0; row < 2; row++) {
+          const sel = state.ambalareSelectii[p][zi - 1][row];
+          if (!sel || sel.format === '—') continue;
+          const timpPlan = calcTimpAmbalareProportional(sel.format, sel.cantitate);
+          const refAmb = AMBALARE_REF[sel.format] || {};
+          const cantPlan = sel.cantitate ? `${sel.cantitate} ${refAmb.um||''}` : '—';
+          rows.push({
+            slot: `Slot ${p+1}${row > 0 ? 'b' : 'a'}`,
+            planificat: sel.format,
+            cantPlan,
+            timpPlan,
+            key: `amb_${p}_${zi}_${row}`,
+            isFormat: true
+          });
+        }
+      } else {
+        // Produs simplu → un rând normal
+        const timpPlan = calcTimpAmbalare([prod]);
+        rows.push({ slot: `Slot ${p+1}`, planificat: prod, cantPlan: '—', timpPlan, key: `amb_${p}_${zi}`, isFormat: false });
+      }
     }
   }
+
   if (rows.length === 0) {
     const msg = zi === 0 ? 'Luni nu are ambalare planificată' : 'Nicio ambalare planificată pentru această zi';
     tbody.innerHTML = `<tr><td colspan="11" style="text-align:center;padding:16px;color:var(--ink-muted)">${msg}</td></tr>`;
     document.getElementById('monitSummaryAmb').textContent = ''; return;
   }
   document.getElementById('monitSummaryAmb').textContent = statusSummary(rows);
+
   rows.forEach(row => {
     const saved = state.monitorizare[row.key] || {};
     const ab = abatereCell(row.planificat, saved.realizat);
     const refProdA = (saved.realizat && saved.realizat !== '—') ? saved.realizat : row.planificat;
-    const { lotOptim, um } = getLotOptim(refProdA);
+    // Lot optim din AMBALARE_REF pentru produse cu format, din PROCESARE_REF pentru simple
+    const refAmb = AMBALARE_REF[refProdA];
+    let lotOptim, um;
+    if (refAmb) {
+      lotOptim = refAmb.lotOptim; um = refAmb.um;
+    } else {
+      const info = getLotOptim(refProdA);
+      lotOptim = info.lotOptim; um = info.um;
+    }
     const { lotDisplay, qtyTd, badge } = renderQtyCols(row.key, lotOptim, um, saved);
     const timpReal = saved.timpReal || '';
     const { std, real } = calcRandament(refProdA, saved.cantitate);
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td><strong>${row.slot}</strong></td>
-      <td style="font-weight:500;color:var(--info)">${row.planificat}</td>
+      <td style="font-weight:500;color:var(--info)">${row.planificat}${row.cantPlan !== '—' ? `<br><span style="font-size:10px;color:var(--ink-muted)">Plan: ${row.cantPlan}</span>` : ''}</td>
       <td><select class="monit-input" onchange="updateMonit('${row.key}','realizat',this.value)" style="width:100%">${prodSelectOptions(saved,'realizat')}</select></td>
       <td style="text-align:center">${lotDisplay}</td>
       ${qtyTd}
@@ -1953,6 +2243,7 @@ function buildMonitAmb(zi, dayLabel) {
       <td><input class="monit-input" type="text" placeholder="Motiv / observații..." value="${(saved.motiv||'').replace(/"/g,'&quot;')}" oninput="updateMonitNoRefresh('${row.key}','motiv',this.value)"></td>`;
     tbody.appendChild(tr);
   });
+
   const totalPlan = rows.reduce((s,r) => s + r.timpPlan, 0);
   const totalReal = rows.reduce((s,r) => { const v = parseFloat((state.monitorizare[r.key]||{}).timpReal||0); return s+(isNaN(v)?0:v); }, 0);
   const diff = totalReal - totalPlan;
@@ -1972,31 +2263,60 @@ function buildMonitEtic(zi, dayLabel) {
   const tbody = document.getElementById('tbodyMonitEtic');
   tbody.innerHTML = '';
   const rows = [];
+
+  // Din ambalare (procesare -2 zile) → afișăm formatele selectate, nu materia primă
   if (zi > 1) {
     for (let p = 0; p < 8; p++) {
       const prod = state.procesare[p][zi - 2];
-      if (prod && prod !== '—') rows.push({ slot: `Slot ${p+1}`, planificat: prod, key: `etic_proc_${p}_${zi}`, sursa: 'Ambalare' });
+      if (!prod || prod === '—') continue;
+      const matKey = getMateriePrivaKey(prod);
+      if (matKey) {
+        // Produs cu formate → un rând per format selectat la ambalare (zi-1)
+        for (let row = 0; row < 2; row++) {
+          const sel = state.ambalareSelectii[p][zi - 2][row];
+          if (!sel || sel.format === '—') continue;
+          const refAmb = AMBALARE_REF[sel.format] || {};
+          const cantPlan = sel.cantitate ? `${sel.cantitate} ${refAmb.um||''}` : '—';
+          rows.push({
+            slot: `Slot ${p+1}${row > 0 ? 'b' : 'a'}`,
+            planificat: sel.format,
+            cantPlan,
+            key: `etic_proc_${p}_${zi}_${row}`,
+            sursa: 'Ambalare'
+          });
+        }
+      } else {
+        // Produs simplu
+        rows.push({ slot: `Slot ${p+1}`, planificat: prod, cantPlan: '—', key: `etic_proc_${p}_${zi}`, sursa: 'Ambalare' });
+      }
     }
   }
+
+  // Din burduf (-1 zi) → direct la etichetare
   if (zi > 0) {
     for (let r = 0; r < 5; r++) {
       const prod = state.burduf[r][zi - 1];
-      if (prod && prod !== '—') rows.push({ slot: `Burduf R${r+1}`, planificat: prod, key: `etic_burduf_${r}_${zi}`, sursa: 'Burduf' });
+      if (prod && prod !== '—') rows.push({ slot: `Burduf R${r+1}`, planificat: prod, cantPlan: '—', key: `etic_burduf_${r}_${zi}`, sursa: 'Burduf' });
     }
   }
+
   if (rows.length === 0) {
     const msg = zi < 2 ? 'Primele zile nu au etichetare planificată' : 'Nicio etichetare planificată pentru această zi';
     tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:16px;color:var(--ink-muted)">${msg}</td></tr>`;
     document.getElementById('monitSummaryEtic').textContent = ''; return;
   }
   document.getElementById('monitSummaryEtic').textContent = statusSummary(rows);
+
   rows.forEach(row => {
     const saved = state.monitorizare[row.key] || {};
     const ab = abatereCell(row.planificat, saved.realizat);
     const isBurduf = row.sursa === 'Burduf';
     const refProdE = (saved.realizat && saved.realizat !== '—') ? saved.realizat : row.planificat;
+    // Lot optim din AMBALARE_REF dacă există, altfel din PROCESARE_REF
+    const refAmb = AMBALARE_REF[refProdE];
     let lotOptim = null, um = '';
-    if (isBurduf) {
+    if (refAmb) { lotOptim = refAmb.lotOptim; um = refAmb.um; }
+    else if (isBurduf) {
       const match = refProdE.match(/[-–]\s*(\d+)\s*$/);
       lotOptim = match ? parseInt(match[1]) : null; um = 'BUC';
     } else {
@@ -2010,7 +2330,7 @@ function buildMonitEtic(zi, dayLabel) {
         <strong>${row.slot}</strong>
         <span style="font-size:10px;padding:1px 5px;border-radius:8px;margin-left:4px;${isBurduf ? 'background:var(--warn-pale);color:var(--warn)' : 'background:var(--info-pale);color:var(--info)'}">${row.sursa}</span>
       </td>
-      <td style="font-weight:500;color:${isBurduf ? 'var(--warn)' : '#8A6A1A'}">${row.planificat}</td>
+      <td style="font-weight:500;color:${isBurduf ? 'var(--warn)' : '#8A6A1A'}">${row.planificat}${row.cantPlan !== '—' ? `<br><span style="font-size:10px;color:var(--ink-muted)">Plan: ${row.cantPlan}</span>` : ''}</td>
       <td><select class="monit-input" onchange="updateMonit('${row.key}','realizat',this.value)" style="width:100%">${prodSelectOptions(saved,'realizat')}</select></td>
       <td style="text-align:center">${lotDisplay}</td>
       ${qtyTd}
@@ -2021,11 +2341,48 @@ function buildMonitEtic(zi, dayLabel) {
       <td><input class="monit-input" type="text" placeholder="Motiv / observații..." value="${(saved.motiv||'').replace(/"/g,'&quot;')}" oninput="updateMonitNoRefresh('${row.key}','motiv',this.value)"></td>`;
     tbody.appendChild(tr);
   });
+
+  // 3 rânduri suplimentare goale pentru etichetări extra
+  const sepTr = document.createElement('tr');
+  sepTr.innerHTML = `<td colspan="9" style="background:var(--gold-pale);padding:5px 10px;font-size:11px;font-weight:600;color:#8A6A1A;border-top:2px solid var(--border)">
+    ＋ Etichetări suplimentare (recuperări / stoc anterior)
+  </td>`;
+  tbody.appendChild(sepTr);
+
+  for (let ex = 0; ex < 3; ex++) {
+    const key = `etic_extra_${ex}_${zi}`;
+    const saved = state.monitorizare[key] || {};
+    const refProd = (saved.realizat && saved.realizat !== '—') ? saved.realizat : null;
+    const refAmb = refProd ? AMBALARE_REF[refProd] : null;
+    let lotOptim = null, um = '';
+    if (refAmb) { lotOptim = refAmb.lotOptim; um = refAmb.um; }
+    else if (refProd) { const info = getLotOptim(refProd); lotOptim = info.lotOptim; um = info.um; }
+    const { lotDisplay, qtyTd: qtyTdEx, badge: badgeEx } = renderQtyCols(key, lotOptim, um, saved);
+    const { std: stdEx, real: realEx } = refProd ? calcRandament(refProd, saved.cantitate) : { std: null, real: null };
+    const ab = abatereCell('', saved.realizat);
+    const tr = document.createElement('tr');
+    tr.style.background = '#FFFDF5';
+    tr.innerHTML = `
+      <td><strong style="color:#8A6A1A">Extra ${ex + 1}</strong></td>
+      <td style="color:var(--ink-muted);font-size:11px">—</td>
+      <td><select class="monit-input" onchange="updateMonit('${key}','realizat',this.value)" style="width:100%">${prodSelectOptions(saved,'realizat')}</select></td>
+      <td style="text-align:center">${lotDisplay}</td>
+      ${qtyTdEx}
+      <td style="text-align:center">${badgeEx}</td>
+      <td style="text-align:center;font-size:11px">${stdEx !== null ? `<span style="color:var(--ink-soft)">${stdEx}%</span>` : '—'}</td>
+      <td style="text-align:center">${randBadge(realEx, stdEx)}</td>
+      <td></td>
+      <td><input class="monit-input" type="text" placeholder="Motiv / observații..." value="${(saved.motiv||'').replace(/"/g,'&quot;')}" oninput="updateMonitNoRefresh('${key}','motiv',this.value)"></td>`;
+    tbody.appendChild(tr);
+  }
 }
 
 function buildMonitToc(zi, dayLabel) {
-  document.getElementById('monitTitleToc').textContent = dayLabel;
+  const titleEl = document.getElementById('monitTitleToc');
   const tbody = document.getElementById('tbodyMonitToc');
+  const summaryEl = document.getElementById('monitSummaryToc');
+  if (!titleEl || !tbody) return;
+  titleEl.textContent = dayLabel;
   tbody.innerHTML = '';
 
   // Tocare zi = CAS procesate zi-1
@@ -2042,10 +2399,10 @@ function buildMonitToc(zi, dayLabel) {
   if (rows.length === 0) {
     const msg = zi === 0 ? 'Luni nu are tocare planificată' : 'Nicio tocare planificată pentru această zi';
     tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:16px;color:var(--ink-muted)">${msg}</td></tr>`;
-    document.getElementById('monitSummaryToc').textContent = '';
+    if (summaryEl) summaryEl.textContent = '';
     return;
   }
-  document.getElementById('monitSummaryToc').textContent = `${rows.length} înregistrări`;
+  if (summaryEl) summaryEl.textContent = `${rows.length} înregistrări`;
 
   rows.forEach(row => {
     const saved = state.monitorizare[row.key] || {};
@@ -2061,12 +2418,6 @@ function buildMonitToc(zi, dayLabel) {
         style="width:88px;font-family:'JetBrains Mono',monospace;text-align:right"
         oninput="updateMonitNoRefresh('${row.key}','cantTocata',this.value)"
         onblur="updateMonit('${row.key}','cantTocata',this.value)"> <span style="font-size:10px;color:var(--ink-muted)">KG</span>
-      </td>
-      <td><input class="monit-input" type="text" inputmode="numeric" pattern="[0-9]*"
-        placeholder="ex: 50" value="${saved.matPrimaRecup||''}"
-        style="width:88px;font-family:'JetBrains Mono',monospace;text-align:right"
-        oninput="updateMonitNoRefresh('${row.key}','matPrimaRecup',this.value)"
-        onblur="updateMonit('${row.key}','matPrimaRecup',this.value)"> <span style="font-size:10px;color:var(--ink-muted)">KG</span>
       </td>
       <td><input class="monit-input" type="text" placeholder="Motiv / observații..."
         value="${(saved.motiv||'').replace(/"/g,'&quot;')}"
@@ -2166,7 +2517,7 @@ function generatePrint() {
           </tr>`).join('')}
         <tr class="timp-row">
           <td class="label-col" style="font-weight:700;background:var(--info-pale);color:var(--info)">Timp (h)</td>
-          ${ZILE.map((_,zi)=>`<td style="background:var(--info-pale);color:var(--info);font-weight:700">${calcTimpAmbalare(amb[zi])>0?calcTimpAmbalare(amb[zi]).toFixed(2):''}</td>`).join('')}
+          ${ZILE.map((_,zi)=>`<td style="background:var(--info-pale);color:var(--info);font-weight:700">${calcTimpAmbalareZi(zi)>0?calcTimpAmbalareZi(zi).toFixed(2):''}</td>`).join('')}
         </tr>
       </tbody>
     </table>
@@ -2382,6 +2733,24 @@ function parseSheetRows(rows) {
       if (row) ZILE.forEach((_, zi) => { state.personal[s][zi][p] = row[3 + zi] || '—'; });
     });
   });
+  // Ambalare selectii editabile (rânduri 22+)
+  // Row 22 = AmbSel_P1_R1, 23 = AmbSel_P1_R2, 24 = AmbSel_P2_R1 ...
+  const ambStart = 22;
+  for (let pi = 0; pi < 8; pi++) {
+    for (let row = 0; row < 2; row++) {
+      const sheetRow = rows[ambStart + pi * 2 + row];
+      if (sheetRow) {
+        ZILE.forEach((_, zi) => {
+          const val = String(sheetRow[3 + zi] || '');
+          const parts = val.split('||');
+          state.ambalareSelectii[pi][zi][row] = {
+            format: parts[0] || '—',
+            cantitate: parts[1] || ''
+          };
+        });
+      }
+    }
+  }
   // Sync selector
   const sel = document.getElementById('weekSelector');
   const key = planifSheetKey();
@@ -2490,6 +2859,18 @@ function buildPlanifRows() {
   ['schimb1','schimb2','schimb3'].forEach((s, si) => {
     [0,1,2].forEach(p => { rows.push([`Schimb${si+1}_P${p+1}`, '', '', ...state.personal[s].map(day => day[p])]); });
   });
+  // Ambalare selectii editabile
+  PROCESARI.forEach((proc, pi) => {
+    [0,1].forEach(row => {
+      rows.push([
+        `AmbSel_P${pi+1}_R${row+1}`, '', '',
+        ...ZILE.map((_, zi) => {
+          const s = state.ambalareSelectii[pi][zi][row];
+          return `${s.format}||${s.cantitate}`;
+        })
+      ]);
+    });
+  });
   return rows;
 }
 
@@ -2554,7 +2935,7 @@ function buildFormattedPlanif() {
 
   // Timp ambalare
   rows.push(['Timp necesar (h)', ...ZILE.map((_, zi) => {
-    const t = calcTimpAmbalare(amb[zi]);
+    const t = calcTimpAmbalareZi(zi);
     return t > 0 ? t.toFixed(2) : '';
   })]);
   colors.push([{ bg: '#F5F5F0', bold: true }, ...Array(7).fill({ bg: '#D0E4F5', fg: '#1A4A7A', bold: true })]);
@@ -2725,7 +3106,12 @@ function buildFormattedMonit() {
       const um = ref ? (ref.buc > 0 ? 'BUC' : 'KG') : '';
       const pct = lotOptim && cantitate ? Math.round((parseFloat(cantitate) / lotOptim) * 100) : '';
       const pctBg = pct !== '' ? (pct >= 95 ? '#D4EDDA' : pct >= 70 ? '#FFF3CD' : '#F8D7DA') : '#FFFFFF';
-      const timpPlan = calcTimpAmbalare([prod]);
+      const timpPlan = getMateriePrivaKey(prod)
+        ? [0,1].reduce((s, row) => {
+            const sel = state.ambalareSelectii[p] && state.ambalareSelectii[p][ziIdx-1] ? state.ambalareSelectii[p][ziIdx-1][row] : null;
+            return s + (sel && sel.format !== '—' ? calcTimpAmbalareProportional(sel.format, sel.cantitate) : 0);
+          }, 0)
+        : calcTimpAmbalare([prod]);
       const { stdStr, realStr, stdBg, realBg } = getRand(refProd, cantitate);
 
       rows.push([`Slot ${p+1}`, `${zi} ${dateStr}`, prod, realizat || '—', lotOptim ? `${lotOptim} ${um}` : '—', cantitate ? `${cantitate} ${um}` : '—', pct !== '' ? `${pct}%` : '', stdStr, realStr, timpPlan > 0 ? timpPlan.toFixed(2) : '—', saved.timpReal || '—', saved.motiv || '', saved.status || 'Necompletat']);
@@ -2881,6 +3267,12 @@ function createNewWeek() {
   state.firstLot = lot || String(w * 100 + 1);
   state.procesare = Array(8).fill(null).map(() => Array(7).fill('—'));
   state.burduf = Array(5).fill(null).map(() => Array(7).fill('—'));
+  state.ambalareSelectii = Array(8).fill(null).map(() =>
+    Array(7).fill(null).map(() => [
+      { format: '—', cantitate: '' },
+      { format: '—', cantitate: '' }
+    ])
+  );
   state.personal = {
     schimb1: Array(7).fill(null).map(() => ['—','—','—']),
     schimb2: Array(7).fill(null).map(() => ['—','—','—']),
