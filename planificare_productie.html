@@ -1268,10 +1268,10 @@ const AMBALARE_REF = {
   'TV DEG 4KG':         { timp: 1.16, lotOptim: 500,  um: 'KG'  },
   'TV':                 { timp: 1.16, lotOptim: 550,  um: 'KG'  },
   'BB 5X60DLF':         { timp: 4.0,  lotOptim: 1500, um: 'BUC' },
-  'TVPS 4KG':           { timp: 1.16, lotOptim: 162,  um: 'KG'  },
-  'TV MOLD 4KG':        { timp: 1.16, lotOptim: 150,  um: 'KG'  },
-  'TV+O 4KG':           { timp: 1.16, lotOptim: 162,  um: 'KG'  },
-  'TV+C 4KG':           { timp: 1.16, lotOptim: 162,  um: 'KG'  },
+  'TVPS 4KG':           { timp: 1.16, lotOptim: 650,  um: 'KG'  },
+  'TV MOLD 4KG':        { timp: 1.16, lotOptim: 600,  um: 'KG'  },
+  'TV+O 4KG':           { timp: 1.16, lotOptim: 650,  um: 'KG'  },
+  'TV+C 4KG':           { timp: 1.16, lotOptim: 650,  um: 'KG'  },
   'CAS O 100%':         { timp: 1.5,  lotOptim: 550,  um: 'KG'  },
   'CAS V+O MP DLF':     { timp: 1.25, lotOptim: 200,  um: 'KG'  },
   'BB PDA 1KG':         { timp: 1.6,  lotOptim: 240,  um: 'KG'  },
@@ -1292,8 +1292,9 @@ const FORMATE_AMBALARE = {
 // Returnează materia primă din care provine un produs de procesare
 function getMateriePrivaKey(prod) {
   if (!prod || prod === '—') return null;
+  // Produsele care merg doar la tocare nu au format multiplu de ambalare
+  if (CAS_DOAR_TOCARE.includes(prod)) return null;
   // Sortăm cheile după lungime descrescător (cele mai specifice primul)
-  // ex: 'CAS V+O' înainte de 'CAS V' ca să nu prindă 'CAS V+O' ca 'CAS V'
   const keys = Object.keys(FORMATE_AMBALARE).sort((a, b) => b.length - a.length);
   for (const key of keys) {
     if (prod === key) return key;
