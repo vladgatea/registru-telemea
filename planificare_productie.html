@@ -3471,6 +3471,43 @@ async function createNewWeek() {
         const LUNI_NOU = 0;
         const MARTI_NOU = 1;
 
+        // Citim procesarea din S_prev
+        const prevProcesare = Array(8).fill(null).map(() => Array(7).fill('—'));
+        for (let pi = 0; pi < 8; pi++) {
+          const row = rows[2 + pi];
+          if (row) prevProcesare[pi] = ZILE.map((_, zi) => row[3 + zi] || '—');
+        }
+
+        // Citim burduf din S_prev
+        const prevBurduf = Array(5).fill(null).map(() => Array(7).fill('—'));
+        for (let ri = 0; ri < 5; ri++) {
+          const row = rows[10 + ri];
+          if (row) prevBurduf[ri] = ZILE.map((_, zi) => row[3 + zi] || '—');
+        }
+
+        // Citim ambalareSelectii din S_prev (rânduri 24+)
+        const prevAmbSel = Array(8).fill(null).map(() =>
+          Array(7).fill(null).map(() => [
+            { format: '—', cantitate: '' },
+            { format: '—', cantitate: '' }
+          ])
+        );
+        for (let pi = 0; pi < 8; pi++) {
+          for (let row = 0; row < 2; row++) {
+            const sheetRow = rows[24 + pi * 2 + row];
+            if (sheetRow) {
+              ZILE.forEach((_, zi) => {
+                const val = String(sheetRow[3 + zi] || '');
+                const parts = val.split('||');
+                prevAmbSel[pi][zi][row] = {
+                  format: parts[0] || '—',
+                  cantitate: parts[1] || ''
+                };
+              });
+            }
+          }
+        }
+
         // ── 1. Ambalare Luni S_nou = Procesare Vineri S_prev ──
         for (let pi = 0; pi < 8; pi++) {
           const prodVineri = prevProcesare[pi][VINERI];
