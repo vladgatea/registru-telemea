@@ -1647,6 +1647,35 @@ function updateAutoTables() {
   buildMonitDaySelector();
 }
 
+function applyFormat2Visibility(body) {
+  for (let p = 0; p < 8; p++) {
+    for (let zi = 0; zi <= 4; zi++) {
+      const procZi = zi === 0 ? 0 : zi - 1;
+      const sel0 = state.ambalareSelectii[p][procZi][0];
+      const cant = parseFloat(sel0.cantitate) || 0;
+      const refAmbF1 = AMBALARE_REF[sel0.format] || {};
+      let prod = zi === 0 ? null : state.procesare[p][procZi];
+      const refMaterie = PROCESARE_REF[prod || ''] || {};
+      const lotMaterie = refAmbF1.um === 'BUC'
+        ? (refMaterie.buc || refMaterie.lot || 0)
+        : (refMaterie.lot || 0);
+      if (!lotMaterie || cant < lotMaterie) continue;
+      const allRows = body.querySelectorAll('tr');
+      allRows.forEach(tr => {
+        const label = tr.querySelector('.row-label');
+        if (label && label.textContent === `P${p+1} Format 2`) {
+          const cells = tr.querySelectorAll('td');
+          if (cells[zi + 1]) { // +1 pentru label col
+            cells[zi + 1].innerHTML = '<span style="color:var(--accent);font-size:11px">✓</span>';
+            cells[zi + 1].style.background = 'var(--accent-pale)';
+            cells[zi + 1].style.pointerEvents = 'none';
+          }
+        }
+      });
+    }
+  }
+}
+
 function buildAmbalareTable() {
   const head = document.getElementById('tblAmbHead');
   const body = document.getElementById('tblAmbBody');
