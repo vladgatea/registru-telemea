@@ -1324,6 +1324,8 @@ let state = {
     { format: '—', cantitate: '' },
     { format: '—', cantitate: '' }
   ]),
+  // burdufSA[randIdx] = produs burduf din Vineri S_prev → Etichetare Luni S_nou
+  burdufSA: Array(5).fill('—'),
   personal: {
     schimb1: Array(7).fill(null).map(() => ['—','—','—']),
     schimb2: Array(7).fill(null).map(() => ['—','—','—']),
@@ -1414,13 +1416,19 @@ function getAmbalareFromProcesare() {
 function getBurdufEtichetareFromBurduf() {
   // Burduf planificat zi X → Etichetare zi X+1
   // Luni..Joi (z=0..3): etichetare Marți..Vineri
-  // Vineri burduf → etichetare Sâmbătă → nu se face → merge la S.V. (preluat la creare)
+  // Vineri burduf → etichetare Sâmbătă → nu se face → merge la S.V.
   const etic = Array(7).fill(null).map(() => []);
   for (let z = 0; z <= 3; z++) {
     for (let r = 0; r < 5; r++) {
       const prod = state.burduf[r][z];
       if (prod && prod !== '—') etic[z + 1].push(prod + ' ★');
     }
+  }
+  // Burduf din Vineri S_prev (burdufSA) → Etichetare Luni S_nou (zi=0)
+  if (state.burdufSA) {
+    state.burdufSA.forEach(prod => {
+      if (prod && prod !== '—') etic[0].push(prod + ' ★');
+    });
   }
   return etic;
 }
@@ -3438,6 +3446,7 @@ async function createNewWeek() {
     { format: '—', cantitate: '' },
     { format: '—', cantitate: '' }
   ]);
+  state.burdufSA = Array(5).fill('—');
   state.personal = {
     schimb1: Array(7).fill(null).map(() => ['—','—','—']),
     schimb2: Array(7).fill(null).map(() => ['—','—','—']),
@@ -3516,10 +3525,11 @@ async function createNewWeek() {
           }
         }
 
-        // 2. Burduf Vineri S_prev → Burduf Luni S_nou (→ Etichetare Marți S_nou automat)
+        // 2. Burduf Vineri S_prev → burdufSA (→ Etichetare Luni S_nou)
+        state.burdufSA = Array(5).fill('—');
         for (let ri = 0; ri < 5; ri++) {
           const prod = prevBurduf[ri][VINERI];
-          if (prod && prod !== '—') state.burduf[ri][LUNI_NOU] = prod;
+          if (prod && prod !== '—') state.burdufSA[ri] = prod;
         }
 
         setSyncStatus('ok', `Săptămână nouă S${w}_${y} — preluare din ${prevSheetKey} ✓`);
