@@ -1326,6 +1326,8 @@ let state = {
   ]),
   // burdufSA[randIdx] = produs burduf din Vineri S_prev → Etichetare Luni S_nou
   burdufSA: Array(5).fill('—'),
+  // eticSA = produse de etichetat Luni S_nou (din Ambalare Vineri S_prev = Procesare Joi S_prev)
+  eticSA: { auto: [], formate: [] }, // auto = produse simple, formate = { format, cantitate }[]
   personal: {
     schimb1: Array(7).fill(null).map(() => ['—','—','—']),
     schimb2: Array(7).fill(null).map(() => ['—','—','—']),
@@ -1414,9 +1416,7 @@ function getAmbalareFromProcesare() {
 }
 
 function getBurdufEtichetareFromBurduf() {
-  // Burduf planificat zi X → Etichetare zi X+1
-  // Luni..Joi (z=0..3): etichetare Marți..Vineri
-  // Vineri burduf → etichetare Sâmbătă → nu se face → merge la S.V.
+  // Burduf zi X → Etichetare zi X+1, Luni..Joi (z=0..3) → Marți..Vineri
   const etic = Array(7).fill(null).map(() => []);
   for (let z = 0; z <= 3; z++) {
     for (let r = 0; r < 5; r++) {
@@ -1424,7 +1424,7 @@ function getBurdufEtichetareFromBurduf() {
       if (prod && prod !== '—') etic[z + 1].push(prod + ' ★');
     }
   }
-  // Burduf din Vineri S_prev (burdufSA) → Etichetare Luni S_nou (zi=0)
+  // burdufSA (Burduf Vineri S_prev) → Etichetare Luni S_nou
   if (state.burdufSA) {
     state.burdufSA.forEach(prod => {
       if (prod && prod !== '—') etic[0].push(prod + ' ★');
@@ -1435,13 +1435,16 @@ function getBurdufEtichetareFromBurduf() {
 
 function getEtichetareFromAmbalare() {
   const amb = getAmbalareFromProcesare();
-  // Etichetare[zi] = ce a fost la ambalare[zi-1]
-  // Luni ambalare (z=0, din S.A.) → Etichetare Marți (z=1)
-  // Marți..Vineri ambalare (z=1..4) → Etichetare Miercuri..Sâmbătă
-  // Dar Sâmbătă nu se etichetează → max z=1..4
+  // Etichetare zi X = Ambalare zi X-1
+  // Marți(1)=Ambalare Luni(0 SA), Miercuri(2)=Ambalare Marți(1), ..., Vineri(4)=Ambalare Joi(3)
   const etic = Array(7).fill(null).map(() => []);
   for (let z = 1; z <= 4; z++) {
     etic[z].push(...amb[z - 1]);
+  }
+  // eticSA: Etichetare Luni S_nou = Ambalare Vineri S_prev (Procesare Joi S_prev)
+  if (state.eticSA) {
+    state.eticSA.auto.forEach(prod => { if (prod && prod !== '—') etic[0].push(prod); });
+    state.eticSA.formate.forEach(s => { if (s.format && s.format !== '—') etic[0].push(s.format); });
   }
   return etic;
 }
@@ -3447,6 +3450,7 @@ async function createNewWeek() {
     { format: '—', cantitate: '' }
   ]);
   state.burdufSA = Array(5).fill('—');
+  state.eticSA = { auto: [], formate: [] };
   state.personal = {
     schimb1: Array(7).fill(null).map(() => ['—','—','—']),
     schimb2: Array(7).fill(null).map(() => ['—','—','—']),
@@ -3462,70 +3466,39 @@ async function createNewWeek() {
 
       if (prevData.data && prevData.data.length > 1) {
         const rows = prevData.data;
-        const VINERI = 4; // index zi Vineri în S_prev
-        const LUNI_NOU = 0; // index zi Luni în S_nou
-        const MARTI_NOU = 1; // index zi Marți în S_nou
+        const JOI = 3;    // index Joi în S_prev
+        const VINERI = 4; // index Vineri în S_prev
+        const LUNI_NOU = 0;
+        const MARTI_NOU = 1;
 
-        // Citim procesarea din S_prev
-        const prevProcesare = Array(8).fill(null).map(() => Array(7).fill('—'));
-        for (let pi = 0; pi < 8; pi++) {
-          const row = rows[2 + pi];
-          if (row) prevProcesare[pi] = ZILE.map((_, zi) => row[3 + zi] || '—');
-        }
-
-        // Citim burduf din S_prev
-        const prevBurduf = Array(5).fill(null).map(() => Array(7).fill('—'));
-        for (let ri = 0; ri < 5; ri++) {
-          const row = rows[10 + ri];
-          if (row) prevBurduf[ri] = ZILE.map((_, zi) => row[3 + zi] || '—');
-        }
-
-        // Citim ambalareSelectii din S_prev (rânduri 24+)
-        const prevAmbSel = Array(8).fill(null).map(() =>
-          Array(7).fill(null).map(() => [
-            { format: '—', cantitate: '' },
-            { format: '—', cantitate: '' }
-          ])
-        );
-        for (let pi = 0; pi < 8; pi++) {
-          for (let row = 0; row < 2; row++) {
-            const sheetRow = rows[24 + pi * 2 + row];
-            if (sheetRow) {
-              ZILE.forEach((_, zi) => {
-                const val = String(sheetRow[3 + zi] || '');
-                const parts = val.split('||');
-                prevAmbSel[pi][zi][row] = {
-                  format: parts[0] || '—',
-                  cantitate: parts[1] || ''
-                };
-              });
-            }
-          }
-        }
-
-        // ── PRELUARE VINERI S_prev → LUNI + MARȚI S_nou ──
-
-        // 1. Ambalare Luni S_nou = selecțiile de ambalare planificate pt Vineri S_prev
-        //    Selecțiile sunt indexate pe ziua procesării: procZi=4 (Vineri)
+        // ── 1. Ambalare Luni S_nou = Procesare Vineri S_prev ──
         for (let pi = 0; pi < 8; pi++) {
           const prodVineri = prevProcesare[pi][VINERI];
           if (!prodVineri || prodVineri === '—' || CAS_DOAR_TOCARE.includes(prodVineri)) continue;
           if (getMateriePrivaKey(prodVineri)) {
-            // Formate multiple: copiem selecțiile de la procZi=4 (Vineri)
-            // Stocăm în state.ambSA — complet separat de ambalareSelectii
             state.ambSA[pi][0] = { ...prevAmbSel[pi][VINERI][0] };
             state.ambSA[pi][1] = { ...prevAmbSel[pi][VINERI][1] };
           } else {
-            // Produs simplu: îl marcăm ca produs de ambalat Luni
-            // (merge în rândul auto prin getAmbalareFromProcesare care citește ambalareSelectii[p][0])
-            // Nu e necesar — produsele simple apar automat din getAmbalareFromProcesare Luni
-            // dacă există o "procesare" în ziua 0... dar nu vrem să poluăm procesarea S_nou
-            // Soluție: stocăm produsul simplu ca un format special în ambalareSelectii
             state.ambSA[pi][0] = { format: prodVineri, cantitate: '' };
           }
         }
 
-        // 2. Burduf Vineri S_prev → burdufSA (→ Etichetare Luni S_nou)
+        // ── 2. Etichetare Luni S_nou = Ambalare Vineri S_prev = Procesare Joi S_prev ──
+        state.eticSA = { auto: [], formate: [] };
+        for (let pi = 0; pi < 8; pi++) {
+          const prodJoi = prevProcesare[pi][JOI];
+          if (!prodJoi || prodJoi === '—' || CAS_DOAR_TOCARE.includes(prodJoi)) continue;
+          if (getMateriePrivaKey(prodJoi)) {
+            [0,1].forEach(row => {
+              const sel = prevAmbSel[pi][JOI][row];
+              if (sel && sel.format !== '—') state.eticSA.formate.push({ ...sel });
+            });
+          } else {
+            state.eticSA.auto.push(prodJoi);
+          }
+        }
+
+        // ── 3. Burduf Vineri S_prev → Etichetare Luni S_nou ──
         state.burdufSA = Array(5).fill('—');
         for (let ri = 0; ri < 5; ri++) {
           const prod = prevBurduf[ri][VINERI];
