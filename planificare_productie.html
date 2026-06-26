@@ -765,9 +765,6 @@
       <div class="modal-actions">
         <button class="btn btn-secondary" onclick="closeNewWeekModal()">Anulează</button>
         <button class="btn btn-primary" onclick="createNewWeek()">Creează</button>
-        <p style="font-size:11px;color:var(--ink-muted);margin-top:8px;text-align:center">
-          ↩ Se va prelua automat ambalarea și burduful din Vineri săptămâna anterioară
-        </p>
       </div>
     </div>
   </div>
@@ -3315,18 +3312,13 @@ function closeNewWeekModal() {
   document.getElementById('newWeekModal').classList.remove('open');
 }
 
-async function createNewWeek() {
+function createNewWeek() {
   const w = parseInt(document.getElementById('newWeekNr').value);
   const y = parseInt(document.getElementById('newWeekYear').value);
   const lot = document.getElementById('newWeekLot').value.trim();
   if (!w || !y) { alert('Completează săptămâna și anul'); return; }
 
-  // Calculăm săptămâna anterioară
-  const prevW = w === 1 ? 52 : w - 1;
-  const prevY = w === 1 ? y - 1 : y;
-  const prevSheetKey = `S${prevW}_${prevY}`;
-
-  // Reset state
+  // Reset state to blank week
   state.week = w;
   state.year = y;
   state.firstLot = lot || String(w * 100 + 1);
@@ -3345,104 +3337,10 @@ async function createNewWeek() {
   };
   state.monitorizare = {};
 
-  // Încercăm să preluăm datele din săptămâna anterioară
-  if (config.sheetsUrl) {
-    try {
-      setSyncStatus('loading', `Se preia din ${prevSheetKey}...`);
-      const prevData = await sheetsRead(prevSheetKey);
-
-      if (prevData.data && prevData.data.length > 1) {
-        const rows = prevData.data;
-        const VINERI = 4; // index zi Vineri în S_prev
-        const LUNI_NOU = 0; // index zi Luni în S_nou
-        const MARTI_NOU = 1; // index zi Marți în S_nou
-
-        // Citim procesarea din S_prev
-        const prevProcesare = Array(8).fill(null).map(() => Array(7).fill('—'));
-        for (let pi = 0; pi < 8; pi++) {
-          const row = rows[2 + pi];
-          if (row) prevProcesare[pi] = ZILE.map((_, zi) => row[3 + zi] || '—');
-        }
-
-        // Citim burduf din S_prev
-        const prevBurduf = Array(5).fill(null).map(() => Array(7).fill('—'));
-        for (let ri = 0; ri < 5; ri++) {
-          const row = rows[10 + ri];
-          if (row) prevBurduf[ri] = ZILE.map((_, zi) => row[3 + zi] || '—');
-        }
-
-        // Citim ambalareSelectii din S_prev (rânduri 24+)
-        const prevAmbSel = Array(8).fill(null).map(() =>
-          Array(7).fill(null).map(() => [
-            { format: '—', cantitate: '' },
-            { format: '—', cantitate: '' }
-          ])
-        );
-        for (let pi = 0; pi < 8; pi++) {
-          for (let row = 0; row < 2; row++) {
-            const sheetRow = rows[24 + pi * 2 + row];
-            if (sheetRow) {
-              ZILE.forEach((_, zi) => {
-                const val = String(sheetRow[3 + zi] || '');
-                const parts = val.split('||');
-                prevAmbSel[pi][zi][row] = {
-                  format: parts[0] || '—',
-                  cantitate: parts[1] || ''
-                };
-              });
-            }
-          }
-        }
-
-        // ── PRELUARE VINERI S_prev → LUNI + MARȚI S_nou ──
-
-        // 1. Ambalare Luni S_nou = Procesare Vineri S_prev
-        //    (produsele procesate Vineri se ambalează Luni săptămâna nouă)
-        for (let pi = 0; pi < 8; pi++) {
-          const prod = prevProcesare[pi][VINERI];
-          if (!prod || prod === '—' || CAS_DOAR_TOCARE.includes(prod)) continue;
-          const matKey = getMateriePrivaKey(prod);
-          if (matKey) {
-            // Formate multiple → copiem selecțiile de Vineri S_prev la Luni S_nou
-            // Dar selecțiile de ambalare din S_prev pt Vineri sunt indexate la zi=5 (Sâmbătă)
-            // deoarece ambalarea e +1 față de procesare
-            const ambZiPrev = VINERI + 1; // Sâmbătă în S_prev = index 5
-            state.ambalareSelectii[pi][LUNI_NOU][0] = { ...prevAmbSel[pi][ambZiPrev][0] };
-            state.ambalareSelectii[pi][LUNI_NOU][1] = { ...prevAmbSel[pi][ambZiPrev][1] };
-          }
-          // Notăm procesarea Vineri S_prev în procesare Luni S_nou ca referință
-          // (folosim un slot special — nu modificăm procesarea directă,
-          //  ambalarea Luni vine din selecțiile copiate mai sus)
-        }
-
-        // 2. Burduf Vineri S_prev → Burduf Luni S_nou
-        //    (burduf Vineri → etichetare Luni, deci trebuie în Burduf Luni S_nou)
-        for (let ri = 0; ri < 5; ri++) {
-          const prod = prevBurduf[ri][VINERI];
-          if (prod && prod !== '—') {
-            state.burduf[ri][LUNI_NOU] = prod;
-          }
-        }
-
-        // 3. Etichetare Marți S_nou vine automat din:
-        //    - Ambalare Luni S_nou (calculat automat din selecțiile copiate)
-        //    - Burduf Luni S_nou (copiat mai sus)
-        // Deci nu trebuie să facem nimic suplimentar pentru Marți.
-
-        setSyncStatus('ok', `Săptămână nouă S${w}_${y} — preluare din ${prevSheetKey} ✓`);
-      } else {
-        setSyncStatus('ok', `Săptămână nouă S${w}_${y} — ${prevSheetKey} nu există, start gol`);
-      }
-    } catch(e) {
-      console.warn('Nu s-a putut prelua din săptămâna anterioară:', e);
-      setSyncStatus('ok', `Săptămână nouă S${w}_${y} — nesalvată`);
-    }
-  }
-
   document.getElementById('firstLot').value = state.firstLot;
   closeNewWeekModal();
   recalcDates();
-  rebuildAll();
+  setSyncStatus('ok', `Săptămână nouă S${w}_${y} — nesalvată`);
 }
 
 async function testConnection() {
