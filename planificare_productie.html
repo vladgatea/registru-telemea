@@ -3489,11 +3489,19 @@ async function createNewWeek() {
           const prodJoi = prevProcesare[pi][JOI];
           if (!prodJoi || prodJoi === '—' || CAS_DOAR_TOCARE.includes(prodJoi)) continue;
           if (getMateriePrivaKey(prodJoi)) {
+            // Produse cu formate multiple: selecțiile de ambalare Vineri = procZi=JOI
+            let hasFormat = false;
             [0,1].forEach(row => {
               const sel = prevAmbSel[pi][JOI][row];
-              if (sel && sel.format !== '—') state.eticSA.formate.push({ ...sel });
+              if (sel && sel.format !== '—') {
+                state.eticSA.formate.push({ ...sel });
+                hasFormat = true;
+              }
             });
+            // Dacă nu există selecții salvate, adăugăm materia primă ca fallback
+            if (!hasFormat) state.eticSA.auto.push(prodJoi);
           } else {
+            // Produse simple: ambalate Vineri → etichetare Luni S_nou
             state.eticSA.auto.push(prodJoi);
           }
         }
