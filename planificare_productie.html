@@ -2774,23 +2774,25 @@ function parseSheetRows(rows) {
   state.firstLot = String(rows[1][2] || state.firstLot);
   document.getElementById('firstLot').value = state.firstLot;
 
+  // Rows 2-9: Procesare
   for (let pi = 0; pi < 8; pi++) {
     const row = rows[2 + pi];
     if (row) state.procesare[pi] = ZILE.map((_, zi) => row[3 + zi] || '—');
   }
+  // Rows 10-14: Burduf (5 rânduri)
   for (let ri = 0; ri < 5; ri++) {
     const row = rows[10 + ri];
     if (row) state.burduf[ri] = ZILE.map((_, zi) => row[3 + zi] || '—');
   }
+  // Rows 15-23: Personal (3 schimburi × 3 persoane = 9 rânduri)
   ['schimb1','schimb2','schimb3'].forEach((s, si) => {
     [0,1,2].forEach(p => {
-      const row = rows[13 + si*3 + p];
+      const row = rows[15 + si*3 + p];
       if (row) ZILE.forEach((_, zi) => { state.personal[s][zi][p] = row[3 + zi] || '—'; });
     });
   });
-  // Ambalare selectii editabile (rânduri 22+)
-  // Row 22 = AmbSel_P1_R1, 23 = AmbSel_P1_R2, 24 = AmbSel_P2_R1 ...
-  const ambStart = 22;
+  // Rows 24-39: Ambalare selectii (8 procesări × 2 rânduri = 16)
+  const ambStart = 24;
   for (let pi = 0; pi < 8; pi++) {
     for (let row = 0; row < 2; row++) {
       const sheetRow = rows[ambStart + pi * 2 + row];
