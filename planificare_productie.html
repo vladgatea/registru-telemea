@@ -2513,11 +2513,51 @@ function generatePrint() {
         ${ZILE.map((z,i)=>`<th>${z}<br><span style="font-weight:400;font-size:8px">${formatDate(dates[i])}</span></th>`).join('')}
       </tr></thead>
       <tbody>
-        ${Array(Math.max(...amb.map(a=>a.length),1)).fill(0).map((_,r)=>`
-          <tr>
-            <td class="label-col">${r===0?'Ambalare':''}</td>
-            ${ZILE.map((_,zi)=>`<td class="amb-col">${amb[zi][r]||''}</td>`).join('')}
-          </tr>`).join('')}
+        ${(() => {
+          // Rânduri pentru produse simple (auto)
+          const ambRows = [];
+          const maxAuto = Math.max(...amb.map(a=>a.length), 0);
+          for (let r = 0; r < maxAuto; r++) {
+            ambRows.push(`<tr>
+              <td class="label-col">${r===0?'Ambalare':''}</td>
+              ${ZILE.map((_,zi)=>`<td class="amb-col">${amb[zi][r]||''}</td>`).join('')}
+            </tr>`);
+          }
+          // Rânduri pentru formate multiple cu cantitate
+          for (let p = 0; p < 8; p++) {
+            const hasMultInAnyDay = ZILE.some((_, zi) => {
+              if (zi === 0) return false;
+              const prod = state.procesare[p][zi-1];
+              return prod && prod !== '—' && getMateriePrivaKey(prod);
+            });
+            if (!hasMultInAnyDay) continue;
+            for (let row = 0; row < 2; row++) {
+              const hasContent = ZILE.some((_, zi) => {
+                if (zi === 0) return false;
+                const prod = state.procesare[p][zi-1];
+                if (!prod || prod === '—' || !getMateriePrivaKey(prod)) return false;
+                const sel = state.ambalareSelectii[p][zi-1][row];
+                return sel && sel.format !== '—';
+              });
+              if (!hasContent) continue;
+              ambRows.push(`<tr>
+                <td class="label-col" style="color:#1A4A7A;font-size:9px">P${p+1} F${row+1}</td>
+                ${ZILE.map((_, zi) => {
+                  if (zi === 0) return '<td></td>';
+                  const prod = state.procesare[p][zi-1];
+                  const matKey = prod && prod !== '—' ? getMateriePrivaKey(prod) : null;
+                  if (!matKey) return '<td></td>';
+                  const sel = state.ambalareSelectii[p][zi-1][row];
+                  if (!sel || sel.format === '—') return '<td class="amb-col"></td>';
+                  const refAmb = AMBALARE_REF[sel.format] || {};
+                  const cantStr = sel.cantitate ? ` · ${sel.cantitate} ${refAmb.um||''}` : '';
+                  return `<td class="amb-col" style="font-size:9px"><strong>${sel.format}</strong>${cantStr}</td>`;
+                }).join('')}
+              </tr>`);
+            }
+          }
+          return ambRows.join('');
+        })()}
         <tr class="timp-row">
           <td class="label-col" style="font-weight:700;background:var(--info-pale);color:var(--info)">Timp (h)</td>
           ${ZILE.map((_,zi)=>`<td style="background:var(--info-pale);color:var(--info);font-weight:700">${calcTimpAmbalareZi(zi)>0?calcTimpAmbalareZi(zi).toFixed(2):''}</td>`).join('')}
@@ -2532,11 +2572,70 @@ function generatePrint() {
         ${ZILE.map((z,i)=>`<th>${z}<br><span style="font-weight:400;font-size:8px">${formatDate(dates[i])}</span></th>`).join('')}
       </tr></thead>
       <tbody>
-        ${Array(Math.max(...combined.map(a=>a.length),1)).fill(0).map((_,r)=>`
-          <tr>
-            <td class="label-col">${r===0?'Etichetare':''}</td>
-            ${ZILE.map((_,zi)=>`<td class="etic-col" style="${combined[zi][r]?.includes('★')?'color:var(--warn)':''}">${(combined[zi][r]||'').replace(' ★','')}</td>`).join('')}
-          </tr>`).join('')}
+        ${(() => {
+          const eticRows = [];
+
+          // Produse simple din ambalare (auto) — +1 zi față de ambalare = +2 față de procesare
+          const eticAuto = Array(7).fill(null).map(() => []);
+          for (let zi = 2; zi < 7; zi++) {
+            for (let p = 0; p < 8; p++) {
+              const prod = state.procesare[p][zi - 2];
+              if (!prod || prod === '—' || CAS_DOAR_TOCARE.includes(prod) || getMateriePrivaKey(prod)) continue;
+              eticAuto[zi].push(prod);
+            }
+          }
+          // Burduf (+1 zi)
+          const eticBurduf = getBurdufEtichetareFromBurduf();
+          const maxAuto = Math.max(...eticAuto.map(a => a.length), ...eticBurduf.map(a => a.length), 0);
+          for (let r = 0; r < maxAuto; r++) {
+            eticRows.push(`<tr>
+              <td class="label-col">${r===0?'Etichetare':''}</td>
+              ${ZILE.map((_,zi) => {
+                const autoVal = eticAuto[zi][r] || '';
+                const burdufVal = (eticBurduf[zi][r] || '').replace(' ★','');
+                const val = autoVal || burdufVal;
+                const isBurduf = !autoVal && !!burdufVal;
+                return `<td class="etic-col" style="${isBurduf?'color:var(--warn)':''}">${val}</td>`;
+              }).join('')}
+            </tr>`);
+          }
+
+          // Formate multiple — +2 zile față de procesare (ambalare +1, etichetare +1)
+          for (let p = 0; p < 8; p++) {
+            const hasMultInAnyDay = ZILE.some((_, zi) => {
+              if (zi < 2) return false;
+              const prod = state.procesare[p][zi-2];
+              return prod && prod !== '—' && getMateriePrivaKey(prod);
+            });
+            if (!hasMultInAnyDay) continue;
+            for (let row = 0; row < 2; row++) {
+              const hasContent = ZILE.some((_, zi) => {
+                if (zi < 2) return false;
+                const prod = state.procesare[p][zi-2];
+                if (!prod || prod === '—' || !getMateriePrivaKey(prod)) return false;
+                const sel = state.ambalareSelectii[p][zi-2][row];
+                return sel && sel.format !== '—';
+              });
+              if (!hasContent) continue;
+              eticRows.push(`<tr>
+                <td class="label-col" style="color:#8A6A1A;font-size:9px">P${p+1} F${row+1}</td>
+                ${ZILE.map((_, zi) => {
+                  if (zi < 2) return '<td></td>';
+                  const prod = state.procesare[p][zi-2];
+                  const matKey = prod && prod !== '—' ? getMateriePrivaKey(prod) : null;
+                  if (!matKey) return '<td></td>';
+                  const sel = state.ambalareSelectii[p][zi-2][row];
+                  if (!sel || sel.format === '—') return '<td class="etic-col"></td>';
+                  const refAmb = AMBALARE_REF[sel.format] || {};
+                  const cantStr = sel.cantitate ? ` · ${sel.cantitate} ${refAmb.um||''}` : '';
+                  return `<td class="etic-col" style="font-size:9px"><strong>${sel.format}</strong>${cantStr}</td>`;
+                }).join('')}
+              </tr>`);
+            }
+          }
+
+          return eticRows.join('');
+        })()}
       </tbody>
     </table>
 
