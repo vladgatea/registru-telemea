@@ -1312,13 +1312,18 @@ let state = {
   firstLot: '27173',
   procesare: Array(8).fill(null).map(() => Array(7).fill('—')),  // [procesare][zi]
   burduf: Array(5).fill(null).map(() => Array(7).fill('—')),     // 5 randuri burduf
-  // ambalareSelectii[procIdx][zi][0/1] = { format, cantitate }
+  // ambalareSelectii[procIdx][procZi][0/1] = { format, cantitate }
   ambalareSelectii: Array(8).fill(null).map(() =>
     Array(7).fill(null).map(() => [
       { format: '—', cantitate: '' },
       { format: '—', cantitate: '' }
     ])
   ),
+  // ambSA[procIdx][0/1] = date preluate din Vineri S_prev → afișate la Ambalare Luni S_nou
+  ambSA: Array(8).fill(null).map(() => [
+    { format: '—', cantitate: '' },
+    { format: '—', cantitate: '' }
+  ]),
   personal: {
     schimb1: Array(7).fill(null).map(() => ['—','—','—']),
     schimb2: Array(7).fill(null).map(() => ['—','—','—']),
@@ -1397,10 +1402,11 @@ function getAmbalareFromProcesare() {
       }
     }
   }
-  // Luni (z=0): preluare din S.A. — stocat la procZi=5 (Sâmbătă, slot neutilizat)
-  for (let p = 0; p < 8; p++) {
-    const selSA = state.ambalareSelectii[p][5];
-    if (selSA) selSA.forEach(s => { if (s.format && s.format !== '—') amb[0].push(s.format); });
+  // Luni (z=0): preluare din S.A. — stocat în state.ambSA
+  if (state.ambSA) {
+    for (let p = 0; p < 8; p++) {
+      state.ambSA[p].forEach(s => { if (s.format && s.format !== '—') amb[0].push(s.format); });
+    }
   }
   return amb;
 }
@@ -1728,9 +1734,9 @@ function buildAmbalareTable() {
         // Sâmbătă/Duminică — gol
         if (zi >= 5) { tr.appendChild(td); return; }
 
-        // Luni (zi=0): selecție preluată din S.A. — stocată la procZi=5
+        // Luni (zi=0): selecție preluată din S.A. — stocată în state.ambSA
         if (zi === 0) {
-          const sel = state.ambalareSelectii[p][5][row];
+          const sel = state.ambSA && state.ambSA[p] ? state.ambSA[p][row] : { format: '—', cantitate: '' };
           let matKeyLuni = null;
           if (sel && sel.format !== '—') {
             for (const [key, vals] of Object.entries(FORMATE_AMBALARE)) {
@@ -1738,7 +1744,7 @@ function buildAmbalareTable() {
             }
           }
           if (matKeyLuni) {
-            buildAmbCell(td, p, 5, row, FORMATE_AMBALARE[matKeyLuni], sel, body, 0);
+            buildAmbCellSA(td, p, row, FORMATE_AMBALARE[matKeyLuni], sel, body);
           } else if (row === 0) {
             td.innerHTML = '<span style="font-size:9px;color:var(--ink-muted);padding:2px">↩ S.A.</span>';
           }
@@ -1777,6 +1783,48 @@ function buildAmbalareTable() {
   applyFormat2Visibility(body);
 }
 
+// Celulă ambalare specială pentru Luni S.A. — salvează în state.ambSA
+function buildAmbCellSA(td, p, row, formate, sel, body) {
+  const refFormat = AMBALARE_REF[sel.format] || {};
+  const umDisplay = refFormat.um || 'BUC';
+  const wrapper = document.createElement('div');
+  wrapper.style.cssText = 'display:flex;gap:3px;align-items:center;flex-wrap:wrap';
+  const selectEl = document.createElement('select');
+  selectEl.className = 'cell-select';
+  selectEl.style.cssText = 'font-size:11px;flex:1;min-width:90px';
+  formate.forEach(f => {
+    const opt = document.createElement('option');
+    opt.value = f; opt.textContent = f;
+    if (f === sel.format) opt.selected = true;
+    selectEl.appendChild(opt);
+  });
+  const umLabel = document.createElement('span');
+  umLabel.style.cssText = 'font-size:10px;color:var(--ink-muted);min-width:20px';
+  umLabel.textContent = umDisplay;
+  const cantInput = document.createElement('input');
+  cantInput.type = 'text'; cantInput.inputMode = 'numeric';
+  cantInput.placeholder = umDisplay; cantInput.value = sel.cantitate || '';
+  cantInput.style.cssText = 'width:52px;font-size:11px;border:1px solid var(--border);border-radius:3px;padding:2px 4px;font-family:"JetBrains Mono",monospace;text-align:right';
+  const lotHint = document.createElement('div');
+  lotHint.style.cssText = 'font-size:9px;color:var(--ink-muted);line-height:1.2;margin-top:1px;width:100%';
+  lotHint.textContent = refFormat.lotOptim ? `Optim: ${refFormat.lotOptim} ${refFormat.um||'BUC'}` : '';
+  selectEl.onchange = (e) => {
+    state.ambSA[p][row].format = e.target.value;
+    const newRef = AMBALARE_REF[e.target.value] || {};
+    umLabel.textContent = newRef.um || 'BUC';
+    cantInput.placeholder = newRef.um || 'BUC';
+    lotHint.textContent = newRef.lotOptim ? `Optim: ${newRef.lotOptim} ${newRef.um||'BUC'}` : '';
+    buildEtichetareTable(); updateCentralizare(); buildAmbalareTable();
+  };
+  // oninput: salvează fără rebuild (păstrează focusul)
+  cantInput.oninput = (e) => { state.ambSA[p][row].cantitate = e.target.value; };
+  // onblur: rebuild după ce termini de scris
+  cantInput.onblur = () => { buildEtichetareTable(); updateCentralizare(); };
+  wrapper.appendChild(selectEl); wrapper.appendChild(cantInput);
+  wrapper.appendChild(umLabel); wrapper.appendChild(lotHint);
+  td.appendChild(wrapper);
+}
+
 function buildAmbCell(td, p, procZi, row, formate, sel, body, ziAfisare) {
   const refFormat = AMBALARE_REF[sel.format] || {};
   const umDisplay = refFormat.um || 'BUC';
@@ -1813,35 +1861,25 @@ function buildAmbCell(td, p, procZi, row, formate, sel, body, ziAfisare) {
     if (timpCells[ziAfisare]) timpCells[ziAfisare].textContent = timpZi > 0 ? timpZi.toFixed(2) : '—';
     applyFormat2Visibility(body);
   };
+  // oninput: salvează valoarea fără rebuild (păstrează focusul)
   cantInput.oninput = (e) => {
     state.ambalareSelectii[p][procZi][row].cantitate = e.target.value;
     const timpZi = calcTimpAmbalareZi(ziAfisare);
     const timpCells = body.querySelectorAll('.timp-total');
     if (timpCells[ziAfisare]) timpCells[ziAfisare].textContent = timpZi > 0 ? timpZi.toFixed(2) : '—';
+  };
+  // onblur: rebuild după ce utilizatorul termină de scris
+  cantInput.onblur = (e) => {
     if (row === 0) {
       const cant = parseFloat(e.target.value) || 0;
       const refAmbF1 = AMBALARE_REF[state.ambalareSelectii[p][procZi][0].format] || {};
-      const refMat = PROCESARE_REF[state.procesare[p] && state.procesare[p][procZi] || ''] || {};
+      const refMat = PROCESARE_REF[state.procesare[p] ? state.procesare[p][procZi] || '' : ''] || {};
       const lotMat = refAmbF1.um === 'BUC' ? (refMat.buc || refMat.lot || 0) : (refMat.lot || 0);
       if (lotMat > 0 && cant >= lotMat) {
-        const allRows = body.querySelectorAll('tr');
-        allRows.forEach(tr => {
-          const label = tr.querySelector('.row-label');
-          if (label && label.textContent === `P${p+1} Format 2`) {
-            const cells = tr.querySelectorAll('td');
-            if (cells[ziAfisare]) {
-              cells[ziAfisare].innerHTML = '<span style="color:var(--accent);font-size:11px">✓ Lot complet</span>';
-              cells[ziAfisare].style.background = 'var(--accent-pale)';
-              cells[ziAfisare].style.pointerEvents = 'none';
-              state.ambalareSelectii[p][procZi][1] = { format: '—', cantitate: '' };
-              buildEtichetareTable(); updateCentralizare();
-            }
-          }
-        });
-      } else {
-        buildAmbalareTable();
+        state.ambalareSelectii[p][procZi][1] = { format: '—', cantitate: '' };
       }
     }
+    buildEtichetareTable(); updateCentralizare(); buildAmbalareTable();
   };
   wrapper.appendChild(selectEl); wrapper.appendChild(cantInput);
   wrapper.appendChild(umLabel); wrapper.appendChild(lotHint);
@@ -3396,6 +3434,10 @@ async function createNewWeek() {
       { format: '—', cantitate: '' }
     ])
   );
+  state.ambSA = Array(8).fill(null).map(() => [
+    { format: '—', cantitate: '' },
+    { format: '—', cantitate: '' }
+  ]);
   state.personal = {
     schimb1: Array(7).fill(null).map(() => ['—','—','—']),
     schimb2: Array(7).fill(null).map(() => ['—','—','—']),
@@ -3461,16 +3503,16 @@ async function createNewWeek() {
           if (!prodVineri || prodVineri === '—' || CAS_DOAR_TOCARE.includes(prodVineri)) continue;
           if (getMateriePrivaKey(prodVineri)) {
             // Formate multiple: copiem selecțiile de la procZi=4 (Vineri)
-            // Stocăm datele din Vineri S_prev la procZi=5 (slot S.A.) — nu la 0 care e Luni procesare
-            state.ambalareSelectii[pi][5][0] = { ...prevAmbSel[pi][VINERI][0] };
-            state.ambalareSelectii[pi][5][1] = { ...prevAmbSel[pi][VINERI][1] };
+            // Stocăm în state.ambSA — complet separat de ambalareSelectii
+            state.ambSA[pi][0] = { ...prevAmbSel[pi][VINERI][0] };
+            state.ambSA[pi][1] = { ...prevAmbSel[pi][VINERI][1] };
           } else {
             // Produs simplu: îl marcăm ca produs de ambalat Luni
             // (merge în rândul auto prin getAmbalareFromProcesare care citește ambalareSelectii[p][0])
             // Nu e necesar — produsele simple apar automat din getAmbalareFromProcesare Luni
             // dacă există o "procesare" în ziua 0... dar nu vrem să poluăm procesarea S_nou
             // Soluție: stocăm produsul simplu ca un format special în ambalareSelectii
-            state.ambalareSelectii[pi][5][0] = { format: prodVineri, cantitate: '' };
+            state.ambSA[pi][0] = { format: prodVineri, cantitate: '' };
           }
         }
 
