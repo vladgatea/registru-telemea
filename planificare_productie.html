@@ -1321,7 +1321,18 @@ let state = {
     schimb2: Array(7).fill(null).map(() => ['—','—','—']),
     schimb3: Array(7).fill(null).map(() => ['—','—','—']),
   },
-  monitorizare: {}
+  monitorizare: {},
+  // Carry-over din săptămâna anterioară
+  // ambalLuni = ce trebuia ambalatat Luni (din procesare Joi din săpt. ant.)
+  // eticLuni  = ce trebuia etichetat Luni (din procesare Joi din săpt. ant. → ambalat Vineri)
+  // eticMarti = ce trebuia etichetat Marți (din procesare Vineri din săpt. ant. → ambalat Sâmbătă)
+  prevWeekCarry: {
+    label: '',          // ex: "S26/2026"
+    ambalLuni: [],      // produse simple pentru ambalare Luni
+    ambalLuniSelectii: [], // [{ format, cantitate }] pentru produse cu formate multiple
+    eticLuni: [],       // produse pentru etichetare Luni
+    eticMarti: []       // produse pentru etichetare Marți
+  }
 };
 
 const SHEETS_URL_DEFAULT = 'https://script.google.com/macros/s/AKfycbwxDj763V6mK1ou0QjdwJKWK631gbVtzug50oxYtyjIeZohc1ScPj_Qvmp-yBP9gEUK/exec';
@@ -1643,6 +1654,39 @@ function buildAmbalareTable() {
 
   const amb = getAmbalareFromProcesare();
 
+  // ── Rânduri carry-over din săptămâna anterioară (Luni) ──
+  const carry = state.prevWeekCarry;
+  if (carry && carry.label && (carry.ambalLuni.length > 0 || carry.ambalLuniSelectii.length > 0)) {
+    // Produse simple
+    const carryProds = [
+      ...carry.ambalLuni,
+      ...carry.ambalLuniSelectii.flatMap(e => e.selectii.filter(s => s.format && s.format !== '—').map(s => s.format))
+    ];
+    const maxCarry = Math.max(carryProds.length, 1);
+    for (let r = 0; r < maxCarry; r++) {
+      const tr = document.createElement('tr');
+      tr.style.background = 'var(--info-pale)';
+      const tdLabel = document.createElement('td');
+      tdLabel.className = 'row-label';
+      tdLabel.style.cssText = 'color:var(--info);font-size:10px;font-style:italic;line-height:1.2';
+      tdLabel.innerHTML = r === 0 ? `↩ ${carry.label}<br><span style="font-weight:400">carry-over</span>` : '';
+      tr.appendChild(tdLabel);
+      ZILE.forEach((_, zi) => {
+        const td = document.createElement('td');
+        td.className = 'auto-cell';
+        td.style.cssText = 'background:var(--info-pale);color:var(--info);font-style:italic;font-size:11px';
+        if (zi === 0) {
+          // Luni — afișăm carry-over
+          td.textContent = carryProds[r] || '';
+        } else {
+          td.textContent = '';
+        }
+        tr.appendChild(td);
+      });
+      body.appendChild(tr);
+    }
+  }
+
   // ── Rânduri auto (produse simple) ──
   const maxAuto = Math.max(...amb.map(a => a.length), 0);
   for (let r = 0; r < maxAuto; r++) {
@@ -1797,6 +1841,36 @@ function buildEtichetareTable() {
   const eticFromBurduf = getBurdufEtichetareFromBurduf();
   const combined = eticFromAmb.map((a, i) => [...a, ...eticFromBurduf[i]]);
   const maxRows = Math.max(...combined.map(a => a.length), 1);
+
+  // ── Rânduri carry-over din săptămâna anterioară (Luni + Marți) ──
+  const carry = state.prevWeekCarry;
+  const hasCarryEtic = carry && carry.label && (carry.eticLuni.length > 0 || carry.eticMarti.length > 0);
+  if (hasCarryEtic) {
+    const maxCarry = Math.max(carry.eticLuni.length, carry.eticMarti.length, 1);
+    for (let r = 0; r < maxCarry; r++) {
+      const tr = document.createElement('tr');
+      tr.style.background = 'var(--gold-pale)';
+      const tdLabel = document.createElement('td');
+      tdLabel.className = 'row-label';
+      tdLabel.style.cssText = 'color:#8A6A1A;font-size:10px;font-style:italic;line-height:1.2';
+      tdLabel.innerHTML = r === 0 ? `↩ ${carry.label}<br><span style="font-weight:400">carry-over</span>` : '';
+      tr.appendChild(tdLabel);
+      ZILE.forEach((_, zi) => {
+        const td = document.createElement('td');
+        td.className = 'auto-cell etichetare';
+        td.style.cssText = 'background:var(--gold-pale);color:#8A6A1A;font-style:italic;font-size:11px';
+        if (zi === 0) {
+          td.textContent = carry.eticLuni[r] || '';
+        } else if (zi === 1) {
+          td.textContent = carry.eticMarti[r] || '';
+        } else {
+          td.textContent = '';
+        }
+        tr.appendChild(td);
+      });
+      body.appendChild(tr);
+    }
+  }
 
   for (let r = 0; r < maxRows; r++) {
     const tr = document.createElement('tr');
@@ -2514,8 +2588,22 @@ function generatePrint() {
       </tr></thead>
       <tbody>
         ${(() => {
-          // Rânduri pentru produse simple (auto)
+          // Rânduri carry-over din săptămâna anterioară (Luni)
           const ambRows = [];
+          const carry = state.prevWeekCarry;
+          if (carry && carry.label && (carry.ambalLuni.length > 0 || carry.ambalLuniSelectii.length > 0)) {
+            const carryProds = [
+              ...carry.ambalLuni,
+              ...carry.ambalLuniSelectii.flatMap(e => e.selectii.filter(s => s.format && s.format !== '—').map(s => s.format))
+            ];
+            carryProds.forEach((prod, r) => {
+              ambRows.push(`<tr style="background:#EFF6FF">
+                <td class="label-col" style="color:#1A4A7A;font-size:9px;font-style:italic">${r===0?`↩ ${carry.label}`:''}</td>
+                ${ZILE.map((_,zi) => zi === 0 ? `<td class="amb-col" style="color:#1A4A7A;font-style:italic;font-size:10px">${prod}</td>` : '<td></td>').join('')}
+              </tr>`);
+            });
+          }
+          // Rânduri pentru produse simple (auto)
           const maxAuto = Math.max(...amb.map(a=>a.length), 0);
           for (let r = 0; r < maxAuto; r++) {
             ambRows.push(`<tr>
@@ -2574,6 +2662,22 @@ function generatePrint() {
       <tbody>
         ${(() => {
           const eticRows = [];
+
+          // Carry-over din săptămâna anterioară (Luni + Marți)
+          const carry = state.prevWeekCarry;
+          if (carry && carry.label && (carry.eticLuni.length > 0 || carry.eticMarti.length > 0)) {
+            const maxCarry = Math.max(carry.eticLuni.length, carry.eticMarti.length, 1);
+            for (let r = 0; r < maxCarry; r++) {
+              eticRows.push(`<tr style="background:#FEFCE8">
+                <td class="label-col" style="color:#8A6A1A;font-size:9px;font-style:italic">${r===0?`↩ ${carry.label}`:''}</td>
+                ${ZILE.map((_,zi) => {
+                  if (zi === 0) return `<td class="etic-col" style="color:#8A6A1A;font-style:italic;font-size:10px">${carry.eticLuni[r]||''}</td>`;
+                  if (zi === 1) return `<td class="etic-col" style="color:#8A6A1A;font-style:italic;font-size:10px">${carry.eticMarti[r]||''}</td>`;
+                  return '<td></td>';
+                }).join('')}
+              </tr>`);
+            }
+          }
 
           // Produse simple din ambalare (auto) — +1 zi față de ambalare = +2 față de procesare
           const eticAuto = Array(7).fill(null).map(() => []);
@@ -2773,6 +2877,8 @@ function parseSheetRows(rows) {
   state.year = parseInt(rows[1][1]) || state.year;
   state.firstLot = String(rows[1][2] || state.firstLot);
   document.getElementById('firstLot').value = state.firstLot;
+  // Resetăm carry-over la încărcarea unei săptămâni din Sheets
+  state.prevWeekCarry = { label: '', ambalLuni: [], ambalLuniSelectii: [], eticLuni: [], eticMarti: [] };
 
   // Rows 2-9: Procesare
   for (let pi = 0; pi < 8; pi++) {
@@ -3312,11 +3418,89 @@ function closeNewWeekModal() {
   document.getElementById('newWeekModal').classList.remove('open');
 }
 
+// ── Calculează carry-over din săptămâna curentă (înainte de reset) ──────────
+function computeCarryOver() {
+  // Procesare Joi (idx 3) → Ambalare Vineri (idx 4) din S_prev
+  //   → Etichetare Sâmbătă (idx 5) din S_prev
+  //   → Trebuie la Etichetare Luni (idx 0) din S_new
+  //
+  // Procesare Vineri (idx 4) → Ambalare Sâmbătă (idx 5) din S_prev
+  //   → Trebuie la Ambalare Luni (idx 0) din S_new
+  //   → Etichetare Duminică (idx 6) din S_prev
+  //   → Trebuie la Etichetare Marți (idx 1) din S_new
+
+  const carry = {
+    label: `S${state.week}/${state.year}`,
+    ambalLuni: [],
+    ambalLuniSelectii: [],
+    eticLuni: [],
+    eticMarti: []
+  };
+
+  // Ambalare Luni = ce se procesa Joi (zi idx 3) în S_prev
+  // (produse simple)
+  for (let p = 0; p < 8; p++) {
+    const prod = state.procesare[p][3]; // Joi
+    if (!prod || prod === '—') continue;
+    if (CAS_DOAR_TOCARE.includes(prod)) continue;
+    const matKey = getMateriePrivaKey(prod);
+    if (matKey) {
+      // Format multiplu: păstrăm selecțiile de la ambalareSelectii[p][3]
+      // (adică ce era selectat pentru ambalare Vineri = selectii[p][zi=4, zi-1=3])
+      // ATENȚIE: ambalareSelectii[p][zi][row] unde zi = ziua de ambalare
+      // Ambalare Vineri (zi=4) folosește selectii[p][4-1=3]... deci corect [p][3]
+      carry.ambalLuniSelectii.push({
+        procesareIdx: p,
+        prod,
+        matKey,
+        selectii: state.ambalareSelectii[p][3].map(s => ({ ...s }))
+      });
+    } else {
+      carry.ambalLuni.push(prod);
+    }
+  }
+
+  // Etichetare Luni = Ambalare Vineri (zi=4) din S_prev
+  // = ce se procesa Joi (zi=3) din S_prev — produse simple
+  carry.eticLuni.push(...carry.ambalLuni);
+  // + formate selectate Vineri (din procesare Joi) cu formate multiple
+  carry.ambalLuniSelectii.forEach(entry => {
+    entry.selectii.forEach(s => {
+      if (s.format && s.format !== '—') carry.eticLuni.push(s.format);
+    });
+  });
+
+  // Etichetare Marți = Ambalare Sâmbătă (zi=5) din S_prev
+  // = ce se procesa Vineri (zi=4) din S_prev
+  for (let p = 0; p < 8; p++) {
+    const prod = state.procesare[p][4]; // Vineri
+    if (!prod || prod === '—') continue;
+    if (CAS_DOAR_TOCARE.includes(prod)) continue;
+    const matKey = getMateriePrivaKey(prod);
+    if (matKey) {
+      // selectii pentru ambalare Sâmbătă (zi=5) = ambalareSelectii[p][4]
+      state.ambalareSelectii[p][4].forEach(s => {
+        if (s.format && s.format !== '—') carry.eticMarti.push(s.format);
+      });
+    } else {
+      carry.eticMarti.push(prod);
+    }
+  }
+
+  return carry;
+}
+
 function createNewWeek() {
   const w = parseInt(document.getElementById('newWeekNr').value);
   const y = parseInt(document.getElementById('newWeekYear').value);
   const lot = document.getElementById('newWeekLot').value.trim();
   if (!w || !y) { alert('Completează săptămâna și anul'); return; }
+
+  // Calculează carry-over ÎNAINTE de reset (dacă există date în săptămâna curentă)
+  const hasCurrentData = state.procesare.some(row => row.some(v => v && v !== '—'));
+  const carry = hasCurrentData ? computeCarryOver() : {
+    label: '', ambalLuni: [], ambalLuniSelectii: [], eticLuni: [], eticMarti: []
+  };
 
   // Reset state to blank week
   state.week = w;
@@ -3336,6 +3520,7 @@ function createNewWeek() {
     schimb3: Array(7).fill(null).map(() => ['—','—','—']),
   };
   state.monitorizare = {};
+  state.prevWeekCarry = carry;
 
   document.getElementById('firstLot').value = state.firstLot;
   closeNewWeekModal();
