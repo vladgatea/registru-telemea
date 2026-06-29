@@ -2696,12 +2696,22 @@ function generatePrint() {
               </tr>`);
             });
           }
-          // Rânduri pentru produse simple (auto)
-          const maxAuto = Math.max(...amb.map(a=>a.length), 0);
+          // Rânduri pentru produse simple (auto) — excludem produsele cu formate multiple
+          // (acestea apar deja mai jos cu cantitate în rândurile P1F1/P1F2)
+          const ambSimple = Array(7).fill(null).map(() => []);
+          for (let z = 1; z < 7; z++) {
+            for (let p = 0; p < 8; p++) {
+              const prod = state.procesare[p][z - 1];
+              if (!prod || prod === '—' || CAS_DOAR_TOCARE.includes(prod)) continue;
+              if (getMateriePrivaKey(prod)) continue; // sărim formatele multiple — apar la P1F1/P1F2
+              ambSimple[z].push(prod);
+            }
+          }
+          const maxAuto = Math.max(...ambSimple.map(a=>a.length), 0);
           for (let r = 0; r < maxAuto; r++) {
             ambRows.push(`<tr>
               <td class="label-col">${r===0?'Ambalare':''}</td>
-              ${ZILE.map((_,zi)=>`<td class="amb-col">${amb[zi][r]||''}</td>`).join('')}
+              ${ZILE.map((_,zi)=>`<td class="amb-col">${ambSimple[zi][r]||''}</td>`).join('')}
             </tr>`);
           }
           // Rânduri pentru formate multiple cu cantitate
