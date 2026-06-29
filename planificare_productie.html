@@ -2266,6 +2266,44 @@ function buildMonitAmb(zi, dayLabel) {
   tbody.innerHTML = '';
   const rows = [];
 
+  // Carry-over din săptămâna anterioară — doar Luni (zi=0)
+  if (zi === 0) {
+    const carry = state.prevWeekCarry;
+    if (carry && carry.label) {
+      // Produse simple din carry
+      carry.ambalLuni.forEach((prod, idx) => {
+        const timpPlan = calcTimpAmbalare([prod]);
+        rows.push({
+          slot: `↩ ${carry.label}`,
+          planificat: prod,
+          cantPlan: '—',
+          timpPlan,
+          key: `carry_amb_luni_s_${idx}`,
+          isFormat: false,
+          isCarry: true
+        });
+      });
+      // Formate multiple din carry
+      carry.ambalLuniSelectii.forEach((entry, ei) => {
+        entry.selectii.forEach((s, row) => {
+          if (!s.format || s.format === '—') return;
+          const timpPlan = calcTimpAmbalareProportional(s.format, s.cantitate);
+          const refAmb = AMBALARE_REF[s.format] || {};
+          const cantPlan = s.cantitate ? `${s.cantitate} ${refAmb.um||''}` : '—';
+          rows.push({
+            slot: `↩ ${carry.label}`,
+            planificat: s.format,
+            cantPlan,
+            timpPlan,
+            key: `carry_amb_luni_f_${ei}_${row}`,
+            isFormat: true,
+            isCarry: true
+          });
+        });
+      });
+    }
+  }
+
   if (zi > 0) {
     for (let p = 0; p < 8; p++) {
       const prod = state.procesare[p][zi - 1];
@@ -2323,8 +2361,9 @@ function buildMonitAmb(zi, dayLabel) {
     const timpReal = saved.timpReal || '';
     const { std, real } = calcRandament(refProdA, saved.cantitate);
     const tr = document.createElement('tr');
+    if (row.isCarry) tr.style.background = 'var(--info-pale)';
     tr.innerHTML = `
-      <td><strong>${row.slot}</strong></td>
+      <td><strong style="${row.isCarry ? 'color:var(--info);font-style:italic;font-size:11px' : ''}">${row.slot}</strong></td>
       <td style="font-weight:500;color:var(--info)">${row.planificat}${row.cantPlan !== '—' ? `<br><span style="font-size:10px;color:var(--ink-muted)">Plan: ${row.cantPlan}</span>` : ''}</td>
       <td><select class="monit-input" onchange="updateMonit('${row.key}','realizat',this.value)" style="width:100%">${prodSelectOptions(saved,'realizat')}</select></td>
       <td style="text-align:center">${lotDisplay}</td>
@@ -2363,6 +2402,37 @@ function buildMonitEtic(zi, dayLabel) {
   tbody.innerHTML = '';
   const rows = [];
 
+  // Carry-over din săptămâna anterioară
+  const carry = state.prevWeekCarry;
+  if (carry && carry.label) {
+    // Etichetare Luni (zi=0) — carry din procesare Joi S_prev
+    if (zi === 0) {
+      carry.eticLuni.forEach((prod, idx) => {
+        rows.push({
+          slot: `↩ ${carry.label}`,
+          planificat: prod,
+          cantPlan: '—',
+          key: `carry_etic_luni_${idx}`,
+          sursa: 'Ambalare',
+          isCarry: true
+        });
+      });
+    }
+    // Etichetare Marți (zi=1) — carry din procesare Vineri S_prev
+    if (zi === 1) {
+      carry.eticMarti.forEach((prod, idx) => {
+        rows.push({
+          slot: `↩ ${carry.label}`,
+          planificat: prod,
+          cantPlan: '—',
+          key: `carry_etic_marti_${idx}`,
+          sursa: 'Ambalare',
+          isCarry: true
+        });
+      });
+    }
+  }
+
   // Din ambalare (procesare -2 zile) → afișăm formatele selectate, nu materia primă
   if (zi > 1) {
     for (let p = 0; p < 8; p++) {
@@ -2400,7 +2470,7 @@ function buildMonitEtic(zi, dayLabel) {
   }
 
   if (rows.length === 0) {
-    const msg = zi < 2 ? 'Primele zile nu au etichetare planificată' : 'Nicio etichetare planificată pentru această zi';
+    const msg = 'Nicio etichetare planificată pentru această zi';
     tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:16px;color:var(--ink-muted)">${msg}</td></tr>`;
     document.getElementById('monitSummaryEtic').textContent = ''; return;
   }
@@ -2424,10 +2494,11 @@ function buildMonitEtic(zi, dayLabel) {
     const { lotDisplay, qtyTd, badge } = renderQtyCols(row.key, lotOptim, um, saved);
     const { std, real } = calcRandament(refProdE, saved.cantitate);
     const tr = document.createElement('tr');
+    if (row.isCarry) tr.style.background = 'var(--gold-pale)';
     tr.innerHTML = `
       <td>
-        <strong>${row.slot}</strong>
-        <span style="font-size:10px;padding:1px 5px;border-radius:8px;margin-left:4px;${isBurduf ? 'background:var(--warn-pale);color:var(--warn)' : 'background:var(--info-pale);color:var(--info)'}">${row.sursa}</span>
+        <strong style="${row.isCarry ? 'color:#8A6A1A;font-style:italic;font-size:11px' : ''}">${row.slot}</strong>
+        ${!row.isCarry ? `<span style="font-size:10px;padding:1px 5px;border-radius:8px;margin-left:4px;${isBurduf ? 'background:var(--warn-pale);color:var(--warn)' : 'background:var(--info-pale);color:var(--info)'}">${row.sursa}</span>` : ''}
       </td>
       <td style="font-weight:500;color:${isBurduf ? 'var(--warn)' : '#8A6A1A'}">${row.planificat}${row.cantPlan !== '—' ? `<br><span style="font-size:10px;color:var(--ink-muted)">Plan: ${row.cantPlan}</span>` : ''}</td>
       <td><select class="monit-input" onchange="updateMonit('${row.key}','realizat',this.value)" style="width:100%">${prodSelectOptions(saved,'realizat')}</select></td>
