@@ -1458,6 +1458,28 @@ function calcTimpAmbalareProportional(format, cantitate) {
 // Timp total ambalare pentru o zi — include și rândurile editabile proporționale
 function calcTimpAmbalareZi(zi) {
   let total = 0;
+
+  // Carry-over din săptămâna anterioară — aplicabil doar Luni (zi=0)
+  if (zi === 0) {
+    const carry = state.prevWeekCarry;
+    if (carry && carry.label) {
+      // Produse simple
+      carry.ambalLuni.forEach(prod => {
+        const ref = AMBALARE_REF[prod];
+        if (ref) total += ref.timp;
+      });
+      // Formate multiple cu cantitate
+      carry.ambalLuniSelectii.forEach(entry => {
+        entry.selectii.forEach(s => {
+          if (s.format && s.format !== '—') {
+            total += calcTimpAmbalareProportional(s.format, s.cantitate);
+          }
+        });
+      });
+    }
+    return total;
+  }
+
   // Produse simple (auto)
   for (let p = 0; p < 8; p++) {
     if (zi === 0) continue;
