@@ -3017,13 +3017,17 @@ function parseSheetRows(rows) {
       }
     }
   }
-  // Row 40: PrevWeekCarry (JSON)
-  const carryRow = rows[40];
-  if (carryRow && carryRow[0] === 'PrevWeekCarry' && carryRow[3]) {
+  // Caută rândul PrevWeekCarry oriunde în sheet (nu depinde de index fix)
+  const carryRow = rows.find(r => r && r[0] === 'PrevWeekCarry');
+  console.log('[Carry] Total rows from sheet:', rows.length, '| carryRow found:', !!carryRow, '| value:', carryRow ? carryRow[3] : 'N/A');
+  if (carryRow && carryRow[3]) {
     try {
       const parsed = JSON.parse(String(carryRow[3]));
-      if (parsed && typeof parsed === 'object') state.prevWeekCarry = parsed;
-    } catch(e) { /* carry invalid, rămâne gol */ }
+      if (parsed && typeof parsed === 'object') {
+        state.prevWeekCarry = parsed;
+        console.log('[Carry] Restored:', parsed.label, '| ambalLuni:', parsed.ambalLuni, '| eticLuni:', parsed.eticLuni, '| eticMarti:', parsed.eticMarti);
+      }
+    } catch(e) { console.warn('[Carry] Parse error:', e); }
   }
   // Sync selector
   const sel = document.getElementById('weekSelector');
