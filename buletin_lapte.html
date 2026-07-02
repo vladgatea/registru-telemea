@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Buletin Analize Lapte</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --blue:     #1565C0; --blue-mid: #1976D2; --blue-bg: #E3F2FD; --blue-bg2: #F0F7FF;
+  --green:    #2E7D32; --green-bg: #E8F5E9;
+  --orange:   #E65100; --orange-bg: #FFF3E0;
+  --red:      #C62828; --red-bg: #FFEBEE;
+  --gray-1:   #F7F8FA; --gray-2: #ECEEF2; --gray-3: #C8CDD6;
+  --gray-4:   #7A8494; --gray-5: #3D4452; --dark: #1A1D23; --white: #FFFFFF;
+  --radius:   12px; --shadow: 0 2px 12px rgba(0,0,0,0.08);
+}
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--gray-1); color: var(--dark); min-height: 100vh; -webkit-font-smoothing: antialiased; }
+
+/* HEADER */
+.app-header { background: var(--blue); color: white; padding: 14px 16px; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
+.header-row { display: flex; align-items: center; gap: 10px; }
+.header-icon { width: 38px; height: 38px; background: rgba(255,255,255,0.15); border-radius: 9px; display: flex; align-items: center; justify-content: center; font-size: 19px; flex-shrink: 0; }
+.header-title { font-size: 16px; font-weight: 700; flex: 1; }
+.header-sub { font-size: 11px; opacity: 0.75; margin-top: 1px; }
+.btn-draft-hdr { background: rgba(255,255,255,0.18); border: none; color: white; padding: 7px 13px; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+
+/* MAIN */
+.main { padding: 14px; max-width: 860px; margin: 0 auto; }
+
+/* INFO BAR */
+.info-bar { background: white; border-radius: var(--radius); box-shadow: var(--shadow); padding: 14px 16px; margin-bottom: 12px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (min-width: 500px) { .info-bar { grid-template-columns: repeat(3, 1fr); } }
+
+/* CARD */
+.card { background: white; border-radius: var(--radius); box-shadow: var(--shadow); margin-bottom: 12px; overflow: hidden; }
+.card-header { padding: 11px 16px; font-size: 12px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid var(--gray-2); background: var(--blue-bg2); color: var(--blue); }
+.card-body { padding: 14px 16px; }
+
+/* FORM FIELDS */
+.field { display: flex; flex-direction: column; gap: 5px; }
+label { font-size: 11px; font-weight: 700; color: var(--gray-4); text-transform: uppercase; letter-spacing: 0.4px; }
+label .req { color: var(--red); }
+input[type="text"], input[type="number"], input[type="date"], input[type="time"], select, textarea {
+  width: 100%; padding: 10px 12px; border: 1.5px solid var(--gray-2); border-radius: 8px;
+  font-size: 15px; color: var(--dark); background: var(--gray-1);
+  appearance: none; -webkit-appearance: none; outline: none; transition: border-color 0.2s, background 0.2s;
+}
+input:focus, select:focus, textarea:focus { border-color: var(--blue-mid); background: white; box-shadow: 0 0 0 3px rgba(25,118,210,0.1); }
+input.error { border-color: var(--red); background: var(--red-bg); }
+.select-wrap { position: relative; }
+.select-wrap::after { content: '▾'; position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: var(--gray-4); pointer-events: none; font-size: 13px; }
+select { padding-right: 32px; cursor: pointer; }
+
+/* GRID */
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+
+/* REGISTRU INTRARI */
+.entry-block { border: 1.5px solid var(--gray-2); border-radius: 10px; padding: 14px; margin-bottom: 10px; background: var(--gray-1); transition: border-color 0.2s; }
+.entry-block.active { border-color: var(--blue-mid); background: white; }
+.entry-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.entry-num { width: 26px; height: 26px; background: var(--blue); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800; flex-shrink: 0; }
+.entry-title { font-size: 13px; font-weight: 700; color: var(--blue); margin-left: 8px; flex: 1; }
+.entry-ruta { font-size: 12px; color: var(--gray-4); margin-left: 6px; font-weight: 400; }
+
+/* REZISTENTA ALCOOL — butoane */
+.alcool-btns { display: flex; gap: 8px; }
+.alcool-btn { flex: 1; padding: 10px 6px; border: 1.5px solid var(--gray-2); border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer; background: var(--gray-1); color: var(--gray-5); text-align: center; transition: all 0.15s; }
+.alcool-btn:hover { border-color: var(--blue-mid); }
+.alcool-btn.ok { border-color: var(--green); background: var(--green-bg); color: var(--green); }
+.alcool-btn.nok { border-color: var(--red); background: var(--red-bg); color: var(--red); }
+
+/* ANTIBIOTIC / AFLATOXINA */
+.result-btns { display: flex; gap: 8px; }
+.result-btn { flex: 1; padding: 10px 6px; border: 1.5px solid var(--gray-2); border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer; background: var(--gray-1); color: var(--gray-5); text-align: center; transition: all 0.15s; }
+.result-btn.pozitiv { border-color: var(--red); background: var(--red-bg); color: var(--red); }
+.result-btn.negativ { border-color: var(--green); background: var(--green-bg); color: var(--green); }
+.result-btn.netestat { border-color: var(--gray-3); background: var(--gray-2); color: var(--gray-4); }
+
+/* ADD ENTRY BTN */
+.btn-add { width: 100%; padding: 13px; background: white; border: 2px dashed var(--gray-3); border-radius: var(--radius); color: var(--blue-mid); font-size: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.2s; margin-bottom: 12px; }
+.btn-add:hover { border-color: var(--blue-mid); background: var(--blue-bg2); }
+
+/* ACTION BAR */
+.action-bar { display: flex; gap: 10px; margin-bottom: 12px; }
+.btn-primary { flex: 1; padding: 14px; background: var(--blue); color: white; border: none; border-radius: var(--radius); font-size: 15px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: background 0.2s; }
+.btn-primary:hover { background: var(--blue-mid); }
+.btn-primary:disabled { background: var(--gray-3); cursor: not-allowed; }
+.btn-secondary { flex: 1; padding: 14px; background: var(--gray-2); color: var(--gray-5); border: none; border-radius: var(--radius); font-size: 15px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: background 0.2s; }
+.btn-secondary:hover { background: var(--gray-3); }
+.btn-sm { padding: 6px 12px; border: none; border-radius: 7px; font-size: 12px; font-weight: 600; cursor: pointer; }
+.btn-remove { background: var(--red-bg); color: var(--red); }
+
+/* SPINNER */
+.spinner { width: 18px; height: 18px; border: 3px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 0.7s linear infinite; display: none; }
+.spinner.show { display: block; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* TOAST */
+.toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px); background: var(--dark); color: white; padding: 12px 20px; border-radius: 24px; font-size: 14px; font-weight: 600; z-index: 999; transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1); box-shadow: 0 4px 20px rgba(0,0,0,0.25); max-width: calc(100vw - 40px); text-align: center; }
+.toast.show { transform: translateX(-50%) translateY(0); }
+.toast.success { background: var(--green); }
+.toast.error   { background: var(--red); }
+
+/* DRAFTURI */
+.drafturi-panel { display: none; }
+.draft-item { border: 1.5px solid var(--gray-2); border-radius: 10px; padding: 14px; margin-bottom: 10px; background: var(--gray-1); }
+.draft-title { font-size: 14px; font-weight: 700; }
+.draft-meta  { font-size: 12px; color: var(--gray-4); margin-top: 3px; }
+.draft-status { font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 20px; }
+.draft-status.nesalvat { background: #FFF3CD; color: #856404; }
+.draft-status.salvat   { background: #D4EDDA; color: #155724; }
+.draft-actions { display: flex; gap: 8px; margin-top: 10px; }
+.draft-actions button { flex: 1; padding: 9px; border: none; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; }
+.btn-draft-edit   { background: var(--blue-bg); color: var(--blue); }
+.btn-draft-send   { background: var(--green); color: white; }
+.btn-draft-delete { background: var(--red-bg); color: var(--red); }
+
+/* CONFIG */
+.config-btn { position: fixed; bottom: 20px; right: 20px; width: 44px; height: 44px; background: var(--gray-5); color: white; border: none; border-radius: 50%; font-size: 18px; cursor: pointer; box-shadow: 0 4px 16px rgba(0,0,0,0.2); z-index: 500; display: flex; align-items: center; justify-content: center; }
+.config-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 600; align-items: flex-end; }
+.config-overlay.open { display: flex; }
+.config-sheet { background: white; border-radius: 20px 20px 0 0; padding: 24px 20px 40px; width: 100%; max-width: 860px; margin: 0 auto; }
+.config-handle { width: 40px; height: 4px; background: var(--gray-3); border-radius: 2px; margin: 0 auto 20px; }
+.status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--gray-3); margin-right: 6px; }
+.status-dot.connected { background: #4CAF50; }
+
+.bottom-spacer { height: 80px; }
+</style>
+</head>
+<body>
+
+<div class="app-header">
+  <div class="header-row">
+    <div class="header-icon">🥛</div>
+    <div style="flex:1">
+      <div class="header-title">Buletin Analize Lapte</div>
+      <div class="header-sub">Ferma cu Omenie · Laborator</div>
+    </div>
+    <button class="btn-draft-hdr" id="draftHdrBtn" onclick="arataDrafturi()">📋 Drafturi</button>
+  </div>
+</div>
+
+<div class="main">
+
+<!-- DRAFTURI PANEL -->
+<div class="drafturi-panel" id="drafturiPanel">
+  <div class="card">
+    <div class="card-header" style="justify-content:space-between;">
+      <span>📋 Buletine salvate</span>
+      <button class="btn-sm" style="background:var(--blue-bg);color:var(--blue);" onclick="ascundeDrafturi()">← Înapoi</button>
+    </div>
+    <div class="card-body" id="drafturiList">
+      <div style="text-align:center;color:var(--gray-4);padding:24px;font-size:14px;">Nu există drafturi</div>
+    </div>
+  </div>
+  <div class="bottom-spacer"></div>
+</div>
+
+<!-- FORM VIEW -->
+<div id="formView">
+
+  <!-- INFO GENERALĂ -->
+  <div class="info-bar">
+    <div class="field">
+      <label>Data <span class="req">*</span></label>
+      <input type="date" id="g_data" />
+    </div>
+    <div class="field">
+      <label>Laborant <span class="req">*</span></label>
+      <input type="text" id="g_laborant" placeholder="Nume laborant" />
+    </div>
+    <div class="field">
+      <label>Verificat de</label>
+      <input type="text" id="g_verificat" placeholder="Nume verificator" />
+    </div>
+  </div>
+
+  <!-- INTRĂRI LAPTE -->
+  <div class="card">
+    <div class="card-header">🚛 Intrări lapte materie primă</div>
+    <div class="card-body" style="padding-bottom:8px;">
+      <div id="intrariContainer"></div>
+    </div>
+  </div>
+
+  <button class="btn-add" onclick="adaugaIntrare()">+ Adaugă intrare lapte</button>
+
+  <div class="action-bar">
+    <button class="btn-secondary" onclick="salvezDraft()">💾 Salvează draft</button>
+    <button class="btn-primary" id="submitBtn" onclick="trimiteForm()">
+      <span id="btnTxt">📤 Trimite în Google Sheets</span>
+      <div class="spinner" id="btnSpin"></div>
+    </button>
+  </div>
+
+  <div class="bottom-spacer"></div>
+</div><!-- /formView -->
+
+</div><!-- /main -->
+
+<div class="toast" id="toast"></div>
+
+<button class="config-btn" onclick="openConfig()" title="Configurare">⚙️</button>
+<div class="config-overlay" id="configOverlay" onclick="closeConfigEv(event)">
+  <div class="config-sheet">
+    <div class="config-handle"></div>
+    <div style="font-size:16px;font-weight:700;margin-bottom:12px;">⚙️ Configurare Google Sheets</div>
+    <div style="font-size:13px;color:var(--gray-4);margin-bottom:16px;">
+      <span class="status-dot" id="statusDot"></span><span id="statusLabel">Neconectat</span>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:5px;margin-bottom:14px;">
+      <label style="font-size:11px;font-weight:700;color:var(--gray-4);text-transform:uppercase;">URL Google Apps Script</label>
+      <input type="text" id="configUrl" placeholder="https://script.google.com/macros/s/..." style="padding:10px 12px;border:1.5px solid var(--gray-2);border-radius:8px;font-size:14px;outline:none;" />
+    </div>
+    <button class="btn-primary" onclick="saveConfig()" style="width:100%;flex:none;">Salvează URL</button>
+  </div>
+</div>
+
+<script>
+const SCRIPT_KEY     = 'lapte_script_url';
+const DRAFTURI_KEY   = 'lapte_drafturi';
+const SCRIPT_URL_DEFAULT = 'https://script.google.com/macros/s/AKfycbwSU_bcZek1yKoZ84crIuAy90WPx7u2xQP43_zSkKLmJKPJrQEM5NgvmK05dMX9wIld/exec';
+
+let intrariIds = [];
+let intrariCounter = 0;
+let currentDraftId = null;
+
+// State per intrare
+let state = {}; // { [id]: { alcool, antibiotice, aflatoxina } }
+
+window.addEventListener('load', () => {
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('g_data').value = today;
+  const saved = localStorage.getItem(SCRIPT_KEY) || SCRIPT_URL_DEFAULT;
+  document.getElementById('configUrl').value = saved;
+  if (!localStorage.getItem(SCRIPT_KEY)) localStorage.setItem(SCRIPT_KEY, SCRIPT_URL_DEFAULT);
+  updateStatus(true);
+  adaugaIntrare();
+  actualizeazaBadge();
+});
+
+// ── ADAUGĂ INTRARE ──────────────────────────────────────
+function adaugaIntrare() {
+  intrariCounter++;
+  const id = intrariCounter;
+  intrariIds.push(id);
+  state[id] = { alcool: '', antibiotice: 'Netestat', aflatoxina: 'Netestat' };
+
+  const html = `
+  <div class="entry-block active" id="intr_${id}">
+    <div class="entry-header">
+      <div class="entry-num">${id}</div>
+      <span class="entry-title">Intrare ${id}</span>
+      <span class="entry-ruta" id="ruta_label_${id}"></span>
+      ${intrariIds.length > 1 ? `<button class="btn-sm btn-remove" onclick="stergeIntrare(${id})">✕</button>` : ''}
+    </div>
+
+    <!-- RUTA + DATA/ORA + TANC -->
+    <div class="grid-3" style="margin-bottom:12px;">
+      <div class="field" style="grid-column:span 2;">
+        <label>Ruta <span class="req">*</span></label>
+        <input type="text" id="i${id}_ruta" placeholder="ex: Ferma Ionescu / Ruta 3" oninput="updateRutaLabel(${id})" />
+      </div>
+      <div class="field">
+        <label>Tanc Nr.</label>
+        <input type="number" id="i${id}_tanc" placeholder="1" min="1" max="20" />
+      </div>
+    </div>
+    <div class="grid-3" style="margin-bottom:12px;">
+      <div class="field">
+        <label>Ora recepție</label>
+        <input type="time" id="i${id}_ora" />
+      </div>
+      <div class="field">
+        <label>Cantitate (litri) <span class="req">*</span></label>
+        <input type="number" id="i${id}_cant" placeholder="1000" min="0" step="1" />
+      </div>
+      <div class="field">
+        <label>Temp (°C)</label>
+        <input type="number" id="i${id}_temp" placeholder="4.0" step="0.1" />
+      </div>
+    </div>
+
+    <!-- PARAMETRI FIZICO-CHIMICI -->
+    <div style="font-size:11px;font-weight:700;color:var(--gray-4);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--gray-2);">⚗️ Parametri fizico-chimici</div>
+    <div class="grid-3" style="margin-bottom:12px;">
+      <div class="field">
+        <label>Grăsime (g/100g)</label>
+        <input type="number" id="i${id}_gras" placeholder="3.8" step="0.01" />
+      </div>
+      <div class="field">
+        <label>Proteine (g/100g)</label>
+        <input type="number" id="i${id}_prot" placeholder="3.3" step="0.01" />
+      </div>
+      <div class="field">
+        <label>Lactoză (g/100g)</label>
+        <input type="number" id="i${id}_lact" placeholder="4.7" step="0.01" />
+      </div>
+      <div class="field">
+        <label>S.N.F. (g/100g)</label>
+        <input type="number" id="i${id}_snf" placeholder="8.5" step="0.01" />
+      </div>
+      <div class="field">
+        <label>Densitate (g/cm³)</label>
+        <input type="number" id="i${id}_dens" placeholder="1.028" step="0.001" />
+      </div>
+      <div class="field">
+        <label>Aciditate (°Th)</label>
+        <input type="number" id="i${id}_acid" placeholder="17" step="0.1" />
+      </div>
+      <div class="field">
+        <label>Pt. Crioscopic</label>
+        <input type="number" id="i${id}_crios" placeholder="-0.520" step="0.001" />
+      </div>
+      <div class="field">
+        <label>Apă adăugată (%)</label>
+        <input type="number" id="i${id}_apa" placeholder="0" step="0.1" />
+      </div>
+    </div>
+
+    <!-- TESTE CALITATIVE -->
+    <div style="font-size:11px;font-weight:700;color:var(--gray-4);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--gray-2);">🧪 Teste calitative</div>
+
+    <div class="grid-3" style="margin-bottom:12px;">
+      <div class="field" style="grid-column:span 3;">
+        <label>Rezistență la alcool (70°)</label>
+        <div class="alcool-btns">
+          <button class="alcool-btn" id="alc_ok_${id}" onclick="setAlcool(${id},'Trece')">✓ Trece</button>
+          <button class="alcool-btn" id="alc_nok_${id}" onclick="setAlcool(${id},'Nu trece')">✗ Nu trece</button>
+          <button class="alcool-btn" id="alc_nt_${id}" onclick="setAlcool(${id},'Netestat')">— Netestat</button>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Reziduuri Antibiotice</label>
+        <div class="result-btns" style="flex-direction:column; gap:6px;">
+          <button class="result-btn" id="ab_poz_${id}" onclick="setAntibiotic(${id},'Pozitiv')">+ Pozitiv</button>
+          <button class="result-btn" id="ab_neg_${id}" onclick="setAntibiotic(${id},'Negativ')">− Negativ</button>
+          <button class="result-btn netestat" id="ab_nt_${id}" onclick="setAntibiotic(${id},'Netestat')">— Netestat</button>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Test Aflatoxină M1 (ppt)</label>
+        <div class="result-btns" style="flex-direction:column; gap:6px;">
+          <button class="result-btn" id="af_poz_${id}" onclick="setAflatoxina(${id},'Pozitiv')">+ Pozitiv</button>
+          <button class="result-btn" id="af_neg_${id}" onclick="setAflatoxina(${id},'Negativ')">− Negativ</button>
+          <button class="result-btn netestat" id="af_nt_${id}" onclick="setAflatoxina(${id},'Netestat')">— Netestat</button>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Valoare aflatoxină (ppt)</label>
+        <input type="number" id="i${id}_aflval" placeholder="ex: 0.05" step="0.001" />
+      </div>
+    </div>
+
+  </div>`;
+
+  document.getElementById('intrariContainer').insertAdjacentHTML('beforeend', html);
+  // Set default Netestat
+  setAlcool(id, ''); setAntibiotic(id, 'Netestat'); setAflatoxina(id, 'Netestat');
+}
+
+function stergeIntrare(id) {
+  if (intrariIds.length <= 1) { showToast('Trebuie cel puțin o intrare', 'error'); return; }
+  document.getElementById('intr_' + id)?.remove();
+  intrariIds = intrariIds.filter(x => x !== id);
+  delete state[id];
+}
+
+function updateRutaLabel(id) {
+  const val = document.getElementById('i' + id + '_ruta').value;
+  document.getElementById('ruta_label_' + id).textContent = val ? '— ' + val : '';
+}
+
+// ── TESTE BUTOANE ──────────────────────────────────────
+function setAlcool(id, val) {
+  state[id].alcool = val;
+  ['ok','nok','nt'].forEach(k => {
+    const btn = document.getElementById('alc_' + k + '_' + id);
+    if (!btn) return;
+    btn.classList.remove('ok','nok');
+  });
+  if (val === 'Trece')    { document.getElementById('alc_ok_'  + id)?.classList.add('ok'); }
+  if (val === 'Nu trece') { document.getElementById('alc_nok_' + id)?.classList.add('nok'); }
+}
+
+function setAntibiotic(id, val) {
+  state[id].antibiotice = val;
+  ['poz','neg','nt'].forEach(k => {
+    const btn = document.getElementById('ab_' + k + '_' + id);
+    if (!btn) return;
+    btn.classList.remove('pozitiv','negativ','netestat');
+  });
+  if (val === 'Pozitiv')  document.getElementById('ab_poz_' + id)?.classList.add('pozitiv');
+  if (val === 'Negativ')  document.getElementById('ab_neg_' + id)?.classList.add('negativ');
+  if (val === 'Netestat') document.getElementById('ab_nt_'  + id)?.classList.add('netestat');
+}
+
+function setAflatoxina(id, val) {
+  state[id].aflatoxina = val;
+  ['poz','neg','nt'].forEach(k => {
+    const btn = document.getElementById('af_' + k + '_' + id);
+    if (!btn) return;
+    btn.classList.remove('pozitiv','negativ','netestat');
+  });
+  if (val === 'Pozitiv')  document.getElementById('af_poz_' + id)?.classList.add('pozitiv');
+  if (val === 'Negativ')  document.getElementById('af_neg_' + id)?.classList.add('negativ');
+  if (val === 'Netestat') document.getElementById('af_nt_'  + id)?.classList.add('netestat');
+}
+
+// ── COLECTEAZĂ DATE ────────────────────────────────────
+function colecteaza() {
+  return {
+    tip: 'buletin_lapte',
+    data: document.getElementById('g_data').value,
+    laborant: document.getElementById('g_laborant').value.trim(),
+    verificat: document.getElementById('g_verificat').value.trim(),
+    intrari: intrariIds.map(id => ({
+      ruta:        document.getElementById('i'+id+'_ruta').value.trim(),
+      tanc:        document.getElementById('i'+id+'_tanc').value,
+      ora:         document.getElementById('i'+id+'_ora').value,
+      cantitate:   document.getElementById('i'+id+'_cant').value,
+      temp:        document.getElementById('i'+id+'_temp').value,
+      grasime:     document.getElementById('i'+id+'_gras').value,
+      proteine:    document.getElementById('i'+id+'_prot').value,
+      lactoza:     document.getElementById('i'+id+'_lact').value,
+      snf:         document.getElementById('i'+id+'_snf').value,
+      densitate:   document.getElementById('i'+id+'_dens').value,
+      aciditate:   document.getElementById('i'+id+'_acid').value,
+      pt_crioscopic: document.getElementById('i'+id+'_crios').value,
+      apa_adaugata:  document.getElementById('i'+id+'_apa').value,
+      alcool:      state[id]?.alcool || '',
+      antibiotice: state[id]?.antibiotice || '',
+      aflatoxina:  state[id]?.aflatoxina || '',
+      aflval:      document.getElementById('i'+id+'_aflval').value,
+    }))
+  };
+}
+
+// ── VALIDARE ──────────────────────────────────────────
+function validate() {
+  let ok = true;
+  const data = document.getElementById('g_data');
+  const lab  = document.getElementById('g_laborant');
+  if (!data.value) { data.classList.add('error'); ok = false; } else data.classList.remove('error');
+  if (!lab.value.trim()) { lab.classList.add('error'); ok = false; } else lab.classList.remove('error');
+  intrariIds.forEach(id => {
+    const ruta = document.getElementById('i'+id+'_ruta');
+    const cant = document.getElementById('i'+id+'_cant');
+    if (!ruta.value.trim()) { ruta.classList.add('error'); ok = false; } else ruta.classList.remove('error');
+    if (!cant.value)        { cant.classList.add('error'); ok = false; } else cant.classList.remove('error');
+  });
+  return ok;
+}
+
+// ── DRAFT SYSTEM ──────────────────────────────────────
+function getDrafturi() { try { return JSON.parse(localStorage.getItem(DRAFTURI_KEY)||'[]'); } catch { return []; } }
+function setDrafturi(list) { localStorage.setItem(DRAFTURI_KEY, JSON.stringify(list)); actualizeazaBadge(); }
+function actualizeazaBadge() {
+  const n = getDrafturi().filter(d=>!d.trimis).length;
+  document.getElementById('draftHdrBtn').textContent = n > 0 ? `📋 Drafturi (${n})` : '📋 Drafturi';
+}
+
+function salvezDraft() {
+  const date = colecteaza();
+  const drafturi = getDrafturi();
+  const existing = drafturi.find(d => d.id === currentDraftId);
+  if (existing) {
+    Object.assign(existing, date, { updatedAt: new Date().toLocaleString('ro-RO') });
+  } else {
+    currentDraftId = Date.now().toString();
+    drafturi.push({ id: currentDraftId, ...date, createdAt: new Date().toLocaleString('ro-RO'), updatedAt: new Date().toLocaleString('ro-RO'), trimis: false });
+  }
+  setDrafturi(drafturi);
+  showToast('Draft salvat!', 'success');
+}
+
+function arataDrafturi() {
+  document.getElementById('formView').style.display = 'none';
+  document.getElementById('drafturiPanel').style.display = 'block';
+  const drafturi = getDrafturi();
+  const list = document.getElementById('drafturiList');
+  if (!drafturi.length) {
+    list.innerHTML = '<div style="text-align:center;color:var(--gray-4);padding:24px;font-size:14px;">Nu există drafturi salvate</div>';
+    return;
+  }
+  list.innerHTML = drafturi.slice().reverse().map(d => `
+    <div class="draft-item">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">
+        <div>
+          <div class="draft-title">🥛 Buletin ${d.data}</div>
+          <div class="draft-meta">${d.laborant||'—'} · ${d.intrari?.length||0} intrări · ${d.updatedAt}</div>
+        </div>
+        <span class="draft-status ${d.trimis?'salvat':'nesalvat'}">${d.trimis?'✓ Trimis':'Draft'}</span>
+      </div>
+      <div class="draft-actions">
+        <button class="btn-draft-edit" onclick="incarcaDraft('${d.id}')">✏️ Editează</button>
+        ${!d.trimis ? `<button class="btn-draft-send" onclick="trimiteDirect('${d.id}')">📤 Trimite</button>` : ''}
+        <button class="btn-draft-delete" onclick="stergeDraft('${d.id}')">🗑</button>
+      </div>
+    </div>`).join('');
+}
+
+function ascundeDrafturi() {
+  document.getElementById('drafturiPanel').style.display = 'none';
+  document.getElementById('formView').style.display = '';
+}
+
+function incarcaDraft(id) {
+  const d = getDrafturi().find(x => x.id === id);
+  if (!d) return;
+  currentDraftId = id;
+  document.getElementById('g_data').value      = d.data || '';
+  document.getElementById('g_laborant').value  = d.laborant || '';
+  document.getElementById('g_verificat').value = d.verificat || '';
+
+  // Reset intrări
+  document.getElementById('intrariContainer').innerHTML = '';
+  intrariIds = []; intrariCounter = 0; state = {};
+
+  d.intrari.forEach(intr => {
+    adaugaIntrare();
+    const id2 = intrariIds[intrariIds.length - 1];
+    const fields = ['ruta','tanc','ora','cantitate','temp','grasime','proteine','lactoza','snf','densitate','aciditate','pt_crioscopic','apa_adaugata','aflval'];
+    const keys   = ['ruta','tanc','ora','cant','temp','gras','prot','lact','snf','dens','acid','crios','apa','aflval'];
+    fields.forEach((f, i) => {
+      const el = document.getElementById('i'+id2+'_'+keys[i]);
+      if (el) el.value = intr[f] || '';
+    });
+    updateRutaLabel(id2);
+    setAlcool(id2, intr.alcool || '');
+    setAntibiotic(id2, intr.antibiotice || 'Netestat');
+    setAflatoxina(id2, intr.aflatoxina || 'Netestat');
+  });
+
+  ascundeDrafturi();
+  showToast('Draft încărcat!', 'success');
+}
+
+function stergeDraft(id) {
+  if (!confirm('Ștergi acest buletin?')) return;
+  setDrafturi(getDrafturi().filter(d => d.id !== id));
+  if (currentDraftId === id) currentDraftId = null;
+  arataDrafturi();
+  showToast('Draft șters', '');
+}
+
+async function trimiteDirect(id) {
+  const d = getDrafturi().find(x => x.id === id);
+  if (!d) return;
+  d.timestamp = new Date().toLocaleString('ro-RO');
+  await trimiteLaSheets(d, id);
+  arataDrafturi();
+}
+
+// ── SUBMIT ────────────────────────────────────────────
+async function trimiteForm() {
+  if (!validate()) { showToast('Completați câmpurile obligatorii', 'error'); return; }
+  salvezDraft();
+  const date = colecteaza();
+  date.timestamp = new Date().toLocaleString('ro-RO');
+  setLoading(true);
+  await trimiteLaSheets(date, currentDraftId);
+  setLoading(false);
+}
+
+async function trimiteLaSheets(payload, draftId) {
+  const url = localStorage.getItem(SCRIPT_KEY) || SCRIPT_URL_DEFAULT;
+  payload.timestamp = payload.timestamp || new Date().toLocaleString('ro-RO');
+  try {
+    const resp = await fetch(url, { method: 'POST', body: JSON.stringify(payload) });
+    const res  = await resp.json();
+    if (res.status === 'success') {
+      if (draftId) {
+        const dr = getDrafturi(); const idx = dr.findIndex(d => d.id === draftId);
+        if (idx >= 0) { dr[idx].trimis = true; dr[idx].trimisAt = new Date().toLocaleString('ro-RO'); }
+        setDrafturi(dr);
+      }
+      showToast('Buletin trimis cu succes! ✓', 'success');
+    } else throw new Error(res.message || 'Eroare server');
+  } catch(e) { showToast('Eroare: ' + e.message, 'error'); }
+}
+
+function setLoading(on) {
+  document.getElementById('submitBtn').disabled = on;
+  document.getElementById('btnTxt').textContent = on ? 'Se trimite...' : '📤 Trimite în Google Sheets';
+  document.getElementById('btnSpin').classList.toggle('show', on);
+}
+
+// ── CONFIG ────────────────────────────────────────────
+function openConfig()  { document.getElementById('configOverlay').classList.add('open'); }
+function closeConfigEv(e) { if (e.target === document.getElementById('configOverlay')) document.getElementById('configOverlay').classList.remove('open'); }
+function saveConfig() {
+  const url = document.getElementById('configUrl').value.trim();
+  if (!url.startsWith('https://script.google.com')) { showToast('URL invalid', 'error'); return; }
+  localStorage.setItem(SCRIPT_KEY, url); updateStatus(true);
+  document.getElementById('configOverlay').classList.remove('open');
+  showToast('URL salvat!', 'success');
+}
+function updateStatus(c) {
+  document.getElementById('statusDot').classList.toggle('connected', c);
+  document.getElementById('statusLabel').textContent = c ? 'Conectat la Google Sheets' : 'Neconectat';
+}
+
+// ── TOAST ─────────────────────────────────────────────
+let toastTimer;
+function showToast(msg, type = '') {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = 'toast show ' + type;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 3500);
+}
+</script>
+</body>
+</html>
