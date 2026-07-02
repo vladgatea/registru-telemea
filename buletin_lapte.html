@@ -233,9 +233,11 @@ let state = {}; // { [id]: { alcool, antibiotice, aflatoxina } }
 window.addEventListener('load', () => {
   const today = new Date().toISOString().split('T')[0];
   document.getElementById('g_data').value = today;
-  const saved = localStorage.getItem(SCRIPT_KEY) || SCRIPT_URL_DEFAULT;
-  document.getElementById('configUrl').value = saved;
-  if (!localStorage.getItem(SCRIPT_KEY)) localStorage.setItem(SCRIPT_KEY, SCRIPT_URL_DEFAULT);
+  // Hardcodat — nu necesită configurare manuală
+  if (!localStorage.getItem(SCRIPT_KEY)) {
+    localStorage.setItem(SCRIPT_KEY, SCRIPT_URL_DEFAULT);
+  }
+  document.getElementById('configUrl').value = localStorage.getItem(SCRIPT_KEY);
   updateStatus(true);
   adaugaIntrare();
   actualizeazaBadge();
