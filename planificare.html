@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Planificare & Raportare — Producție</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --blue:      #1565C0; --blue-mid:  #1976D2; --blue-bg:   #E3F2FD; --blue-bg2:  #F0F7FF;
+  --green:     #2E7D32; --green-bg:  #E8F5E9;
+  --orange:    #E65100; --orange-bg: #FFF3E0;
+  --red:       #C62828; --red-bg:    #FFEBEE;
+  --gray-1:    #F7F8FA; --gray-2:    #ECEEF2; --gray-3:    #C8CDD6;
+  --gray-4:    #7A8494; --gray-5:    #3D4452; --dark:      #1A1D23; --white:     #FFFFFF;
+  --radius:    12px;    --shadow:    0 2px 12px rgba(0,0,0,0.08);
+}
+body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; background:var(--gray-1); color:var(--dark); min-height:100vh; -webkit-font-smoothing:antialiased; }
+
+/* HEADER */
+.app-header { background:var(--blue); color:white; padding:14px 16px; position:sticky; top:0; z-index:100; box-shadow:0 2px 8px rgba(0,0,0,0.2); }
+.header-top { display:flex; align-items:center; gap:10px; margin-bottom:12px; }
+.header-icon { width:36px; height:36px; background:rgba(255,255,255,0.15); border-radius:9px; display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0; }
+.header-title { font-size:16px; font-weight:700; flex:1; }
+.header-sub { font-size:11px; opacity:0.75; }
+.draft-badge-header { background:rgba(255,255,255,0.2); border:none; color:white; padding:6px 12px; border-radius:8px; font-size:12px; font-weight:600; cursor:pointer; white-space:nowrap; }
+
+/* TABS */
+.tabs { display:flex; gap:4px; }
+.tab { flex:1; padding:8px 4px; border:none; border-radius:8px; font-size:13px; font-weight:600; cursor:pointer; background:rgba(255,255,255,0.12); color:rgba(255,255,255,0.7); transition:all 0.2s; }
+.tab.active { background:white; color:var(--blue); }
+
+/* MAIN */
+.main { padding:14px; max-width:960px; margin:0 auto; }
+.tab-content { display:none; }
+.tab-content.active { display:block; }
+
+/* DATE BAR */
+.date-bar { background:white; border-radius:var(--radius); box-shadow:var(--shadow); padding:12px 16px; margin-bottom:12px; display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap; }
+.date-bar .field { display:flex; flex-direction:column; gap:4px; }
+.date-bar label { font-size:11px; font-weight:700; color:var(--gray-4); text-transform:uppercase; letter-spacing:0.4px; }
+.date-bar input, .date-bar select { padding:9px 12px; border:1.5px solid var(--gray-2); border-radius:8px; font-size:14px; color:var(--dark); background:var(--gray-1); appearance:none; -webkit-appearance:none; outline:none; }
+.date-bar input:focus, .date-bar select:focus { border-color:var(--blue-mid); background:white; }
+
+/* SELECTOR */
+.selector-card { background:white; border-radius:var(--radius); box-shadow:var(--shadow); margin-bottom:12px; overflow:hidden; }
+.selector-header { padding:12px 16px; font-size:12px; font-weight:700; color:var(--blue); text-transform:uppercase; letter-spacing:0.5px; background:var(--blue-bg2); border-bottom:1px solid var(--gray-2); display:flex; align-items:center; justify-content:space-between; }
+.search-box { padding:10px 16px; border-bottom:1px solid var(--gray-2); position:relative; }
+.search-box input { width:100%; padding:9px 12px 9px 36px; border:1.5px solid var(--gray-2); border-radius:8px; font-size:14px; background:var(--gray-1); outline:none; }
+.search-box input:focus { border-color:var(--blue-mid); background:white; }
+.search-icon { position:absolute; left:28px; top:50%; transform:translateY(-50%); color:var(--gray-4); font-size:14px; pointer-events:none; }
+.prod-grid { padding:12px 16px; display:grid; grid-template-columns:repeat(auto-fill, minmax(185px, 1fr)); gap:8px; max-height:240px; overflow-y:auto; }
+.prod-chip { padding:8px 12px; border-radius:8px; cursor:pointer; border:1.5px solid var(--gray-2); background:var(--gray-1); font-size:12px; font-weight:600; color:var(--gray-5); transition:all 0.15s; user-select:none; line-height:1.3; }
+.prod-chip:hover { border-color:var(--blue-mid); background:var(--blue-bg2); }
+.prod-chip.selected { border-color:var(--blue); background:var(--blue-bg); color:var(--blue); }
+.prod-chip.selected::before { content:'✓ '; }
+
+/* TABLE */
+.work-table-wrap { background:white; border-radius:var(--radius); box-shadow:var(--shadow); margin-bottom:12px; overflow:hidden; }
+.work-table-header { padding:12px 16px; font-size:12px; font-weight:700; color:var(--blue); text-transform:uppercase; letter-spacing:0.5px; background:var(--blue-bg2); border-bottom:1px solid var(--gray-2); }
+table { width:100%; border-collapse:collapse; }
+th { padding:9px 10px; font-size:11px; font-weight:700; color:var(--gray-4); text-transform:uppercase; letter-spacing:0.3px; background:var(--gray-1); border-bottom:1px solid var(--gray-2); text-align:left; white-space:nowrap; }
+th.center { text-align:center; }
+td { padding:8px 10px; font-size:13px; border-bottom:1px solid var(--gray-2); vertical-align:middle; }
+tr:last-child td { border-bottom:none; }
+tr:hover td { background:var(--gray-1); }
+td.center { text-align:center; }
+.tbl-input { width:80px; padding:6px 8px; border:1.5px solid var(--gray-2); border-radius:6px; font-size:13px; font-weight:600; text-align:right; background:var(--gray-1); outline:none; color:var(--dark); }
+.tbl-input:focus { border-color:var(--blue-mid); background:white; }
+.tbl-textarea { width:100%; min-width:160px; padding:6px 8px; border:1.5px solid var(--orange); border-radius:6px; font-size:12px; background:#FFFBF5; outline:none; color:var(--dark); resize:vertical; min-height:48px; font-family:inherit; }
+.tbl-textarea:focus { border-color:var(--orange); background:white; box-shadow:0 0 0 2px rgba(230,81,0,0.1); }
+.tbl-textarea::placeholder { color:var(--gray-4); font-style:italic; }
+
+/* BADGE */
+.badge { display:inline-block; padding:3px 9px; border-radius:20px; font-size:11px; font-weight:700; }
+.badge-green  { background:var(--green-bg); color:var(--green); }
+.badge-orange { background:var(--orange-bg); color:var(--orange); }
+.badge-red    { background:var(--red-bg); color:var(--red); }
+.badge-blue   { background:var(--blue-bg); color:var(--blue); }
+.badge-gray   { background:var(--gray-2); color:var(--gray-4); }
+
+/* PROGRESS */
+.prog-wrap { display:flex; align-items:center; gap:8px; min-width:110px; }
+.prog-bar  { flex:1; height:6px; background:var(--gray-2); border-radius:3px; overflow:hidden; }
+.prog-fill { height:100%; border-radius:3px; transition:width 0.3s; }
+.prog-pct  { font-size:12px; font-weight:700; min-width:40px; text-align:right; }
+
+/* KPI */
+.kpi-row { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin-bottom:12px; }
+@media (min-width:500px) { .kpi-row { grid-template-columns:repeat(4,1fr); } }
+.kpi-card { background:white; border-radius:var(--radius); box-shadow:var(--shadow); padding:14px 12px; }
+.kpi-label { font-size:11px; color:var(--gray-4); font-weight:700; text-transform:uppercase; letter-spacing:0.4px; margin-bottom:6px; }
+.kpi-val   { font-size:22px; font-weight:800; color:var(--dark); line-height:1; }
+.kpi-sub   { font-size:11px; color:var(--gray-4); margin-top:4px; }
+.kpi-val.blue   { color:var(--blue); } .kpi-val.green  { color:var(--green); }
+.kpi-val.orange { color:var(--orange); } .kpi-val.red    { color:var(--red); }
+
+/* SUMMARY ROW */
+.summary-row { background:var(--blue-bg2); font-weight:700; font-size:13px; border-top:2px solid var(--blue-bg); }
+.summary-row td { color:var(--blue); }
+
+/* EMPTY */
+.empty-state { padding:40px 20px; text-align:center; color:var(--gray-4); }
+.empty-icon { font-size:40px; margin-bottom:10px; }
+.empty-text { font-size:14px; font-weight:600; }
+
+/* ACTION BTNS */
+.action-bar { display:flex; gap:10px; margin-bottom:12px; flex-wrap:wrap; }
+.btn-primary { padding:11px 18px; background:var(--blue); color:white; border:none; border-radius:10px; font-size:14px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:7px; transition:background 0.2s; white-space:nowrap; }
+.btn-primary:hover { background:var(--blue-mid); }
+.btn-primary:disabled { background:var(--gray-3); cursor:not-allowed; }
+.btn-secondary { padding:11px 18px; background:var(--gray-2); color:var(--gray-5); border:none; border-radius:10px; font-size:14px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:7px; transition:background 0.2s; white-space:nowrap; }
+.btn-secondary:hover { background:var(--gray-3); }
+.btn-sm { padding:6px 12px; border:none; border-radius:7px; font-size:12px; font-weight:600; cursor:pointer; transition:background 0.15s; }
+.btn-remove { background:var(--red-bg); color:var(--red); }
+.btn-remove:hover { background:#FFCDD2; }
+
+/* SPINNER */
+.spinner { width:18px; height:18px; border:3px solid rgba(255,255,255,0.3); border-top-color:white; border-radius:50%; animation:spin 0.7s linear infinite; display:none; }
+.spinner.show { display:block; }
+@keyframes spin { to { transform:rotate(360deg); } }
+
+/* TOAST */
+.toast { position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(80px); background:var(--dark); color:white; padding:12px 20px; border-radius:24px; font-size:14px; font-weight:600; z-index:999; transition:transform 0.3s cubic-bezier(0.34,1.56,0.64,1); box-shadow:0 4px 20px rgba(0,0,0,0.25); max-width:calc(100vw - 40px); text-align:center; }
+.toast.show { transform:translateX(-50%) translateY(0); }
+.toast.success { background:var(--green); }
+.toast.error   { background:var(--red); }
+
+/* DRAFTURI PANEL */
+.drafturi-panel { display:none; }
+.draft-item { border:1.5px solid var(--gray-2); border-radius:10px; padding:14px; margin-bottom:10px; background:var(--gray-1); }
+.draft-title { font-size:14px; font-weight:700; color:var(--dark); }
+.draft-meta  { font-size:12px; color:var(--gray-4); margin-top:2px; }
+.draft-status { font-size:11px; font-weight:700; padding:3px 10px; border-radius:20px; }
+.draft-status.nesalvat { background:#FFF3CD; color:#856404; }
+.draft-status.salvat   { background:#D4EDDA; color:#155724; }
+.draft-actions { display:flex; gap:8px; margin-top:10px; }
+.draft-actions button { flex:1; padding:9px; border:none; border-radius:8px; font-size:13px; font-weight:600; cursor:pointer; }
+.btn-draft-edit   { background:var(--blue-bg); color:var(--blue); }
+.btn-draft-send   { background:var(--green); color:white; }
+.btn-draft-delete { background:var(--red-bg); color:var(--red); }
+
+/* CONFIG */
+.config-btn { position:fixed; bottom:20px; right:20px; width:44px; height:44px; background:var(--gray-5); color:white; border:none; border-radius:50%; font-size:18px; cursor:pointer; box-shadow:0 4px 16px rgba(0,0,0,0.2); z-index:500; display:flex; align-items:center; justify-content:center; }
+.config-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:600; align-items:flex-end; }
+.config-overlay.open { display:flex; }
+.config-sheet { background:white; border-radius:20px 20px 0 0; padding:24px 20px 40px; width:100%; max-width:960px; margin:0 auto; }
+.config-handle { width:40px; height:4px; background:var(--gray-3); border-radius:2px; margin:0 auto 20px; }
+.status-dot { display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--gray-3); margin-right:6px; }
+.status-dot.connected { background:#4CAF50; }
+
+.bottom-spacer { height:80px; }
+</style>
+</head>
+<body>
+
+<div class="app-header">
+  <div class="header-top">
+    <div class="header-icon">🏭</div>
+    <div style="flex:1">
+      <div class="header-title">Planificare & Raportare</div>
+      <div class="header-sub">Ferma cu Omenie · Director Fabrică</div>
+    </div>
+    <button class="draft-badge-header" id="draftHeaderBtn" onclick="arataDrafturi()">📋 Drafturi</button>
+  </div>
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('plan')">📋 Planificare</button>
+    <button class="tab" onclick="switchTab('report')">📊 Raportare Realizat</button>
+  </div>
+</div>
+
+<div class="main">
+
+<!-- ══ DRAFTURI PANEL ══ -->
+<div class="drafturi-panel" id="drafturiPanel">
+  <div class="work-table-wrap">
+    <div class="work-table-header" style="display:flex;justify-content:space-between;align-items:center;">
+      <span>📋 Drafturi salvate</span>
+      <button class="btn-sm" style="background:var(--blue-bg);color:var(--blue);" onclick="ascundeDrafturi()">← Înapoi</button>
+    </div>
+    <div style="padding:16px;" id="drafturiList">
+      <div class="empty-state"><div class="empty-icon">📂</div><div class="empty-text">Nu există drafturi</div></div>
+    </div>
+  </div>
+  <div class="bottom-spacer"></div>
+</div>
+
+<!-- ══ TAB: PLANIFICARE ══ -->
+<div class="tab-content active" id="tab_plan">
+  <div class="date-bar">
+    <div class="field"><label>Data</label><input type="date" id="p_data" /></div>
+    <div class="field"><label>Schimb</label>
+      <select id="p_schimb" style="min-width:130px;">
+        <option value="Ambele">Ambele schimburi</option>
+        <option value="Dimineata">Dimineață (06-14)</option>
+        <option value="Seara">Seară (14-22)</option>
+      </select>
+    </div>
+    <div class="field"><label>Responsabil</label><input type="text" id="p_resp" placeholder="Nume..." style="min-width:140px;" /></div>
+  </div>
+
+  <div class="selector-card">
+    <div class="selector-header">
+      <span>Selectează produsele de planificat</span>
+      <span id="p_cnt" style="font-weight:400;color:var(--gray-4);font-size:11px;">0 selectate</span>
+    </div>
+    <div class="search-box"><span class="search-icon">🔍</span><input type="text" id="p_search" placeholder="Caută produs..." oninput="renderGrid('p')" /></div>
+    <div class="prod-grid" id="p_prodGrid"></div>
+  </div>
+
+  <div class="work-table-wrap">
+    <div class="work-table-header">📐 Planificare cantități & resurse</div>
+    <div style="overflow-x:auto;">
+      <table><thead><tr>
+        <th>Produs</th>
+        <th class="center">Std kg/șarjă</th>
+        <th class="center">Cant. planif. (kg)</th>
+        <th class="center">Șarje</th>
+        <th class="center">Ore/șarjă</th>
+        <th class="center">Ore totale</th>
+        <th class="center">Pers.</th>
+        <th class="center">Ore-om</th>
+        <th></th>
+      </tr></thead>
+      <tbody id="p_tbody"><tr><td colspan="9"><div class="empty-state"><div class="empty-icon">👆</div><div class="empty-text">Selectează produse din lista de mai sus</div></div></td></tr></tbody>
+      <tfoot id="p_tfoot"></tfoot>
+      </table>
+    </div>
+  </div>
+
+  <div class="kpi-row" id="p_kpi" style="display:none;">
+    <div class="kpi-card"><div class="kpi-label">Produse</div><div class="kpi-val blue" id="pk_prod">0</div><div class="kpi-sub">tipuri</div></div>
+    <div class="kpi-card"><div class="kpi-label">Ore necesare</div><div class="kpi-val orange" id="pk_ore">0h</div><div class="kpi-sub">ambalare</div></div>
+    <div class="kpi-card"><div class="kpi-label">Ore-om</div><div class="kpi-val blue" id="pk_oreom">0h</div><div class="kpi-sub">resurse umane</div></div>
+    <div class="kpi-card"><div class="kpi-label">Total kg</div><div class="kpi-val green" id="pk_kg">0</div><div class="kpi-sub">planificate</div></div>
+  </div>
+
+  <div class="action-bar">
+    <button class="btn-secondary" onclick="salvezDraft('plan')">💾 Salvează draft</button>
+    <button class="btn-primary" id="p_sendBtn" onclick="trimiteTab('plan')">
+      <span id="p_sendTxt">📤 Trimite în Google Sheets</span>
+      <div class="spinner" id="p_spin"></div>
+    </button>
+  </div>
+  <div class="bottom-spacer"></div>
+</div>
+
+<!-- ══ TAB: RAPORTARE ══ -->
+<div class="tab-content" id="tab_report">
+  <div class="date-bar">
+    <div class="field"><label>Data</label><input type="date" id="r_data" /></div>
+    <div class="field"><label>Schimb</label>
+      <select id="r_schimb" style="min-width:130px;">
+        <option value="Ambele">Ambele schimburi</option>
+        <option value="Dimineata">Dimineață (06-14)</option>
+        <option value="Seara">Seară (14-22)</option>
+      </select>
+    </div>
+    <div class="field"><label>Responsabil</label><input type="text" id="r_resp" placeholder="Nume..." style="min-width:140px;" /></div>
+  </div>
+
+  <div class="selector-card">
+    <div class="selector-header">
+      <span>Selectează produsele realizate</span>
+      <span id="r_cnt" style="font-weight:400;color:var(--gray-4);font-size:11px;">0 selectate</span>
+    </div>
+    <div class="search-box"><span class="search-icon">🔍</span><input type="text" id="r_search" placeholder="Caută produs..." oninput="renderGrid('r')" /></div>
+    <div class="prod-grid" id="r_prodGrid"></div>
+  </div>
+
+  <div class="kpi-row" id="r_kpi" style="display:none;">
+    <div class="kpi-card"><div class="kpi-label">Produse raportate</div><div class="kpi-val blue" id="rk_prod">0</div><div class="kpi-sub">tipuri</div></div>
+    <div class="kpi-card"><div class="kpi-label">Randament mediu</div><div class="kpi-val" id="rk_rand">—</div><div class="kpi-sub">față de standard</div></div>
+    <div class="kpi-card"><div class="kpi-label">Conforme</div><div class="kpi-val green" id="rk_ok">0</div><div class="kpi-sub">≥ 90% std</div></div>
+    <div class="kpi-card"><div class="kpi-label">Sub standard</div><div class="kpi-val red" id="rk_nok">0</div><div class="kpi-sub">necesită explicații</div></div>
+  </div>
+
+  <div class="work-table-wrap">
+    <div class="work-table-header">📈 Realizat vs Standard</div>
+    <div style="overflow-x:auto;">
+      <table><thead><tr>
+        <th>Produs</th>
+        <th class="center">Std kg/șarjă</th>
+        <th class="center">Șarje real.</th>
+        <th class="center">Kg realizat</th>
+        <th class="center">Kg standard</th>
+        <th class="center">Diferență</th>
+        <th class="center">Randament</th>
+        <th class="center">Status</th>
+        <th>Explicații (dacă sub std)</th>
+        <th></th>
+      </tr></thead>
+      <tbody id="r_tbody"><tr><td colspan="10"><div class="empty-state"><div class="empty-icon">👆</div><div class="empty-text">Selectează produse realizate din lista de mai sus</div></div></td></tr></tbody>
+      <tfoot id="r_tfoot"></tfoot>
+      </table>
+    </div>
+  </div>
+
+  <div class="action-bar">
+    <button class="btn-secondary" onclick="salvezDraft('report')">💾 Salvează draft</button>
+    <button class="btn-primary" id="r_sendBtn" onclick="trimiteTab('report')">
+      <span id="r_sendTxt">📤 Trimite în Google Sheets</span>
+      <div class="spinner" id="r_spin"></div>
+    </button>
+  </div>
+  <div class="bottom-spacer"></div>
+</div>
+
+</div><!-- /main -->
+
+<div class="toast" id="toast"></div>
+
+<button class="config-btn" onclick="openConfig()" title="Configurare">⚙️</button>
+<div class="config-overlay" id="configOverlay" onclick="closeConfigEv(event)">
+  <div class="config-sheet">
+    <div class="config-handle"></div>
+    <div style="font-size:16px;font-weight:700;margin-bottom:12px;">⚙️ Configurare Google Sheets</div>
+    <div style="font-size:13px;color:var(--gray-4);margin-bottom:16px;">
+      <span class="status-dot" id="statusDot"></span><span id="statusLabel">Neconectat</span>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:5px;margin-bottom:12px;">
+      <label style="font-size:11px;font-weight:700;color:var(--gray-4);text-transform:uppercase;">URL Google Apps Script</label>
+      <input type="text" id="configUrl" placeholder="https://script.google.com/macros/s/..." style="padding:10px 12px;border:1.5px solid var(--gray-2);border-radius:8px;font-size:14px;outline:none;" />
+    </div>
+    <button class="btn-primary" onclick="saveConfig()" style="width:100%;">Salvează URL</button>
+  </div>
+</div>
+
+<script>
+const STANDARDE = [
+  {name:'DLF 350G',std:1500,ore:3,pers:2},{name:'PDA 300G',std:2000,ore:4,pers:2},
+  {name:'BB FRA',std:600,ore:2.75,pers:2},{name:'MARUNTITA',std:602,ore:1.25,pers:2},
+  {name:'BB 4X60DLF',std:2000,ore:4,pers:2},{name:'BB PDA 2KG',std:300,ore:2,pers:2},
+  {name:'DLF 250G',std:2000,ore:4,pers:2},{name:'BB DLF 2KG',std:300,ore:2,pers:2},
+  {name:'BB Oaie 300G',std:600,ore:1.25,pers:2},{name:'BV 400G',std:1250,ore:2.5,pers:6},
+  {name:'TVPS 375 G',std:650,ore:2,pers:4},{name:'TVPS 800G',std:300,ore:1.75,pers:4},
+  {name:'CAS V 300G',std:650,ore:1.5,pers:4},{name:'CAS V+O 300G',std:650,ore:1.5,pers:4},
+  {name:'CAS V MV',std:300,ore:1,pers:3},{name:'CAS V+O MV',std:300,ore:1,pers:3},
+  {name:'BULGARAS',std:2000,ore:2,pers:1},{name:'TV MOLD 800G',std:300,ore:1.75,pers:4},
+  {name:'TOPS 800G',std:300,ore:1.75,pers:4},{name:'TCPS 800G',std:300,ore:1.75,pers:4},
+  {name:'BV 5KG',std:500,ore:1,pers:4},{name:'CAS V MP',std:0,ore:1.25,pers:1},
+  {name:'TOPS',std:800,ore:1.5,pers:4},{name:'TCPS',std:600,ore:1.2,pers:4},
+  {name:'TV DEG 4KG',std:500,ore:1.16,pers:4},{name:'TV',std:550,ore:1.16,pers:4},
+  {name:'BB 5X60DLF',std:1500,ore:4,pers:2},{name:'TVPS 4KG',std:650,ore:1.16,pers:4},
+  {name:'TV MOLD 4KG',std:600,ore:1.16,pers:4},{name:'TV+O 4KG',std:650,ore:1.16,pers:4},
+  {name:'TV+C 4KG',std:650,ore:1.16,pers:4},{name:'CAS O 100%',std:550,ore:1.5,pers:1},
+  {name:'CAS V+O MP',std:200,ore:1.25,pers:1},
+];
+
+const SCRIPT_KEY   = 'planif_script_url';
+const DRAFTURI_KEY = 'planif_drafturi';
+const SCRIPT_URL_DEFAULT = 'https://script.google.com/macros/s/AKfycbzSi7JpF6q0LPK1zP3ue3slKze92dksT-lKM63SwKrMs8gQI953bsOcsCKqPwB2xWqY/exec';
+
+// State
+let pSel = new Set(), rSel = new Set();
+let pQty = {}, rSarje = {}, rKg = {}, rExpl = {};
+let currentDraftId = null;
+let activeView = 'form'; // 'form' | 'drafturi'
+
+window.addEventListener('load', () => {
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('p_data').value = today;
+  document.getElementById('r_data').value = today;
+  const saved = localStorage.getItem(SCRIPT_KEY) || SCRIPT_URL_DEFAULT;
+  document.getElementById('configUrl').value = saved;
+  if (!localStorage.getItem(SCRIPT_KEY)) localStorage.setItem(SCRIPT_KEY, SCRIPT_URL_DEFAULT);
+  updateStatus(true);
+  renderGrid('p'); renderGrid('r');
+  actualizeazaBadge();
+});
+
+// ── TABS ──
+function switchTab(t) {
+  document.querySelectorAll('.tab').forEach((b,i) => b.classList.toggle('active',(i===0&&t==='plan')||(i===1&&t==='report')));
+  document.getElementById('tab_plan').classList.toggle('active', t==='plan');
+  document.getElementById('tab_report').classList.toggle('active', t==='report');
+}
+
+// ── GRID ──
+function renderGrid(px) {
+  const q   = document.getElementById(px+'_search').value.toLowerCase();
+  const sel = px==='p' ? pSel : rSel;
+  document.getElementById(px+'_prodGrid').innerHTML = STANDARDE
+    .filter(p=>p.name.toLowerCase().includes(q))
+    .map(p=>`<div class="prod-chip ${sel.has(p.name)?'selected':''}" onclick="toggleProd('${px}','${p.name}')">${p.name}</div>`)
+    .join('');
+}
+
+function toggleProd(px, name) {
+  const sel = px==='p' ? pSel : rSel;
+  if (sel.has(name)) {
+    sel.delete(name);
+    if (px==='p') delete pQty[name];
+    if (px==='r') { delete rSarje[name]; delete rKg[name]; delete rExpl[name]; }
+  } else {
+    sel.add(name);
+    const s = STANDARDE.find(x=>x.name===name);
+    if (px==='p') pQty[name] = s.std || 0;
+    if (px==='r') { rSarje[name]=1; rKg[name]=s.std||0; rExpl[name]=''; }
+  }
+  renderGrid(px);
+  document.getElementById(px+'_cnt').textContent = sel.size+' selectate';
+  px==='p' ? renderPlan() : renderReport();
+}
+
+// ── PLANIFICARE ──
+function renderPlan() {
+  const tbody=document.getElementById('p_tbody'), tfoot=document.getElementById('p_tfoot'), kpi=document.getElementById('p_kpi');
+  if (!pSel.size) {
+    tbody.innerHTML='<tr><td colspan="9"><div class="empty-state"><div class="empty-icon">👆</div><div class="empty-text">Selectează produse din lista de mai sus</div></div></td></tr>';
+    tfoot.innerHTML=''; kpi.style.display='none'; return;
+  }
+  let totKg=0,totOre=0,totOreOm=0;
+  tbody.innerHTML=[...pSel].map(name=>{
+    const s=STANDARDE.find(x=>x.name===name);
+    const kg=pQty[name]||0, sarje=s.std>0?kg/s.std:0;
+    const ore=sarje*s.ore, oreOm=ore*s.pers;
+    totKg+=kg; totOre+=ore; totOreOm+=oreOm;
+    return `<tr>
+      <td><strong>${name}</strong></td>
+      <td class="center"><span class="badge badge-gray">${s.std>0?s.std.toLocaleString():'—'} kg</span></td>
+      <td class="center"><input class="tbl-input" type="number" min="0" step="50" value="${kg}" oninput="pQty['${name}']=parseFloat(this.value)||0;renderPlan()" /></td>
+      <td class="center"><strong>${s.std>0?sarje.toFixed(2):'—'}</strong></td>
+      <td class="center">${s.ore}h</td>
+      <td class="center"><strong>${ore.toFixed(1)}h</strong></td>
+      <td class="center"><span class="badge badge-blue">${s.pers}p</span></td>
+      <td class="center"><strong>${oreOm.toFixed(1)}h-om</strong></td>
+      <td class="center"><button class="btn-sm btn-remove" onclick="toggleProd('p','${name}')">✕</button></td>
+    </tr>`;
+  }).join('');
+  tfoot.innerHTML=`<tr class="summary-row"><td><strong>TOTAL</strong></td><td></td><td class="center"><strong>${totKg.toLocaleString()} kg</strong></td><td></td><td></td><td class="center"><strong>${totOre.toFixed(1)}h</strong></td><td></td><td class="center"><strong>${totOreOm.toFixed(1)}h-om</strong></td><td></td></tr>`;
+  kpi.style.display='grid';
+  document.getElementById('pk_prod').textContent=pSel.size;
+  document.getElementById('pk_ore').textContent=totOre.toFixed(1)+'h';
+  document.getElementById('pk_oreom').textContent=totOreOm.toFixed(1)+'h';
+  document.getElementById('pk_kg').textContent=totKg.toLocaleString()+' kg';
+}
+
+// ── RAPORTARE ──
+function renderReport() {
+  const tbody=document.getElementById('r_tbody'), tfoot=document.getElementById('r_tfoot'), kpi=document.getElementById('r_kpi');
+  if (!rSel.size) {
+    tbody.innerHTML='<tr><td colspan="10"><div class="empty-state"><div class="empty-icon">👆</div><div class="empty-text">Selectează produse realizate din lista de mai sus</div></div></td></tr>';
+    tfoot.innerHTML=''; kpi.style.display='none'; return;
+  }
+  let totReal=0,totStd=0,nrOk=0,nrNok=0,randSum=0;
+  tbody.innerHTML=[...rSel].map(name=>{
+    const s=STANDARDE.find(x=>x.name===name);
+    const sarje=parseInt(rSarje[name])||0, kgReal=parseFloat(rKg[name])||0;
+    const kgStd=sarje*s.std, diff=kgReal-kgStd;
+    const rand=kgStd>0?(kgReal/kgStd*100):null;
+    totReal+=kgReal; totStd+=kgStd;
+    if(rand!==null) randSum+=rand;
+
+    let badge, col;
+    if(rand===null)     { badge='<span class="badge badge-gray">N/A</span>'; col='#C8CDD6'; }
+    else if(rand>=100)  { badge='<span class="badge badge-green">Peste std ✓</span>'; col='#2E7D32'; nrOk++; }
+    else if(rand>=90)   { badge='<span class="badge badge-green">Conform ✓</span>'; col='#43A047'; nrOk++; }
+    else if(rand>=75)   { badge='<span class="badge badge-orange">Sub std ⚠</span>'; col='#E65100'; nrNok++; }
+    else                { badge='<span class="badge badge-red">Critic ✗</span>'; col='#C62828'; nrNok++; }
+
+    const diffStr=diff>=0?`<span style="color:var(--green)">+${diff.toFixed(0)}</span>`:`<span style="color:var(--red)">${diff.toFixed(0)}</span>`;
+    const prog=rand!==null?`<div class="prog-wrap"><div class="prog-bar"><div class="prog-fill" style="width:${Math.min(rand,100)}%;background:${col}"></div></div><span class="prog-pct" style="color:${col}">${rand.toFixed(1)}%</span></div>`:'<span class="badge badge-gray">N/A</span>';
+    const subStd = rand !== null && rand < 90;
+    const explCell = subStd
+      ? `<textarea class="tbl-textarea" placeholder="Motivul neîndeplinirii standardului..." oninput="rExpl['${name}']=this.value">${rExpl[name]||''}</textarea>`
+      : `<span style="color:var(--gray-3);font-size:12px;">—</span>`;
+
+    return `<tr>
+      <td><strong>${name}</strong></td>
+      <td class="center"><span class="badge badge-gray">${s.std>0?s.std.toLocaleString():'—'} kg</span></td>
+      <td class="center"><input class="tbl-input" type="number" min="0" step="1" style="width:60px;" value="${sarje}" oninput="rSarje['${name}']=parseInt(this.value)||0; if(!rKg['${name}']||rKg['${name}']==0)rKg['${name}']=(parseInt(this.value)||0)*${s.std}; renderReport()" /></td>
+      <td class="center"><input class="tbl-input" type="number" min="0" step="10" value="${kgReal}" oninput="rKg['${name}']=parseFloat(this.value)||0;renderReport()" /></td>
+      <td class="center">${kgStd>0?kgStd.toLocaleString():'—'}</td>
+      <td class="center">${kgStd>0?diffStr:'—'}</td>
+      <td>${prog}</td>
+      <td class="center">${badge}</td>
+      <td>${explCell}</td>
+      <td class="center"><button class="btn-sm btn-remove" onclick="toggleProd('r','${name}')">✕</button></td>
+    </tr>`;
+  }).join('');
+
+  const totRand=totStd>0?(totReal/totStd*100):null;
+  const diffTot=totReal-totStd;
+  tfoot.innerHTML=`<tr class="summary-row">
+    <td><strong>TOTAL</strong></td><td></td><td></td>
+    <td class="center"><strong>${totReal.toLocaleString()} kg</strong></td>
+    <td class="center"><strong>${totStd.toLocaleString()} kg</strong></td>
+    <td class="center"><strong>${diffTot>=0?'+':''}${diffTot.toFixed(0)} kg</strong></td>
+    <td>${totRand!==null?`<div class="prog-wrap"><div class="prog-bar"><div class="prog-fill" style="width:${Math.min(totRand,100)}%;background:${totRand>=90?'var(--green)':totRand>=75?'var(--orange)':'var(--red)'}"></div></div><span class="prog-pct" style="color:${totRand>=90?'var(--green)':totRand>=75?'var(--orange)':'var(--red)'}">${totRand.toFixed(1)}%</span></div>`:'—'}</td>
+    <td></td><td></td><td></td>
+  </tr>`;
+
+  kpi.style.display='grid';
+  document.getElementById('rk_prod').textContent=rSel.size;
+  const rm=rSel.size>0?randSum/rSel.size:0;
+  const rkEl=document.getElementById('rk_rand');
+  rkEl.textContent=rm.toFixed(1)+'%';
+  rkEl.className='kpi-val '+(rm>=90?'green':rm>=75?'orange':'red');
+  document.getElementById('rk_ok').textContent=nrOk;
+  document.getElementById('rk_nok').textContent=nrNok;
+  document.getElementById('rk_nok').className='kpi-val '+(nrNok>0?'red':'green');
+}
+
+// ── COLECTEAZĂ DATE ──
+function colecteazaDate(tip) {
+  if (tip==='plan') {
+    return {
+      tip:'planificare', data:document.getElementById('p_data').value,
+      schimb:document.getElementById('p_schimb').value,
+      responsabil:document.getElementById('p_resp').value.trim(),
+      produse:[...pSel].map(name=>{
+        const s=STANDARDE.find(x=>x.name===name), kg=pQty[name]||0;
+        const sarje=s.std>0?kg/s.std:0;
+        return {name, std:s.std, kg_planificat:kg, sarje:sarje.toFixed(2), ore_sarje:s.ore, ore_totale:(sarje*s.ore).toFixed(1), pers:s.pers, ore_om:(sarje*s.ore*s.pers).toFixed(1)};
+      })
+    };
+  } else {
+    return {
+      tip:'raportare', data:document.getElementById('r_data').value,
+      schimb:document.getElementById('r_schimb').value,
+      responsabil:document.getElementById('r_resp').value.trim(),
+      produse:[...rSel].map(name=>{
+        const s=STANDARDE.find(x=>x.name===name);
+        const sarje=parseInt(rSarje[name])||0, kgReal=parseFloat(rKg[name])||0, kgStd=sarje*s.std;
+        const rand=kgStd>0?(kgReal/kgStd*100):null;
+        return {name, std:s.std, sarje_realizate:sarje, kg_realizat:kgReal, kg_standard:kgStd, diferenta:(kgReal-kgStd).toFixed(0), randament:rand?rand.toFixed(1):'N/A', explicatii:rExpl[name]||''};
+      })
+    };
+  }
+}
+
+// ── DRAFT SYSTEM ──
+function getDrafturi() { try { return JSON.parse(localStorage.getItem(DRAFTURI_KEY)||'[]'); } catch { return []; } }
+function setDrafturi(list) { localStorage.setItem(DRAFTURI_KEY, JSON.stringify(list)); actualizeazaBadge(); }
+function actualizeazaBadge() {
+  const n=getDrafturi().filter(d=>!d.trimis).length;
+  document.getElementById('draftHeaderBtn').textContent=n>0?`📋 Drafturi (${n})`:'📋 Drafturi';
+}
+
+function salvezDraft(tip) {
+  const date=colecteazaDate(tip);
+  const drafturi=getDrafturi();
+  const keyId=`draft_${tip}_${currentDraftId||''}`;
+  const existing=drafturi.find(d=>d.id===currentDraftId&&d.tip===date.tip);
+  if (existing) {
+    Object.assign(existing, date, {updatedAt:new Date().toLocaleString('ro-RO')});
+  } else {
+    const newId=Date.now().toString();
+    currentDraftId=newId;
+    drafturi.push({id:newId, ...date, createdAt:new Date().toLocaleString('ro-RO'), updatedAt:new Date().toLocaleString('ro-RO'), trimis:false});
+  }
+  setDrafturi(drafturi);
+  showToast('Draft salvat! Poți continua mai târziu.','success');
+}
+
+function arataDrafturi() {
+  document.getElementById('tab_plan').classList.remove('active');
+  document.getElementById('tab_report').classList.remove('active');
+  const panel=document.getElementById('drafturiPanel');
+  panel.style.display='block';
+  const drafturi=getDrafturi();
+  const list=document.getElementById('drafturiList');
+  if (!drafturi.length) {
+    list.innerHTML='<div class="empty-state"><div class="empty-icon">📂</div><div class="empty-text">Nu există drafturi salvate</div></div>';
+    return;
+  }
+  list.innerHTML=drafturi.slice().reverse().map(d=>`
+    <div class="draft-item">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">
+        <div>
+          <div class="draft-title">${d.tip==='planificare'?'📋':'📊'} ${d.tip==='planificare'?'Planificare':'Raportare'} · ${d.data}</div>
+          <div class="draft-meta">${d.schimb} · ${d.responsabil||'—'} · ${d.produse?.length||0} produse</div>
+          <div class="draft-meta">Salvat: ${d.updatedAt}</div>
+        </div>
+        <span class="draft-status ${d.trimis?'salvat':'nesalvat'}">${d.trimis?'✓ Trimis':'Draft'}</span>
+      </div>
+      <div class="draft-actions">
+        <button class="btn-draft-edit" onclick="incarcaDraft('${d.id}')">✏️ Editează</button>
+        ${!d.trimis?`<button class="btn-draft-send" onclick="trimiteDraftDirect('${d.id}')">📤 Trimite</button>`:''}
+        <button class="btn-draft-delete" onclick="stergeDraft('${d.id}')">🗑</button>
+      </div>
+    </div>`).join('');
+}
+
+function ascundeDrafturi() {
+  document.getElementById('drafturiPanel').style.display='none';
+  document.getElementById('tab_plan').classList.add('active');
+}
+
+function incarcaDraft(id) {
+  const d=getDrafturi().find(x=>x.id===id);
+  if (!d) return;
+  currentDraftId=id;
+  if (d.tip==='planificare') {
+    document.getElementById('p_data').value=d.data||'';
+    document.getElementById('p_resp').value=d.responsabil||'';
+    pSel.clear(); pQty={};
+    d.produse.forEach(p=>{ pSel.add(p.name); pQty[p.name]=p.kg_planificat||0; });
+    renderGrid('p'); renderPlan();
+    document.getElementById('p_cnt').textContent=pSel.size+' selectate';
+    switchTab('plan');
+  } else {
+    document.getElementById('r_data').value=d.data||'';
+    document.getElementById('r_resp').value=d.responsabil||'';
+    rSel.clear(); rSarje={}; rKg={}; rExpl={};
+    d.produse.forEach(p=>{ rSel.add(p.name); rSarje[p.name]=p.sarje_realizate||0; rKg[p.name]=p.kg_realizat||0; rExpl[p.name]=p.explicatii||''; });
+    renderGrid('r'); renderReport();
+    document.getElementById('r_cnt').textContent=rSel.size+' selectate';
+    switchTab('report');
+  }
+  document.getElementById('drafturiPanel').style.display='none';
+  showToast('Draft încărcat — poți edita și trimite!','success');
+}
+
+function stergeDraft(id) {
+  if (!confirm('Ștergi acest draft?')) return;
+  setDrafturi(getDrafturi().filter(d=>d.id!==id));
+  if (currentDraftId===id) currentDraftId=null;
+  arataDrafturi();
+  showToast('Draft șters','');
+}
+
+async function trimiteDraftDirect(id) {
+  const d=getDrafturi().find(x=>x.id===id);
+  if (!d) return;
+  await trimiteLaSheets(d, id);
+  arataDrafturi();
+}
+
+// ── TRIMITERE ──
+async function trimiteTab(tip) {
+  salvezDraft(tip);
+  const date=colecteazaDate(tip);
+  if (!date.produse.length) { showToast('Adaugă cel puțin un produs','error'); return; }
+  date.timestamp=new Date().toLocaleString('ro-RO');
+  const btn=document.getElementById(tip[0]+'_sendBtn');
+  const txt=document.getElementById(tip[0]+'_sendTxt');
+  const spin=document.getElementById(tip[0]+'_spin');
+  btn.disabled=true; txt.textContent='Se trimite...'; spin.classList.add('show');
+  try {
+    await trimiteLaSheets(date, currentDraftId);
+    txt.textContent='📤 Trimite în Google Sheets';
+  } finally {
+    btn.disabled=false; spin.classList.remove('show');
+    txt.textContent='📤 Trimite în Google Sheets';
+  }
+}
+
+async function trimiteLaSheets(payload, draftId) {
+  const url=localStorage.getItem(SCRIPT_KEY)||SCRIPT_URL_DEFAULT;
+  payload.timestamp=payload.timestamp||new Date().toLocaleString('ro-RO');
+  try {
+    const resp=await fetch(url,{method:'POST',body:JSON.stringify(payload)});
+    const res=await resp.json();
+    if (res.status==='success') {
+      if (draftId) {
+        const dr=getDrafturi(); const idx=dr.findIndex(d=>d.id===draftId);
+        if(idx>=0){dr[idx].trimis=true;dr[idx].trimisAt=new Date().toLocaleString('ro-RO');}
+        setDrafturi(dr);
+      }
+      showToast('Trimis cu succes în Google Sheets!','success');
+    } else throw new Error(res.message||'Eroare server');
+  } catch(e) { showToast('Eroare: '+e.message,'error'); }
+}
+
+// ── CONFIG ──
+function openConfig() { document.getElementById('configOverlay').classList.add('open'); }
+function closeConfigEv(e) { if(e.target===document.getElementById('configOverlay')) document.getElementById('configOverlay').classList.remove('open'); }
+function saveConfig() {
+  const url=document.getElementById('configUrl').value.trim();
+  if(!url.startsWith('https://script.google.com')){showToast('URL invalid','error');return;}
+  localStorage.setItem(SCRIPT_KEY,url); updateStatus(true);
+  document.getElementById('configOverlay').classList.remove('open');
+  showToast('URL salvat!','success');
+}
+function updateStatus(c) {
+  document.getElementById('statusDot').classList.toggle('connected',c);
+  document.getElementById('statusLabel').textContent=c?'Conectat la Google Sheets':'Neconectat';
+}
+
+let toastTimer;
+function showToast(msg,type='') {
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.className='toast show '+type;
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>t.classList.remove('show'),3500);
+}
+</script>
+</body>
+</html>
