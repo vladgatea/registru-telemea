@@ -3062,35 +3062,89 @@ async function sheetsRead(sheetName) {
   return JSON.parse(clean);
 }
 
-async function saveToSheets() {
-  if (!config.sheetsUrl) { alert('Configurează URL-ul Google Sheets mai întâi (⚙)'); return; }
-  setSyncStatus('loading', 'Se salvează...');
-  try {
-    const sheetKey = planifSheetKey();
-    const monitKey = monitSheetKey();
+// Calculează carry-over din rândurile brute ale săptămânii anterioare (din Sheets)
+// fără să modifice state-ul curent
+function computeCarryOverFromRows(rows, prevWeekLabel) {
+  if (!rows || rows.length < 10) return null;
 
-    // POST 1: planificare
-    await sheetsPost({ action: 'write', sheet: sheetKey, rows: buildPlanifRows() });
-
-    // POST 2: monitorizare
-    const monitRows = [['key','realizat','cantitate','timpReal','motiv','cantTocata','matPrimaRecup']];
-    Object.entries(state.monitorizare).forEach(([key, val]) => {
-      monitRows.push([key, val.realizat||'', val.cantitate||'', val.timpReal||'', val.motiv||'', val.cantTocata||'', val.matPrimaRecup||'']);
-    });
-    await sheetsPost({ action: 'write', sheet: monitKey, rows: monitRows });
-
-    setSyncStatus('ok', `Salvat S${state.week}_${state.year} · ${new Date().toLocaleTimeString('ro-RO')}`);
-
-    // Refresh lista săptămâni (citește sheet-urile existente direct)
-    await loadWeekList();
-    const sel = document.getElementById('weekSelector');
-    for (let i = 0; i < sel.options.length; i++) {
-      if (sel.options[i].value === sheetKey) { sel.selectedIndex = i; break; }
-    }
-  } catch(e) {
-    setSyncStatus('error', 'Eroare conexiune');
-    console.error(e);
+  // Citim procesare din rows (rows[2..9], coloanele 3..9 = ZILE 0..6)
+  const procesare = Array(8).fill(null).map(() => Array(7).fill('—'));
+  for (let pi = 0; pi < 8; pi++) {
+    const row = rows[2 + pi];
+    if (row) procesare[pi] = ZILE.map((_, zi) => String(row[3 + zi] || '—'));
   }
+
+  // Citim ambalareSelectii din rows (rows[24..39])
+  const ambalareSelectii = Array(8).fill(null).map(() =>
+    Array(7).fill(null).map(() => [
+      { format: '—', cantitate: '' },
+      { format: '—', cantitate: '' }
+    ])
+  );
+  const ambStart = 24;
+  for (let pi = 0; pi < 8; pi++) {
+    for (let row = 0; row < 2; row++) {
+      const sheetRow = rows[ambStart + pi * 2 + row];
+      if (sheetRow) {
+        ZILE.forEach((_, zi) => {
+          const val = String(sheetRow[3 + zi] || '');
+          const parts = val.split('||');
+          ambalareSelectii[pi][zi][row] = {
+            format: parts[0] || '—',
+            cantitate: parts[1] || ''
+          };
+        });
+      }
+    }
+  }
+
+  const carry = {
+    label: prevWeekLabel,
+    ambalLuni: [],
+    ambalLuniSelectii: [],
+    eticLuni: [],
+    eticMarti: []
+  };
+
+  // Procesare Joi (idx 3) → Ambalare Vineri (idx 4) din S_prev → Ambalare Luni S_new + Etichetare Luni S_new
+  for (let p = 0; p < 8; p++) {
+    const prod = procesare[p][3]; // Joi
+    if (!prod || prod === '—') continue;
+    if (CAS_DOAR_TOCARE.includes(prod)) continue;
+    const matKey = getMateriePrivaKey(prod);
+    if (matKey) {
+      carry.ambalLuniSelectii.push({
+        procesareIdx: p,
+        prod,
+        matKey,
+        selectii: ambalareSelectii[p][3].map(s => ({ ...s }))
+      });
+      // Etichetare Luni = formatele selectate pentru Vineri (ambalare din Joi)
+      ambalareSelectii[p][3].forEach(s => {
+        if (s.format && s.format !== '—') carry.eticLuni.push(s.format);
+      });
+    } else {
+      carry.ambalLuni.push(prod);
+      carry.eticLuni.push(prod);
+    }
+  }
+
+  // Procesare Vineri (idx 4) → Ambalare Sâmbătă (idx 5) → Etichetare Marți S_new
+  for (let p = 0; p < 8; p++) {
+    const prod = procesare[p][4]; // Vineri
+    if (!prod || prod === '—') continue;
+    if (CAS_DOAR_TOCARE.includes(prod)) continue;
+    const matKey = getMateriePrivaKey(prod);
+    if (matKey) {
+      ambalareSelectii[p][4].forEach(s => {
+        if (s.format && s.format !== '—') carry.eticMarti.push(s.format);
+      });
+    } else {
+      carry.eticMarti.push(prod);
+    }
+  }
+
+  return carry;
 }
 
 async function saveToSheets() {
@@ -3099,6 +3153,26 @@ async function saveToSheets() {
   try {
     const sheetKey = planifSheetKey();
     const monitKey = monitSheetKey();
+
+    // Dacă carry-over-ul e gol, încearcă să îl calculeze din săptămâna anterioară din Sheets
+    if (!state.prevWeekCarry || !state.prevWeekCarry.label) {
+      const prevWeek = state.week - 1;
+      const prevYear = state.year;
+      const prevKey = `S${prevWeek}_${prevYear}`;
+      try {
+        setSyncStatus('loading', 'Se încarcă săptămâna anterioară pentru carry-over...');
+        const prevData = await sheetsRead(prevKey);
+        if (prevData && prevData.data && prevData.data.length > 10) {
+          const carry = computeCarryOverFromRows(prevData.data, `S${prevWeek}/${prevYear}`);
+          if (carry) {
+            state.prevWeekCarry = carry;
+            console.log('[Carry] Computed from prev sheet:', carry.label, carry.ambalLuni, carry.eticLuni, carry.eticMarti);
+          }
+        }
+      } catch(e) {
+        console.warn('[Carry] Could not load prev week:', e);
+      }
+    }
 
     // POST 1: planificare date brute (backup)
     await sheetsPost({ action: 'write', sheet: sheetKey, rows: buildPlanifRows() });
