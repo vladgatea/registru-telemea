@@ -233,11 +233,9 @@ let state = {}; // { [id]: { alcool, antibiotice, aflatoxina } }
 window.addEventListener('load', () => {
   const today = new Date().toISOString().split('T')[0];
   document.getElementById('g_data').value = today;
-  // Hardcodat — nu necesită configurare manuală
-  if (!localStorage.getItem(SCRIPT_KEY)) {
-    localStorage.setItem(SCRIPT_KEY, SCRIPT_URL_DEFAULT);
-  }
-  document.getElementById('configUrl').value = localStorage.getItem(SCRIPT_KEY);
+  // Forțează URL-ul corect la fiecare încărcare
+  localStorage.setItem(SCRIPT_KEY, SCRIPT_URL_DEFAULT);
+  document.getElementById('configUrl').value = SCRIPT_URL_DEFAULT;
   updateStatus(true);
   adaugaIntrare();
   actualizeazaBadge();
@@ -571,7 +569,7 @@ async function trimiteForm() {
 }
 
 async function trimiteLaSheets(payload, draftId) {
-  const url = localStorage.getItem(SCRIPT_KEY) || SCRIPT_URL_DEFAULT;
+  const url = SCRIPT_URL_DEFAULT;
   payload.timestamp = payload.timestamp || new Date().toLocaleString('ro-RO');
   try {
     const resp = await fetch(url, { method: 'POST', body: JSON.stringify(payload) });
