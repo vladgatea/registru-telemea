@@ -2980,7 +2980,7 @@ function parseSheetRows(rows) {
   state.year = parseInt(rows[1][1]) || state.year;
   state.firstLot = String(rows[1][2] || state.firstLot);
   document.getElementById('firstLot').value = state.firstLot;
-  // Resetăm carry-over la încărcarea unei săptămâni din Sheets
+  // Resetăm carry-over — va fi restaurat mai jos dacă există în sheet
   state.prevWeekCarry = { label: '', ambalLuni: [], ambalLuniSelectii: [], eticLuni: [], eticMarti: [] };
 
   // Rows 2-9: Procesare
@@ -3016,6 +3016,14 @@ function parseSheetRows(rows) {
         });
       }
     }
+  }
+  // Row 40: PrevWeekCarry (JSON)
+  const carryRow = rows[40];
+  if (carryRow && carryRow[0] === 'PrevWeekCarry' && carryRow[3]) {
+    try {
+      const parsed = JSON.parse(String(carryRow[3]));
+      if (parsed && typeof parsed === 'object') state.prevWeekCarry = parsed;
+    } catch(e) { /* carry invalid, rămâne gol */ }
   }
   // Sync selector
   const sel = document.getElementById('weekSelector');
@@ -3137,10 +3145,10 @@ function buildPlanifRows() {
       ]);
     });
   });
+  // Carry-over din săptămâna anterioară (1 rând JSON)
+  rows.push(['PrevWeekCarry', '', '', JSON.stringify(state.prevWeekCarry), ...Array(6).fill('')]);
   return rows;
 }
-
-// Construiește datele pentru fișa formatată de planificare
 function buildFormattedPlanif() {
   const dates = getWeekDates(state.week, state.year);
   const lots = getLots();
