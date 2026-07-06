@@ -2095,6 +2095,15 @@ function prodSelectOptions(saved, field) {
     .join('');
 }
 
+// Dropdown pentru Procesare — exact aceleași produse ca în planificare
+function prodSelectOptionsProc(saved, field) {
+  const saved_val = saved[field] || '';
+  const hasVal = !saved_val || PRODUSE_PROCESARE.includes(saved_val);
+  return (hasVal ? PRODUSE_PROCESARE : [saved_val, ...PRODUSE_PROCESARE])
+    .map(p => `<option value="${p}" ${saved_val === p ? 'selected' : ''}>${p}</option>`)
+    .join('');
+}
+
 function statusOptions(saved) {
   return ['Necompletat','Realizat','Parțial','Anulat'].map(s =>
     `<option value="${s}" ${(saved.status||'Necompletat') === s ? 'selected' : ''}>${s}</option>`
@@ -2211,7 +2220,7 @@ function buildMonitProc(zi, dayLabel) {
     tr.innerHTML = `
       <td><strong>${row.slot}</strong></td>
       <td style="font-weight:500;color:var(--accent)">${row.planificat}</td>
-      <td><select class="monit-input" onchange="updateMonit('${row.key}','realizat',this.value)" style="width:100%">${prodSelectOptions(saved,'realizat')}</select></td>
+      <td><select class="monit-input" onchange="updateMonit('${row.key}','realizat',this.value)" style="width:100%">${prodSelectOptionsProc(saved,'realizat')}</select></td>
       <td style="text-align:center">${lotDisplay}</td>
       ${qtyTd}
       <td style="text-align:center">${badge}</td>
