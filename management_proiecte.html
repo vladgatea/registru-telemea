@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Management Proiecte · Ferma cu Omenie</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#F3F3EE;
+    --surface:#FFFFFF;
+    --ink:#1F2C29;
+    --ink-soft:#5C6B66;
+    --line:#DEDDD2;
+    --gold:#AD8A34;
+    --gold-soft:#F1E7CC;
+    --ok:#4C7A62;
+    --ok-soft:#E4EEE8;
+    --risk:#C1762C;
+    --risk-soft:#F5E7D6;
+    --late:#AE4B3E;
+    --late-soft:#F5E1DD;
+    --planned:#6C7A86;
+    --planned-soft:#E7EBEE;
+    --radius:14px;
+    --shadow: 0 1px 2px rgba(31,44,41,.05), 0 6px 20px rgba(31,44,41,.06);
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:'Inter',system-ui,sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  h1,h2,h3,.display{ font-family:'Fraunces',serif; font-weight:600; letter-spacing:-.01em; }
+  ::selection{ background:var(--gold-soft); }
+  button{ font-family:inherit; cursor:pointer; }
+  input,select,textarea{ font-family:inherit; }
+  a{ color:inherit; }
+
+  /* ---------- shell ---------- */
+  .app{ display:flex; min-height:100vh; }
+  .sidebar{
+    width:280px; flex-shrink:0; background:var(--surface);
+    border-right:1px solid var(--line); padding:22px 16px;
+    display:flex; flex-direction:column; gap:16px;
+  }
+  .brand{ display:flex; flex-direction:column; gap:2px; padding:0 6px 14px; border-bottom:1px solid var(--line); }
+  .brand .eyebrow{ font-size:11px; text-transform:uppercase; letter-spacing:.12em; color:var(--gold); font-weight:600; }
+  .brand h1{ font-size:20px; margin:2px 0 0; }
+
+  .btn{
+    border:1px solid var(--line); background:var(--surface); color:var(--ink);
+    border-radius:10px; padding:9px 14px; font-size:13.5px; font-weight:600;
+    display:inline-flex; align-items:center; gap:8px; transition:.15s;
+  }
+  .btn:hover{ border-color:var(--ink); }
+  .btn-primary{ background:var(--ink); color:#fff; border-color:var(--ink); }
+  .btn-primary:hover{ background:#0f1917; }
+  .btn-gold{ background:var(--gold); color:#fff; border-color:var(--gold); }
+  .btn-gold:hover{ background:#93752b; }
+  .btn-ghost{ border-color:transparent; background:transparent; }
+  .btn-ghost:hover{ background:var(--bg); }
+  .btn-sm{ padding:6px 10px; font-size:12.5px; border-radius:8px; }
+  .btn-block{ width:100%; justify-content:center; }
+
+  .proj-list{ display:flex; flex-direction:column; gap:6px; overflow-y:auto; }
+  .proj-item{
+    text-align:left; border:1px solid transparent; border-radius:10px; padding:10px 10px;
+    background:transparent; display:flex; flex-direction:column; gap:6px;
+  }
+  .proj-item:hover{ background:var(--bg); }
+  .proj-item.active{ background:var(--gold-soft); border-color:var(--gold); }
+  .proj-item .row1{ display:flex; align-items:center; justify-content:space-between; gap:6px; }
+  .proj-item .name{ font-weight:600; font-size:13.5px; line-height:1.3; }
+  .proj-bar{ height:5px; border-radius:4px; background:var(--line); overflow:hidden; }
+  .proj-bar > span{ display:block; height:100%; background:var(--gold); }
+  .proj-meta{ font-size:11px; color:var(--ink-soft); }
+
+  .sidebar-foot{ margin-top:auto; padding-top:12px; border-top:1px solid var(--line); font-size:11.5px; color:var(--ink-soft); display:flex; flex-direction:column; gap:8px; }
+  .whoami{ display:flex; align-items:center; gap:6px; }
+  .whoami input{ border:1px solid var(--line); border-radius:8px; padding:6px 8px; font-size:12px; width:100%; }
+
+  /* ---------- main ---------- */
+  .main{ flex:1; min-width:0; padding:26px 34px 60px; }
+  .topbar{ display:flex; align-items:center; justify-content:space-between; margin-bottom:22px; }
+  .status-pill{ font-size:11.5px; font-weight:700; padding:4px 10px; border-radius:999px; text-transform:uppercase; letter-spacing:.04em; }
+  .status-In-derulare, .status-In-lucru{ background:var(--ok-soft); color:var(--ok); }
+  .status-Planificat, .status-De-facut{ background:var(--planned-soft); color:var(--planned); }
+  .status-Intarziat, .status-Blocat{ background:var(--late-soft); color:var(--late); }
+  .status-Finalizat{ background:var(--gold-soft); color:var(--gold); }
+
+  .empty-state{ display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; padding:120px 20px; color:var(--ink-soft); text-align:center; }
+  .empty-state h2{ color:var(--ink); }
+
+  .proj-header{ background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); padding:22px 26px; box-shadow:var(--shadow); margin-bottom:20px; }
+  .proj-header .top{ display:flex; justify-content:space-between; align-items:flex-start; gap:16px; margin-bottom:8px; }
+  .proj-header h2{ font-size:24px; margin:0; }
+  .proj-header .desc{ color:var(--ink-soft); font-size:14px; max-width:60ch; margin:4px 0 0; }
+  .proj-dates{ font-size:12.5px; color:var(--ink-soft); display:flex; gap:14px; margin-top:10px; flex-wrap:wrap; }
+  .proj-dates b{ color:var(--ink); }
+
+  /* ---------- timeline (signature element) ---------- */
+  .timeline{ margin-top:20px; }
+  .timeline-scale{ display:flex; justify-content:space-between; font-size:10.5px; color:var(--ink-soft); margin-bottom:4px; }
+  .timeline-track{ position:relative; height:6px; background:var(--line); border-radius:4px; margin-bottom:14px; }
+  .timeline-track .fill{ position:absolute; top:0; left:0; height:100%; background:var(--gold); border-radius:4px; }
+  .timeline-today{ position:absolute; top:-6px; width:2px; height:18px; background:var(--ink); }
+  .timeline-today::after{ content:'azi'; position:absolute; top:-16px; left:50%; transform:translateX(-50%); font-size:9.5px; color:var(--ink-soft); }
+  .timeline-drop{ position:absolute; top:-3px; width:12px; height:12px; border-radius:50% 50% 50% 0; background:var(--ink); transform:translateX(-50%) rotate(45deg); }
+
+  .sub-rows{ display:flex; flex-direction:column; gap:10px; }
+  .sub-row{ display:grid; grid-template-columns:170px 1fr 50px; align-items:center; gap:12px; }
+  .sub-row .lbl{ font-size:12.5px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .sub-row .track{ position:relative; height:16px; background:var(--bg); border-radius:8px; overflow:hidden; border:1px solid var(--line); }
+  .sub-row .track .bar{ position:absolute; top:0; height:100%; border-radius:8px; }
+  .sub-row .pct{ font-size:11.5px; color:var(--ink-soft); text-align:right; }
+
+  /* ---------- board ---------- */
+  .board-head{ display:flex; align-items:center; justify-content:space-between; margin:26px 0 14px; }
+  .board{ display:grid; grid-template-columns:repeat(auto-fit, minmax(300px,1fr)); gap:18px; }
+  .sub-card{ background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow); display:flex; flex-direction:column; overflow:hidden; }
+  .sub-card-head{ padding:16px 18px 12px; border-bottom:1px solid var(--line); }
+  .sub-card-head .row1{ display:flex; justify-content:space-between; align-items:flex-start; gap:8px; }
+  .sub-card-head h3{ font-size:16px; margin:0; }
+  .sub-card-head .dates{ font-size:11.5px; color:var(--ink-soft); margin-top:4px; }
+  .sub-progress{ height:5px; background:var(--bg); border-radius:4px; margin-top:10px; overflow:hidden; }
+  .sub-progress > span{ display:block; height:100%; background:var(--gold); }
+
+  .task-list{ display:flex; flex-direction:column; padding:6px 8px; gap:2px; }
+  .task-row{ display:grid; grid-template-columns:1fr auto; gap:6px; align-items:center; padding:9px 10px; border-radius:8px; }
+  .task-row:hover{ background:var(--bg); }
+  .task-main{ min-width:0; }
+  .task-name{ font-size:13px; font-weight:600; line-height:1.3; }
+  .task-meta{ font-size:11px; color:var(--ink-soft); margin-top:2px; display:flex; gap:8px; flex-wrap:wrap; }
+  .task-meta .overdue{ color:var(--late); font-weight:600; }
+  .task-status-select{ font-size:11px; font-weight:700; border-radius:999px; padding:4px 8px; border:1px solid transparent; text-transform:uppercase; letter-spacing:.03em; appearance:none; text-align:center; }
+  .sub-card-foot{ padding:10px 12px 14px; }
+  .no-tasks{ font-size:12px; color:var(--ink-soft); padding:16px 10px; text-align:center; }
+
+  /* ---------- modal ---------- */
+  .overlay{ position:fixed; inset:0; background:rgba(20,26,24,.45); display:flex; align-items:center; justify-content:center; z-index:50; padding:20px; }
+  .modal{ background:var(--surface); border-radius:16px; padding:26px; width:100%; max-width:440px; box-shadow:0 20px 60px rgba(0,0,0,.25); max-height:88vh; overflow-y:auto; }
+  .modal h3{ margin:0 0 16px; font-size:18px; }
+  .field{ margin-bottom:14px; }
+  .field label{ display:block; font-size:12px; font-weight:600; color:var(--ink-soft); margin-bottom:5px; }
+  .field input, .field select, .field textarea{
+    width:100%; border:1px solid var(--line); border-radius:9px; padding:9px 11px; font-size:13.5px; color:var(--ink); background:#fff;
+  }
+  .field textarea{ resize:vertical; min-height:60px; }
+  .field-row{ display:flex; gap:10px; }
+  .field-row .field{ flex:1; }
+  .modal-actions{ display:flex; justify-content:flex-end; gap:8px; margin-top:18px; }
+
+  .toast{ position:fixed; bottom:22px; left:50%; transform:translateX(-50%); background:var(--ink); color:#fff; padding:10px 18px; border-radius:10px; font-size:13px; box-shadow:var(--shadow); z-index:100; opacity:0; transition:.25s; pointer-events:none; }
+  .toast.show{ opacity:1; }
+
+  @media (max-width: 860px){
+    .app{ flex-direction:column; }
+    .sidebar{ width:100%; border-right:none; border-bottom:1px solid var(--line); }
+    .main{ padding:18px; }
+    .sub-row{ grid-template-columns:110px 1fr 40px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="brand">
+      <span class="eyebrow">Ferma cu Omenie</span>
+      <h1>Proiecte</h1>
+    </div>
+
+    <button class="btn btn-primary btn-block" onclick="openModal('proiect')">+ Proiect nou</button>
+
+    <div class="proj-list" id="projList"></div>
+
+    <div class="sidebar-foot">
+      <div class="whoami">
+        <span>👤</span>
+        <input id="whoamiInput" placeholder="Numele tău" oninput="saveWhoami(this.value)">
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="loadAll(true)">↻ Reîmprospătează</button>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main" id="main">
+    <div class="empty-state">
+      <h2>Se încarcă proiectele…</h2>
+      <p>Dacă durează prea mult, verifică link-ul din SCRIPT_URL_DEFAULT.</p>
+    </div>
+  </main>
+
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script>
+/* =========================================================
+   CONFIG — înlocuiește cu URL-ul tău de Apps Script (…/exec)
+   ========================================================= */
+const SCRIPT_URL_DEFAULT = https://script.google.com/macros/s/AKfycbzJwD6nXpx-xdrWvohqOtWwlFIfYrKflu1kjUFCcdz_Z2rxk0Ygt9IraomVuRIyrDntEQ/exec;
+
+const DEPARTAMENTE = ["Productie","Vanzari","Marketing","Achizitii","Logistica","Management","Calitate","Altul"];
+const TASK_STATUSES = ["De facut","In lucru","Finalizat","Blocat"];
+const SUBPROJ_STATUSES = ["Planificat","In derulare","Finalizat","Intarziat"];
+
+const PROGRESS_BY_STATUS = { "De facut":0, "In lucru":50, "Blocat":25, "Finalizat":100 };
+const STATUS_COLOR = {
+  "In derulare":"var(--ok)", "In lucru":"var(--ok)",
+  "Planificat":"var(--planned)", "De facut":"var(--planned)",
+  "Intarziat":"var(--late)", "Blocat":"var(--late)",
+  "Finalizat":"var(--gold)"
+};
+
+let STATE = { proiecte:[], subproiecte:[], taskuri:[] };
+let selectedProjectId = null;
+
+function scriptUrl(){ return localStorage.getItem('mp_script_url') || SCRIPT_URL_DEFAULT; }
+
+/* ---------------- data layer ---------------- */
+
+async function apiGet(){
+  const res = await fetch(scriptUrl() + '?action=getAll');
+  const json = await res.json();
+  if(!json.ok) throw new Error(json.error || 'Eroare la citire');
+  return json.data;
+}
+
+async function apiPost(action, payload){
+  const res = await fetch(scriptUrl(), {
+    method:'POST',
+    body: JSON.stringify({ action, payload })
+  });
+  const json = await res.json();
+  if(!json.ok) throw new Error(json.error || 'Eroare la scriere');
+  return json;
+}
+
+async function loadAll(keepSelection){
+  try{
+    STATE = await apiGet();
+    renderSidebar();
+    if(keepSelection && selectedProjectId){
+      renderMain();
+    } else if(!selectedProjectId && STATE.proiecte.length){
+      selectedProjectId = STATE.proiecte[0].ID;
+      renderMain();
+    } else if(selectedProjectId){
+      renderMain();
+    } else {
+      renderEmpty();
+    }
+  } catch(err){
+    document.getElementById('main').innerHTML = `<div class="empty-state"><h2>Nu m-am putut conecta</h2><p>${escapeHtml(err.message)}</p><p style="font-size:12px">Verifică URL-ul Apps Script din SCRIPT_URL_DEFAULT și că web app-ul e publicat cu acces "Anyone with the link".</p></div>`;
+  }
+}
+
+async function selectProject(id){
+  selectedProjectId = id;
+  // reincarcare completa, ca sa vedem ce au completat colegii intre timp
+  await loadAll(true);
+}
+
+/* ---------------- derived helpers ---------------- */
+
+function subsOf(pid){ return STATE.subproiecte.filter(s => s.ProiectID === pid); }
+function tasksOf(sid){ return STATE.taskuri.filter(t => t.SubproiectID === sid); }
+function tasksOfProject(pid){ return STATE.taskuri.filter(t => t.ProiectID === pid); }
+
+function progressFromTasks(tasks){
+  if(!tasks.length) return 0;
+  const sum = tasks.reduce((acc,t) => acc + (Number(t.Progres) || PROGRESS_BY_STATUS[t.Status] || 0), 0);
+  return Math.round(sum / tasks.length);
+}
+
+function fmtDate(d){
+  if(!d) return '—';
+  const dt = new Date(d);
+  if(isNaN(dt)) return d;
+  return dt.toLocaleDateString('ro-RO', { day:'2-digit', month:'short', year:'numeric' });
+}
+
+function isOverdue(deadline, status){
+  if(!deadline || status === 'Finalizat') return false;
+  const dl = new Date(deadline);
+  return !isNaN(dl) && dl < new Date(new Date().toDateString());
+}
+
+function statusClass(s){ return 'status-' + String(s).replace(/\s+/g,'-'); }
+function escapeHtml(s){ return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+/* ---------------- render: sidebar ---------------- */
+
+function renderSidebar(){
+  const list = document.getElementById('projList');
+  if(!STATE.proiecte.length){
+    list.innerHTML = `<p style="font-size:12.5px;color:var(--ink-soft);padding:8px;">Niciun proiect încă. Adaugă primul din butonul de mai sus.</p>`;
+    return;
+  }
+  list.innerHTML = STATE.proiecte.map(p => {
+    const tasks = tasksOfProject(p.ID);
+    const pct = progressFromTasks(tasks);
+    const active = p.ID === selectedProjectId ? 'active' : '';
+    return `
+      <button class="proj-item ${active}" onclick="selectProject('${p.ID}')">
+        <div class="row1">
+          <span class="name">${escapeHtml(p.Nume)}</span>
+          <span class="status-pill ${statusClass(p.Status)}" style="font-size:9.5px;padding:2px 7px;">${escapeHtml(p.Status||'')}</span>
+        </div>
+        <div class="proj-bar"><span style="width:${pct}%"></span></div>
+        <div class="proj-meta">${pct}% · deadline ${fmtDate(p.Deadline)}</div>
+      </button>
+    `;
+  }).join('');
+}
+
+function renderEmpty(){
+  document.getElementById('main').innerHTML = `
+    <div class="empty-state">
+      <h2>Niciun proiect selectat</h2>
+      <p>Adaugă un proiect nou din bara laterală ca să începi planificarea.</p>
+      <button class="btn btn-primary" onclick="openModal('proiect')">+ Proiect nou</button>
+    </div>`;
+}
+
+/* ---------------- render: main ---------------- */
+
+function renderMain(){
+  const proj = STATE.proiecte.find(p => p.ID === selectedProjectId);
+  if(!proj){ renderEmpty(); return; }
+
+  const subs = subsOf(proj.ID);
+  const allTasks = tasksOfProject(proj.ID);
+  const overallPct = progressFromTasks(allTasks);
+
+  const t0 = new Date(proj.T0);
+  const dl = new Date(proj.Deadline);
+  const now = new Date();
+  const total = Math.max(1, dl - t0);
+  const elapsed = Math.min(Math.max(now - t0, 0), total);
+  const todayPct = (elapsed/total*100).toFixed(1);
+
+  const subRows = subs.map(s => {
+    const st = new Date(s.T0), sd = new Date(s.Deadline);
+    const left = Math.min(100, Math.max(0, ((st - t0)/total*100)));
+    const width = Math.min(100-left, Math.max(2, ((sd - st)/total*100)));
+    const tasks = tasksOf(s.ID);
+    const pct = progressFromTasks(tasks);
+    const color = STATUS_COLOR[s.Status] || 'var(--planned)';
+    return `
+      <div class="sub-row">
+        <span class="lbl" title="${escapeHtml(s.Nume)}">${escapeHtml(s.Nume)}</span>
+        <div class="track">
+          <div class="bar" style="left:${left}%; width:${width}%; background:${color}; opacity:.85;"></div>
+          <div class="bar" style="left:${left}%; width:${(width*pct/100).toFixed(1)}%; background:${color};"></div>
+        </div>
+        <span class="pct">${pct}%</span>
+      </div>`;
+  }).join('') || `<p class="no-tasks">Niciun subproiect încă.</p>`;
+
+  const board = subs.map(s => renderSubCard(s)).join('') || '';
+
+  document.getElementById('main').innerHTML = `
+    <div class="topbar">
+      <span class="status-pill ${statusClass(proj.Status)}">${escapeHtml(proj.Status||'')}</span>
+      <button class="btn btn-gold btn-sm" onclick="openModal('subproiect')">+ Subproiect</button>
+    </div>
+
+    <section class="proj-header">
+      <div class="top">
+        <div>
+          <h2 class="display">${escapeHtml(proj.Nume)}</h2>
+          ${proj.Descriere ? `<p class="desc">${escapeHtml(proj.Descriere)}</p>` : ''}
+        </div>
+        <div style="text-align:right; flex-shrink:0;">
+          <div class="display" style="font-size:26px;">${overallPct}%</div>
+          <div style="font-size:11px;color:var(--ink-soft);">progres general</div>
+        </div>
+      </div>
+      <div class="proj-dates">
+        <span>T0: <b>${fmtDate(proj.T0)}</b></span>
+        <span>Deadline: <b>${fmtDate(proj.Deadline)}</b></span>
+        <span>${allTasks.length} taskuri · ${subs.length} subproiecte</span>
+      </div>
+
+      <div class="timeline">
+        <div class="timeline-scale"><span>${fmtDate(proj.T0)}</span><span>${fmtDate(proj.Deadline)}</span></div>
+        <div class="timeline-track">
+          <div class="fill" style="width:${overallPct}%"></div>
+          <div class="timeline-today" style="left:${todayPct}%"></div>
+        </div>
+        <div class="sub-rows">${subRows}</div>
+      </div>
+    </section>
+
+    <div class="board-head">
+      <h3 class="display" style="font-size:17px;margin:0;">Subproiecte</h3>
+    </div>
+    <div class="board">${board || '<p style="color:var(--ink-soft);font-size:13px;">Adaugă un subproiect ca să începi să repartizezi taskuri.</p>'}</div>
+  `;
+}
+
+function renderSubCard(s){
+  const tasks = tasksOf(s.ID);
+  const pct = progressFromTasks(tasks);
+  const rows = tasks.length ? tasks.map(t => renderTaskRow(t)).join('') : `<p class="no-tasks">Niciun task încă.</p>`;
+  return `
+    <div class="sub-card">
+      <div class="sub-card-head">
+        <div class="row1">
+          <h3>${escapeHtml(s.Nume)}</h3>
+          <span class="status-pill ${statusClass(s.Status)}">${escapeHtml(s.Status||'')}</span>
+        </div>
+        <div class="dates">T0 ${fmtDate(s.T0)} → ${fmtDate(s.Deadline)} · ${tasks.length} taskuri</div>
+        <div class="sub-progress"><span style="width:${pct}%"></span></div>
+      </div>
+      <div class="task-list">${rows}</div>
+      <div class="sub-card-foot">
+        <button class="btn btn-ghost btn-sm btn-block" onclick="openModal('task','${s.ID}')">+ Task nou</button>
+      </div>
+    </div>`;
+}
+
+function renderTaskRow(t){
+  const overdue = isOverdue(t.Deadline, t.Status);
+  const color = STATUS_COLOR[t.Status] || 'var(--planned)';
+  const soft = color.replace(')', '-soft)').replace('var(--','var(--');
+  return `
+    <div class="task-row">
+      <div class="task-main">
+        <div class="task-name">${escapeHtml(t.Nume)}</div>
+        <div class="task-meta">
+          <span>${escapeHtml(t.Responsabil||'—')}</span>
+          <span>${escapeHtml(t.Departament||'')}</span>
+          <span class="${overdue ? 'overdue' : ''}">${overdue ? '⚠ ' : ''}${fmtDate(t.Deadline)}</span>
+        </div>
+      </div>
+      <select class="task-status-select" style="color:${color};background:${statusBgVar(t.Status)}" onchange="quickUpdateTaskStatus('${t.ID}', this.value)">
+        ${TASK_STATUSES.map(s => `<option value="${s}" ${s===t.Status?'selected':''}>${s}</option>`).join('')}
+      </select>
+    </div>`;
+}
+
+function statusBgVar(status){
+  const map = { 'In lucru':'var(--ok-soft)', 'De facut':'var(--planned-soft)', 'Blocat':'var(--late-soft)', 'Finalizat':'var(--gold-soft)' };
+  return map[status] || 'var(--planned-soft)';
+}
+
+/* ---------------- actions ---------------- */
+
+async function quickUpdateTaskStatus(taskId, newStatus){
+  try{
+    await apiPost('updateTask', { ID:taskId, Status:newStatus, Progres: PROGRESS_BY_STATUS[newStatus] });
+    showToast('Task actualizat');
+    await loadAll(true);
+  }catch(err){ showToast('Eroare: ' + err.message); }
+}
+
+function showToast(msg){
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 2200);
+}
+
+function saveWhoami(v){ localStorage.setItem('mp_whoami', v); }
+
+/* ---------------- modals ---------------- */
+
+function openModal(type, subId){
+  const wrap = document.createElement('div');
+  wrap.className = 'overlay';
+  wrap.id = 'overlay';
+  wrap.onclick = (e) => { if(e.target.id === 'overlay') closeModal(); };
+
+  if(type === 'proiect'){
+    wrap.innerHTML = modalProiect();
+  } else if(type === 'subproiect'){
+    wrap.innerHTML = modalSubproiect();
+  } else if(type === 'task'){
+    wrap.innerHTML = modalTask(subId);
+  }
+  document.body.appendChild(wrap);
+}
+
+function closeModal(){
+  const el = document.getElementById('overlay');
+  if(el) el.remove();
+}
+
+function modalProiect(){
+  return `
+    <div class="modal">
+      <h3 class="display">Proiect nou</h3>
+      <div class="field"><label>Nume proiect</label><input id="f_nume" placeholder="ex: Dezvoltare produse noi"></div>
+      <div class="field"><label>Descriere (opțional)</label><textarea id="f_desc"></textarea></div>
+      <div class="field-row">
+        <div class="field"><label>T0 (start)</label><input id="f_t0" type="date"></div>
+        <div class="field"><label>Deadline</label><input id="f_deadline" type="date"></div>
+      </div>
+      <div class="field"><label>Status</label>
+        <select id="f_status">${SUBPROJ_STATUSES.map(s=>`<option>${s}</option>`).join('')}</select>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" onclick="closeModal()">Anulează</button>
+        <button class="btn btn-primary" onclick="submitProiect()">Salvează</button>
+      </div>
+    </div>`;
+}
+
+async function submitProiect(){
+  const nume = document.getElementById('f_nume').value.trim();
+  if(!nume){ showToast('Numele proiectului e obligatoriu'); return; }
+  const payload = {
+    Nume: nume,
+    Descriere: document.getElementById('f_desc').value.trim(),
+    T0: document.getElementById('f_t0').value,
+    Deadline: document.getElementById('f_deadline').value,
+    Status: document.getElementById('f_status').value,
+    CreatDe: localStorage.getItem('mp_whoami') || ''
+  };
+  try{
+    const r = await apiPost('addProiect', payload);
+    closeModal();
+    selectedProjectId = r.id;
+    showToast('Proiect creat');
+    await loadAll(true);
+  }catch(err){ showToast('Eroare: ' + err.message); }
+}
+
+function modalSubproiect(){
+  return `
+    <div class="modal">
+      <h3 class="display">Subproiect nou</h3>
+      <div class="field"><label>Nume subproiect</label><input id="f_nume" placeholder="ex: Branza proaspata de vaca"></div>
+      <div class="field-row">
+        <div class="field"><label>T0</label><input id="f_t0" type="date"></div>
+        <div class="field"><label>Deadline</label><input id="f_deadline" type="date"></div>
+      </div>
+      <div class="field"><label>Status</label>
+        <select id="f_status">${SUBPROJ_STATUSES.map(s=>`<option>${s}</option>`).join('')}</select>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" onclick="closeModal()">Anulează</button>
+        <button class="btn btn-gold" onclick="submitSubproiect()">Salvează</button>
+      </div>
+    </div>`;
+}
+
+async function submitSubproiect(){
+  const nume = document.getElementById('f_nume').value.trim();
+  if(!nume){ showToast('Numele subproiectului e obligatoriu'); return; }
+  const proj = STATE.proiecte.find(p => p.ID === selectedProjectId);
+  const payload = {
+    ProiectID: selectedProjectId,
+    Nume: nume,
+    T0: document.getElementById('f_t0').value || proj.T0,
+    Deadline: document.getElementById('f_deadline').value || proj.Deadline,
+    Status: document.getElementById('f_status').value
+  };
+  try{
+    await apiPost('addSubproiect', payload);
+    closeModal();
+    showToast('Subproiect creat');
+    await loadAll(true);
+  }catch(err){ showToast('Eroare: ' + err.message); }
+}
+
+function modalTask(subId){
+  return `
+    <div class="modal">
+      <h3 class="display">Task nou</h3>
+      <div class="field"><label>Nume task</label><input id="f_nume" placeholder="ex: Trimitere probă la analiză"></div>
+      <div class="field-row">
+        <div class="field"><label>Responsabil</label><input id="f_resp" value="${escapeHtml(localStorage.getItem('mp_whoami')||'')}"></div>
+        <div class="field"><label>Departament</label>
+          <select id="f_dep">${DEPARTAMENTE.map(d=>`<option>${d}</option>`).join('')}</select>
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Data start</label><input id="f_start" type="date"></div>
+        <div class="field"><label>Deadline</label><input id="f_deadline" type="date"></div>
+      </div>
+      <div class="field"><label>Notă (opțional)</label><textarea id="f_note"></textarea></div>
+      <input type="hidden" id="f_subid" value="${subId}">
+      <div class="modal-actions">
+        <button class="btn btn-ghost" onclick="closeModal()">Anulează</button>
+        <button class="btn btn-primary" onclick="submitTask()">Salvează</button>
+      </div>
+    </div>`;
+}
+
+async function submitTask(){
+  const nume = document.getElementById('f_nume').value.trim();
+  if(!nume){ showToast('Numele task-ului e obligatoriu'); return; }
+  const subId = document.getElementById('f_subid').value;
+  const payload = {
+    SubproiectID: subId,
+    ProiectID: selectedProjectId,
+    Nume: nume,
+    Responsabil: document.getElementById('f_resp').value.trim(),
+    Departament: document.getElementById('f_dep').value,
+    DataStart: document.getElementById('f_start').value,
+    Deadline: document.getElementById('f_deadline').value,
+    Status: 'De facut',
+    Progres: 0
+  };
+  try{
+    await apiPost('addTask', payload);
+    closeModal();
+    showToast('Task creat');
+    await loadAll(true);
+  }catch(err){ showToast('Eroare: ' + err.message); }
+}
+
+/* ---------------- init ---------------- */
+
+document.getElementById('whoamiInput').value = localStorage.getItem('mp_whoami') || '';
+loadAll(false);
+</script>
+</body>
+</html>
