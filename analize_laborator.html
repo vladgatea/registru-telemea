@@ -153,6 +153,7 @@ select{padding-right:30px;cursor:pointer}
               <option>Cas de oaie mp</option><option>BB DLF</option><option>BB PDA</option>
               <option>Branza de vaci</option><option>Tops</option><option>Tcps</option>
               <option>TV DEG 4kg</option><option>Cas de vaca materie prima</option>
+              <option>Telemea proaspata de vaca</option>
             </select>
           </div>
         </div>
@@ -280,6 +281,7 @@ const STANDARDE = {
   'Tcps':           {aciditate:[170,220],ph:[4.6,4.9],temp:[0,14],su_min:46,su_max:null,grasime:45,gsu_min:null,gsu_max:null},
   'TV DEG 4kg':     {aciditate:[170,220],ph:[4.6,4.9],temp:[0,14],su_min:46,su_max:null,grasime:null,gsu_min:null,gsu_max:null},
   'Cas de vaca materie prima':{aciditate:[120,190],ph:[5.3,5.5],temp:[0,14],su_min:null,su_max:null,grasime:null,gsu_min:null,gsu_max:null},
+  'Telemea proaspata de vaca':{aciditate:null,ph:[6.2,6.5],temp:[8,8],su_min:30,su_max:null,grasime:11,gsu_min:38,gsu_max:null,ecoli_max:100},
 };
 
 let records = [];
@@ -295,7 +297,7 @@ function onProdusChange() {
   const defs = [
     {id:'std_acid', v: std?.aciditate ? std.aciditate[0]+'-'+std.aciditate[1]+' °Th' : ''},
     {id:'std_ph',   v: std?.ph   ? std.ph[0]+'-'+std.ph[1] : ''},
-    {id:'std_temp', v: std?.temp ? std.temp[0]+'-'+std.temp[1]+'°C' : '13-14°C'},
+    {id:'std_temp', v: std?.temp ? (std.temp[0]===std.temp[1] ? std.temp[0]+'°C' : std.temp[0]+'-'+std.temp[1]+'°C') : '13-14°C'},
     {id:'std_su',   v: std?.su_min ? (std.su_max ? std.su_min+'-'+std.su_max+'%' : 'min. '+std.su_min+'%') : ''},
     {id:'std_gb',   v: std?.grasime ? 'min. '+std.grasime+'%' : ''},
     {id:'std_gsu',  v: std?.gsu_min ? (std.gsu_max ? std.gsu_min+'-'+std.gsu_max+'%' : 'min. '+std.gsu_min+'%') : ''},
