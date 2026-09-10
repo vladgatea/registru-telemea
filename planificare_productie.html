@@ -765,6 +765,9 @@
       <div class="modal-actions">
         <button class="btn btn-secondary" onclick="closeNewWeekModal()">Anulează</button>
         <button class="btn btn-primary" onclick="createNewWeek()">Creează</button>
+        <p style="font-size:11px;color:var(--ink-muted);margin-top:8px;text-align:center">
+          ↩ Se va prelua automat ambalarea și burduful din Vineri săptămâna anterioară
+        </p>
       </div>
     </div>
   </div>
@@ -776,7 +779,7 @@
         <span class="stage-badge badge-procesare">Etapa 1</span>
         Procesare Lapte
       </div>
-      <div class="text-muted" style="font-size:11px">8 procesări/zi · Slot 7 rezervat BV</div>
+      <div class="text-muted" style="font-size:11px">12 procesări/zi</div>
     </div>
     <div class="planning-grid">
       <table class="planning-table" id="tblProcesare">
@@ -1183,13 +1186,14 @@ const ZILE = ['Luni', 'Marți', 'Miercuri', 'Joi', 'Vineri', 'Sâmbătă', 'Dumi
 
 const PROCESARI = [
   'Procesare 1','Procesare 2','Procesare 3','Procesare 4',
-  'Procesare 5','Procesare 6','Procesare 7','Procesare 8'
+  'Procesare 5','Procesare 6','Procesare 7','Procesare 8',
+  'Procesare 9','Procesare 10','Procesare 11','Procesare 12'
 ];
 
 const PRODUSE_PROCESARE = [
   '—',
   'TVPS','TV MOLD','BV','TOPS','TCPS',
-  'CAS V+O','CAS V',
+  'CAS V+O','CAS V','SMÂNTÂNĂ',
   'TV+O 4KG','TV+C 4KG',
   'CAS V MP','CAS V+O MP DLF',
   'CAS O 100%',
@@ -1234,6 +1238,14 @@ let PROCESARE_REF = {
   'CAS O 100%':       {lot:550, buc:0,   lv:0,    lc:0,    lo:3000,ld:0,    um:'KG'},
   'TV DEG 4KG':       {lot:500, buc:0,   lv:1500, lc:0,    lo:0,   ld:1500, um:'KG'},
   'TV':               {lot:650, buc:0,   lv:3000, lc:0,    lo:0,   ld:0,    um:'KG'},
+  // Smântână — procesare prin degresare lapte integral
+  // 3000L integral → 300kg smântână 32% + 2700L lapte degresat
+  // 3000L integral → 200kg smântână 50% + 2800L lapte degresat
+  'SMÂNTÂNĂ':          {lot:300, buc:0,  lv:3000, lc:0,    lo:0,   ld:0,    um:'KG', degresare:true},
+  'Smântână 32% 5kg':  {lot:300, buc:60, lv:3000, lc:0,    lo:0,   ld:0,    um:'KG', degresare:true, pct:32, ldResult:2700},
+  'Smântână 32% 200g': {lot:300, buc:1500,lv:3000,lc:0,    lo:0,   ld:0,    um:'BUC',degresare:true, pct:32, ldResult:2700},
+  'Smântână 32% 400g': {lot:300, buc:750,lv:3000, lc:0,    lo:0,   ld:0,    um:'BUC',degresare:true, pct:32, ldResult:2700},
+  'Smântână 50% 15kg': {lot:200, buc:13, lv:3000, lc:0,    lo:0,   ld:0,    um:'KG', degresare:true, pct:50, ldResult:2800},
 };
 
 // Date din sheet-ul Ambalare — se încarcă din Google Sheets la pornire
@@ -1275,6 +1287,11 @@ let AMBALARE_REF = {
   'CAS V+O MP DLF':     { timp: 1.25, lotOptim: 200,  um: 'KG'  },
   'BB PDA 1KG':         { timp: 1.6,  lotOptim: 240,  um: 'KG'  },
   'BB DLF 1KG':         { timp: 1.6,  lotOptim: 240,  um: 'KG'  },
+  // Smântână — loturi optime TBD
+  'Smântână 32% 5kg':   { timp: 1.0,  lotOptim: 300,  um: 'KG'  },
+  'Smântână 32% 200g':  { timp: 1.0,  lotOptim: 1500, um: 'BUC' },
+  'Smântână 32% 400g':  { timp: 1.0,  lotOptim: 750,  um: 'BUC' },
+  'Smântână 50% 15kg':  { timp: 1.0,  lotOptim: 200,  um: 'KG'  },
 };
 
 // Materii prime cu formate multiple de ambalare
@@ -1286,6 +1303,7 @@ const FORMATE_AMBALARE = {
   'BV':      ['—', 'BV 400G', 'BV 5KG'],
   'CAS V+O': ['—', 'CAS V+O 300G', 'CAS V+O 800G'],
   'CAS V':   ['—', 'CAS V 300G', 'CAS V 800G'],
+  'SMÂNTÂNĂ':['—', 'Smântână 32% 5kg', 'Smântână 32% 200g', 'Smântână 32% 400g', 'Smântână 50% 15kg'],
 };
 
 // Returnează materia primă din care provine un produs de procesare
@@ -1307,32 +1325,30 @@ let state = {
   week: 27,
   year: 2026,
   firstLot: '27173',
-  procesare: Array(8).fill(null).map(() => Array(7).fill('—')),  // [procesare][zi]
+  procesare: Array(12).fill(null).map(() => Array(7).fill('—')),  // [procesare][zi]
   burduf: Array(5).fill(null).map(() => Array(7).fill('—')),     // 5 randuri burduf
-  // ambalareSelectii[procIdx][zi][0/1] = { format, cantitate }
-  ambalareSelectii: Array(8).fill(null).map(() =>
+  // ambalareSelectii[procIdx][procZi][0/1] = { format, cantitate }
+  ambalareSelectii: Array(12).fill(null).map(() =>
     Array(7).fill(null).map(() => [
       { format: '—', cantitate: '' },
       { format: '—', cantitate: '' }
     ])
   ),
+  // ambSA[procIdx][0/1] = date preluate din Vineri S_prev → afișate la Ambalare Luni S_nou
+  ambSA: Array(12).fill(null).map(() => [
+    { format: '—', cantitate: '' },
+    { format: '—', cantitate: '' }
+  ]),
+  // burdufSA[randIdx] = produs burduf din Vineri S_prev → Etichetare Luni S_nou
+  burdufSA: Array(5).fill('—'),
+  // eticSA = produse de etichetat Luni S_nou (din Ambalare Vineri S_prev = Procesare Joi S_prev)
+  eticSA: { auto: [], formate: [] }, // auto = produse simple, formate = { format, cantitate }[]
   personal: {
     schimb1: Array(7).fill(null).map(() => ['—','—','—']),
     schimb2: Array(7).fill(null).map(() => ['—','—','—']),
     schimb3: Array(7).fill(null).map(() => ['—','—','—']),
   },
-  monitorizare: {},
-  // Carry-over din săptămâna anterioară
-  // ambalLuni = ce trebuia ambalatat Luni (din procesare Joi din săpt. ant.)
-  // eticLuni  = ce trebuia etichetat Luni (din procesare Joi din săpt. ant. → ambalat Vineri)
-  // eticMarti = ce trebuia etichetat Marți (din procesare Vineri din săpt. ant. → ambalat Sâmbătă)
-  prevWeekCarry: {
-    label: '',          // ex: "S26/2026"
-    ambalLuni: [],      // produse simple pentru ambalare Luni
-    ambalLuniSelectii: [], // [{ format, cantitate }] pentru produse cu formate multiple
-    eticLuni: [],       // produse pentru etichetare Luni
-    eticMarti: []       // produse pentru etichetare Marți
-  }
+  monitorizare: {}
 };
 
 const SHEETS_URL_DEFAULT = 'https://script.google.com/macros/s/AKfycbwxDj763V6mK1ou0QjdwJKWK631gbVtzug50oxYtyjIeZohc1ScPj_Qvmp-yBP9gEUK/exec';
@@ -1387,16 +1403,21 @@ function isCas(prod) {
   return prod && prod !== '—' && prod.toUpperCase().startsWith('CAS');
 }
 
+function isSameDayAmbalare(prod) {
+  return prod === 'SMÂNTÂNĂ';
+}
+
 function getAmbalareFromProcesare() {
   const amb = Array(7).fill(null).map(() => []);
-  for (let z = 1; z < 7; z++) {
-    for (let p = 0; p < 8; p++) {
+  // Ambalare Marți-Vineri (z=1..4): din procesarea zilei z-1 (exclusiv SMÂNTÂNĂ)
+  for (let z = 1; z <= 4; z++) {
+    for (let p = 0; p < 12; p++) {
       const prod = state.procesare[p][z - 1];
       if (!prod || prod === '—') continue;
       if (CAS_DOAR_TOCARE.includes(prod)) continue;
+      if (isSameDayAmbalare(prod)) continue;
       const matKey = getMateriePrivaKey(prod);
       if (matKey) {
-        // Produs cu formate multiple → folosim selecțiile editabile
         const sel = state.ambalareSelectii[p][z - 1];
         sel.forEach(s => { if (s.format && s.format !== '—') amb[z].push(s.format); });
       } else {
@@ -1404,27 +1425,59 @@ function getAmbalareFromProcesare() {
       }
     }
   }
+  // SMÂNTÂNĂ — ambalare în aceeași zi (z=0..4, Luni-Vineri)
+  for (let z = 0; z <= 4; z++) {
+    for (let p = 0; p < 12; p++) {
+      const prod = state.procesare[p][z];
+      if (!isSameDayAmbalare(prod)) continue;
+      const matKey = getMateriePrivaKey(prod);
+      if (matKey) {
+        const sel = state.ambalareSelectii[p][z];
+        sel.forEach(s => { if (s.format && s.format !== '—') amb[z].push(s.format); });
+      } else {
+        amb[z].push(prod);
+      }
+    }
+  }
+  // Luni (z=0): preluare din S.A.
+  if (state.ambSA) {
+    for (let p = 0; p < 12; p++) {
+      state.ambSA[p].forEach(s => { if (s.format && s.format !== '—') amb[0].push(s.format); });
+    }
+  }
   return amb;
 }
 
 function getBurdufEtichetareFromBurduf() {
-  // Burduf planificat zi X → Etichetare zi X+1
+  // Burduf zi X → Etichetare zi X+1, Luni..Joi (z=0..3) → Marți..Vineri
   const etic = Array(7).fill(null).map(() => []);
-  for (let z = 0; z < 6; z++) {
+  for (let z = 0; z <= 3; z++) {
     for (let r = 0; r < 5; r++) {
       const prod = state.burduf[r][z];
       if (prod && prod !== '—') etic[z + 1].push(prod + ' ★');
     }
+  }
+  // burdufSA (Burduf Vineri S_prev) → Etichetare Luni S_nou
+  if (state.burdufSA) {
+    state.burdufSA.forEach(prod => {
+      if (prod && prod !== '—') etic[0].push(prod + ' ★');
+    });
   }
   return etic;
 }
 
 function getEtichetareFromAmbalare() {
   const amb = getAmbalareFromProcesare();
-  // Etichetare[zi] = ce a fost la ambalare[zi-1]
+  // Etichetare zi X = Ambalare zi X-1
+  // Marți(1)=Ambalare Luni(0 SA), Miercuri(2)=Ambalare Marți(1), ..., Vineri(4)=Ambalare Joi(3)
   const etic = Array(7).fill(null).map(() => []);
-  for (let z = 1; z < 7; z++) {
+  for (let z = 1; z <= 4; z++) {
     etic[z].push(...amb[z - 1]);
+  }
+  // eticSA: Etichetare Luni S_nou = Ambalare Vineri S_prev (Procesare Joi S_prev)
+  if (state.eticSA) {
+    state.eticSA.auto.forEach(prod => { if (prod && prod !== '—') etic[0].push(prod); });
+    state.eticSA.formate.forEach(s => { if (s.format && s.format !== '—') etic[0].push(s.format); });
   }
   return etic;
 }
@@ -1458,28 +1511,6 @@ function calcTimpAmbalareProportional(format, cantitate) {
 // Timp total ambalare pentru o zi — include și rândurile editabile proporționale
 function calcTimpAmbalareZi(zi) {
   let total = 0;
-
-  // Carry-over din săptămâna anterioară — aplicabil doar Luni (zi=0)
-  if (zi === 0) {
-    const carry = state.prevWeekCarry;
-    if (carry && carry.label) {
-      // Produse simple
-      carry.ambalLuni.forEach(prod => {
-        const ref = AMBALARE_REF[prod];
-        if (ref) total += ref.timp;
-      });
-      // Formate multiple cu cantitate
-      carry.ambalLuniSelectii.forEach(entry => {
-        entry.selectii.forEach(s => {
-          if (s.format && s.format !== '—') {
-            total += calcTimpAmbalareProportional(s.format, s.cantitate);
-          }
-        });
-      });
-    }
-    return total;
-  }
-
   // Produse simple (auto)
   for (let p = 0; p < 8; p++) {
     if (zi === 0) continue;
@@ -1509,7 +1540,7 @@ function calcTimpAmbalareZi(zi) {
 function getTocareFromProcesare() {
   const toc = Array(7).fill(null).map(() => []);
   for (let z = 1; z < 7; z++) {
-    for (let p = 0; p < 8; p++) {
+    for (let p = 0; p < 12; p++) {
       const prod = state.procesare[p][z - 1];
       if (isCas(prod)) toc[z].push({ prod, slot: p });
     }
@@ -1616,7 +1647,7 @@ function buildProcesareTable() {
     const tdLabel = document.createElement('td');
     tdLabel.className = 'row-label';
     tdLabel.textContent = proc;
-    if (pi === 6) tdLabel.style.cssText += 'color:var(--info);font-weight:600'; // slot 7 BV
+
     tr.appendChild(tdLabel);
 
     ZILE.forEach((_, zi) => {
@@ -1668,6 +1699,35 @@ function updateAutoTables() {
   buildMonitDaySelector();
 }
 
+function applyFormat2Visibility(body) {
+  for (let p = 0; p < 8; p++) {
+    for (let zi = 0; zi <= 4; zi++) {
+      const procZi = zi === 0 ? 0 : zi - 1;
+      const sel0 = state.ambalareSelectii[p][procZi][0];
+      const cant = parseFloat(sel0.cantitate) || 0;
+      const refAmbF1 = AMBALARE_REF[sel0.format] || {};
+      let prod = zi === 0 ? null : state.procesare[p][procZi];
+      const refMaterie = PROCESARE_REF[prod || ''] || {};
+      const lotMaterie = refAmbF1.um === 'BUC'
+        ? (refMaterie.buc || refMaterie.lot || 0)
+        : (refMaterie.lot || 0);
+      if (!lotMaterie || cant < lotMaterie) continue;
+      const allRows = body.querySelectorAll('tr');
+      allRows.forEach(tr => {
+        const label = tr.querySelector('.row-label');
+        if (label && label.textContent === `P${p+1} Format 2`) {
+          const cells = tr.querySelectorAll('td');
+          if (cells[zi + 1]) { // +1 pentru label col
+            cells[zi + 1].innerHTML = '<span style="color:var(--accent);font-size:11px">✓</span>';
+            cells[zi + 1].style.background = 'var(--accent-pale)';
+            cells[zi + 1].style.pointerEvents = 'none';
+          }
+        }
+      });
+    }
+  }
+}
+
 function buildAmbalareTable() {
   const head = document.getElementById('tblAmbHead');
   const body = document.getElementById('tblAmbBody');
@@ -1675,39 +1735,6 @@ function buildAmbalareTable() {
   body.innerHTML = '';
 
   const amb = getAmbalareFromProcesare();
-
-  // ── Rânduri carry-over din săptămâna anterioară (Luni) ──
-  const carry = state.prevWeekCarry;
-  if (carry && carry.label && (carry.ambalLuni.length > 0 || carry.ambalLuniSelectii.length > 0)) {
-    // Produse simple
-    const carryProds = [
-      ...carry.ambalLuni,
-      ...carry.ambalLuniSelectii.flatMap(e => e.selectii.filter(s => s.format && s.format !== '—').map(s => s.format))
-    ];
-    const maxCarry = Math.max(carryProds.length, 1);
-    for (let r = 0; r < maxCarry; r++) {
-      const tr = document.createElement('tr');
-      tr.style.background = 'var(--info-pale)';
-      const tdLabel = document.createElement('td');
-      tdLabel.className = 'row-label';
-      tdLabel.style.cssText = 'color:var(--info);font-size:10px;font-style:italic;line-height:1.2';
-      tdLabel.innerHTML = r === 0 ? `↩ ${carry.label}<br><span style="font-weight:400">carry-over</span>` : '';
-      tr.appendChild(tdLabel);
-      ZILE.forEach((_, zi) => {
-        const td = document.createElement('td');
-        td.className = 'auto-cell';
-        td.style.cssText = 'background:var(--info-pale);color:var(--info);font-style:italic;font-size:11px';
-        if (zi === 0) {
-          // Luni — afișăm carry-over
-          td.textContent = carryProds[r] || '';
-        } else {
-          td.textContent = '';
-        }
-        tr.appendChild(td);
-      });
-      body.appendChild(tr);
-    }
-  }
 
   // ── Rânduri auto (produse simple) ──
   const maxAuto = Math.max(...amb.map(a => a.length), 0);
@@ -1720,6 +1747,7 @@ function buildAmbalareTable() {
     ZILE.forEach((_, zi) => {
       const td = document.createElement('td');
       td.className = 'auto-cell';
+      if (zi >= 5) { td.textContent = ''; tr.appendChild(td); return; }
       td.textContent = amb[zi][r] || '';
       tr.appendChild(td);
     });
@@ -1727,16 +1755,17 @@ function buildAmbalareTable() {
   }
 
   // ── Rânduri editabile pentru formate multiple ──
-  // Afișăm 2 rânduri per slot de procesare care are format multiplu
-  // Coloana zi = ambalarea din ziua zi → produsul e procesat în zi-1
-  for (let p = 0; p < 8; p++) {
-    // Verificăm dacă în vreo zi procesare zi-1 are produs cu formate multiple
-    const hasMultInAnyDay = ZILE.some((_, zi) => {
-      if (zi === 0) return false;
+  for (let p = 0; p < 12; p++) {
+    const hasLuniSel = (state.ambSA && state.ambSA[p] && state.ambSA[p].some(s => s.format !== '—')) ||
+      isSameDayAmbalare(state.procesare[p][0]);
+    const hasMultMartiVineri = [1,2,3,4].some(zi => {
       const prod = state.procesare[p][zi - 1];
-      return prod && prod !== '—' && getMateriePrivaKey(prod);
+      return prod && prod !== '—' && getMateriePrivaKey(prod) && !isSameDayAmbalare(prod);
+    }) || [0,1,2,3,4].some(zi => {
+      const prod = state.procesare[p][zi];
+      return isSameDayAmbalare(prod);
     });
-    if (!hasMultInAnyDay) continue;
+    if (!hasLuniSel && !hasMultMartiVineri) continue;
 
     for (let row = 0; row < 2; row++) {
       const tr = document.createElement('tr');
@@ -1750,85 +1779,43 @@ function buildAmbalareTable() {
         const td = document.createElement('td');
         td.style.padding = '3px 4px';
 
-        if (zi === 0) {
-          // Luni nu are ambalare editabilă (nu există zi-1)
-          td.innerHTML = '';
+        // Sâmbătă/Duminică — gol
+        if (zi >= 5) { tr.appendChild(td); return; }
+
+        // SMÂNTÂNĂ: ambalare aceeași zi — verificăm slotul p în ziua zi
+        const prodSameDayCheck = state.procesare[p][zi];
+        if (isSameDayAmbalare(prodSameDayCheck)) {
+          const matKeySameDay = getMateriePrivaKey(prodSameDayCheck);
+          if (matKeySameDay) {
+            buildAmbCell(td, p, zi, row, FORMATE_AMBALARE[matKeySameDay], state.ambalareSelectii[p][zi][row], body, zi);
+          }
           tr.appendChild(td);
           return;
         }
 
-        const prod = state.procesare[p][zi - 1]; // produsul procesat ieri
+        // Luni (zi=0): selecție preluată din S.A. — stocată în state.ambSA
+        if (zi === 0) {
+          const sel = state.ambSA && state.ambSA[p] ? state.ambSA[p][row] : { format: '—', cantitate: '' };
+          let matKeyLuni = null;
+          if (sel && sel.format !== '—') {
+            for (const [key, vals] of Object.entries(FORMATE_AMBALARE)) {
+              if (vals.includes(sel.format)) { matKeyLuni = key; break; }
+            }
+          }
+          if (matKeyLuni) {
+            buildAmbCellSA(td, p, row, FORMATE_AMBALARE[matKeyLuni], sel, body);
+          } else if (row === 0) {
+            td.innerHTML = '<span style="font-size:9px;color:var(--ink-muted);padding:2px">↩ S.A.</span>';
+          }
+          tr.appendChild(td);
+          return;
+        }
+
+        // Marți-Vineri (zi=1..4) — produse normale din procesarea zi-1
+        const prod = state.procesare[p][zi - 1];
         const matKey = prod && prod !== '—' ? getMateriePrivaKey(prod) : null;
-
-        if (matKey) {
-          const formate = FORMATE_AMBALARE[matKey];
-          const sel = state.ambalareSelectii[p][zi - 1][row];
-          const refFormat = AMBALARE_REF[sel.format] || {};
-          const umDisplay = refFormat.um || 'BUC';
-
-          const wrapper = document.createElement('div');
-          wrapper.style.cssText = 'display:flex;gap:3px;align-items:center;flex-wrap:wrap';
-
-          const selectEl = document.createElement('select');
-          selectEl.className = 'cell-select';
-          selectEl.style.cssText = 'font-size:11px;flex:1;min-width:90px';
-          formate.forEach(f => {
-            const opt = document.createElement('option');
-            opt.value = f; opt.textContent = f;
-            if (f === sel.format) opt.selected = true;
-            selectEl.appendChild(opt);
-          });
-
-          const umLabel = document.createElement('span');
-          umLabel.style.cssText = 'font-size:10px;color:var(--ink-muted);min-width:20px';
-          umLabel.textContent = umDisplay;
-
-          const cantInput = document.createElement('input');
-          cantInput.type = 'text';
-          cantInput.inputMode = 'numeric';
-          cantInput.placeholder = umDisplay;
-          cantInput.value = sel.cantitate || '';
-          cantInput.style.cssText = 'width:52px;font-size:11px;border:1px solid var(--border);border-radius:3px;padding:2px 4px;font-family:"JetBrains Mono",monospace;text-align:right';
-
-          selectEl.onchange = (e) => {
-            state.ambalareSelectii[p][zi - 1][row].format = e.target.value;
-            const newRef = AMBALARE_REF[e.target.value] || {};
-            umLabel.textContent = newRef.um || 'BUC';
-            cantInput.placeholder = newRef.um || 'BUC';
-            buildEtichetareTable();
-            updateCentralizare();
-            const timpZi = calcTimpAmbalareZi(zi);
-            const timpCells = body.querySelectorAll('.timp-total');
-            if (timpCells[zi]) timpCells[zi].textContent = timpZi > 0 ? timpZi.toFixed(2) : '—';
-          };
-
-          cantInput.oninput = (e) => {
-            state.ambalareSelectii[p][zi - 1][row].cantitate = e.target.value;
-            const timpZi = calcTimpAmbalareZi(zi);
-            const timpCells = body.querySelectorAll('.timp-total');
-            if (timpCells[zi]) timpCells[zi].textContent = timpZi > 0 ? timpZi.toFixed(2) : '—';
-          };
-
-          wrapper.appendChild(selectEl);
-          wrapper.appendChild(cantInput);
-          wrapper.appendChild(umLabel);
-          // Lot optim hint
-          const lotHint = document.createElement('div');
-          lotHint.style.cssText = 'font-size:9px;color:var(--ink-muted);line-height:1.2;margin-top:1px;width:100%';
-          const lotVal = refFormat.lotOptim ? `Optim: ${refFormat.lotOptim} ${refFormat.um||'BUC'}` : '';
-          lotHint.textContent = lotVal;
-          lotHint.id = `lotHint_${p}_${zi}_${row}`;
-          // Update hint when format changes
-          const origOnchange = selectEl.onchange;
-          selectEl.onchange = (e) => {
-            origOnchange(e);
-            const newRef = AMBALARE_REF[e.target.value] || {};
-            lotHint.textContent = newRef.lotOptim ? `Optim: ${newRef.lotOptim} ${newRef.um||'BUC'}` : '';
-          };
-          wrapper.appendChild(lotHint);
-          td.appendChild(wrapper);
-        } else {
-          td.innerHTML = '';
+        if (matKey && !isSameDayAmbalare(prod)) {
+          buildAmbCell(td, p, zi - 1, row, FORMATE_AMBALARE[matKey], state.ambalareSelectii[p][zi - 1][row], body, zi);
         }
         tr.appendChild(td);
       });
@@ -1846,11 +1833,116 @@ function buildAmbalareTable() {
   ZILE.forEach((_, zi) => {
     const td = document.createElement('td');
     td.className = 'timp-cell timp-total';
+    if (zi >= 5) { trTimp.appendChild(td); return; }
     const timp = calcTimpAmbalareZi(zi);
     td.textContent = timp > 0 ? timp.toFixed(2) : '—';
     trTimp.appendChild(td);
   });
   body.appendChild(trTimp);
+  applyFormat2Visibility(body);
+}
+
+// Celulă ambalare specială pentru Luni S.A. — salvează în state.ambSA
+function buildAmbCellSA(td, p, row, formate, sel, body) {
+  const refFormat = AMBALARE_REF[sel.format] || {};
+  const umDisplay = refFormat.um || 'BUC';
+  const wrapper = document.createElement('div');
+  wrapper.style.cssText = 'display:flex;gap:3px;align-items:center;flex-wrap:wrap';
+  const selectEl = document.createElement('select');
+  selectEl.className = 'cell-select';
+  selectEl.style.cssText = 'font-size:11px;flex:1;min-width:90px';
+  formate.forEach(f => {
+    const opt = document.createElement('option');
+    opt.value = f; opt.textContent = f;
+    if (f === sel.format) opt.selected = true;
+    selectEl.appendChild(opt);
+  });
+  const umLabel = document.createElement('span');
+  umLabel.style.cssText = 'font-size:10px;color:var(--ink-muted);min-width:20px';
+  umLabel.textContent = umDisplay;
+  const cantInput = document.createElement('input');
+  cantInput.type = 'text'; cantInput.inputMode = 'numeric';
+  cantInput.placeholder = umDisplay; cantInput.value = sel.cantitate || '';
+  cantInput.style.cssText = 'width:52px;font-size:11px;border:1px solid var(--border);border-radius:3px;padding:2px 4px;font-family:"JetBrains Mono",monospace;text-align:right';
+  const lotHint = document.createElement('div');
+  lotHint.style.cssText = 'font-size:9px;color:var(--ink-muted);line-height:1.2;margin-top:1px;width:100%';
+  lotHint.textContent = refFormat.lotOptim ? `Optim: ${refFormat.lotOptim} ${refFormat.um||'BUC'}` : '';
+  selectEl.onchange = (e) => {
+    state.ambSA[p][row].format = e.target.value;
+    const newRef = AMBALARE_REF[e.target.value] || {};
+    umLabel.textContent = newRef.um || 'BUC';
+    cantInput.placeholder = newRef.um || 'BUC';
+    lotHint.textContent = newRef.lotOptim ? `Optim: ${newRef.lotOptim} ${newRef.um||'BUC'}` : '';
+    buildEtichetareTable(); updateCentralizare(); buildAmbalareTable();
+  };
+  // oninput: salvează fără rebuild (păstrează focusul)
+  cantInput.oninput = (e) => { state.ambSA[p][row].cantitate = e.target.value; };
+  // onblur: rebuild după ce termini de scris
+  cantInput.onblur = () => { buildEtichetareTable(); updateCentralizare(); };
+  wrapper.appendChild(selectEl); wrapper.appendChild(cantInput);
+  wrapper.appendChild(umLabel); wrapper.appendChild(lotHint);
+  td.appendChild(wrapper);
+}
+
+function buildAmbCell(td, p, procZi, row, formate, sel, body, ziAfisare) {
+  const refFormat = AMBALARE_REF[sel.format] || {};
+  const umDisplay = refFormat.um || 'BUC';
+  const wrapper = document.createElement('div');
+  wrapper.style.cssText = 'display:flex;gap:3px;align-items:center;flex-wrap:wrap';
+  const selectEl = document.createElement('select');
+  selectEl.className = 'cell-select';
+  selectEl.style.cssText = 'font-size:11px;flex:1;min-width:90px';
+  formate.forEach(f => {
+    const opt = document.createElement('option');
+    opt.value = f; opt.textContent = f;
+    if (f === sel.format) opt.selected = true;
+    selectEl.appendChild(opt);
+  });
+  const umLabel = document.createElement('span');
+  umLabel.style.cssText = 'font-size:10px;color:var(--ink-muted);min-width:20px';
+  umLabel.textContent = umDisplay;
+  const cantInput = document.createElement('input');
+  cantInput.type = 'text'; cantInput.inputMode = 'numeric';
+  cantInput.placeholder = umDisplay; cantInput.value = sel.cantitate || '';
+  cantInput.style.cssText = 'width:52px;font-size:11px;border:1px solid var(--border);border-radius:3px;padding:2px 4px;font-family:"JetBrains Mono",monospace;text-align:right';
+  const lotHint = document.createElement('div');
+  lotHint.style.cssText = 'font-size:9px;color:var(--ink-muted);line-height:1.2;margin-top:1px;width:100%';
+  lotHint.textContent = refFormat.lotOptim ? `Optim: ${refFormat.lotOptim} ${refFormat.um||'BUC'}` : '';
+  selectEl.onchange = (e) => {
+    state.ambalareSelectii[p][procZi][row].format = e.target.value;
+    const newRef = AMBALARE_REF[e.target.value] || {};
+    umLabel.textContent = newRef.um || 'BUC';
+    cantInput.placeholder = newRef.um || 'BUC';
+    lotHint.textContent = newRef.lotOptim ? `Optim: ${newRef.lotOptim} ${newRef.um||'BUC'}` : '';
+    buildEtichetareTable(); updateCentralizare();
+    const timpZi = calcTimpAmbalareZi(ziAfisare);
+    const timpCells = body.querySelectorAll('.timp-total');
+    if (timpCells[ziAfisare]) timpCells[ziAfisare].textContent = timpZi > 0 ? timpZi.toFixed(2) : '—';
+    applyFormat2Visibility(body);
+  };
+  // oninput: salvează valoarea fără rebuild (păstrează focusul)
+  cantInput.oninput = (e) => {
+    state.ambalareSelectii[p][procZi][row].cantitate = e.target.value;
+    const timpZi = calcTimpAmbalareZi(ziAfisare);
+    const timpCells = body.querySelectorAll('.timp-total');
+    if (timpCells[ziAfisare]) timpCells[ziAfisare].textContent = timpZi > 0 ? timpZi.toFixed(2) : '—';
+  };
+  // onblur: rebuild după ce utilizatorul termină de scris
+  cantInput.onblur = (e) => {
+    if (row === 0) {
+      const cant = parseFloat(e.target.value) || 0;
+      const refAmbF1 = AMBALARE_REF[state.ambalareSelectii[p][procZi][0].format] || {};
+      const refMat = PROCESARE_REF[state.procesare[p] ? state.procesare[p][procZi] || '' : ''] || {};
+      const lotMat = refAmbF1.um === 'BUC' ? (refMat.buc || refMat.lot || 0) : (refMat.lot || 0);
+      if (lotMat > 0 && cant >= lotMat) {
+        state.ambalareSelectii[p][procZi][1] = { format: '—', cantitate: '' };
+      }
+    }
+    buildEtichetareTable(); updateCentralizare(); buildAmbalareTable();
+  };
+  wrapper.appendChild(selectEl); wrapper.appendChild(cantInput);
+  wrapper.appendChild(umLabel); wrapper.appendChild(lotHint);
+  td.appendChild(wrapper);
 }
 
 function buildEtichetareTable() {
@@ -1863,36 +1955,6 @@ function buildEtichetareTable() {
   const eticFromBurduf = getBurdufEtichetareFromBurduf();
   const combined = eticFromAmb.map((a, i) => [...a, ...eticFromBurduf[i]]);
   const maxRows = Math.max(...combined.map(a => a.length), 1);
-
-  // ── Rânduri carry-over din săptămâna anterioară (Luni + Marți) ──
-  const carry = state.prevWeekCarry;
-  const hasCarryEtic = carry && carry.label && (carry.eticLuni.length > 0 || carry.eticMarti.length > 0);
-  if (hasCarryEtic) {
-    const maxCarry = Math.max(carry.eticLuni.length, carry.eticMarti.length, 1);
-    for (let r = 0; r < maxCarry; r++) {
-      const tr = document.createElement('tr');
-      tr.style.background = 'var(--gold-pale)';
-      const tdLabel = document.createElement('td');
-      tdLabel.className = 'row-label';
-      tdLabel.style.cssText = 'color:#8A6A1A;font-size:10px;font-style:italic;line-height:1.2';
-      tdLabel.innerHTML = r === 0 ? `↩ ${carry.label}<br><span style="font-weight:400">carry-over</span>` : '';
-      tr.appendChild(tdLabel);
-      ZILE.forEach((_, zi) => {
-        const td = document.createElement('td');
-        td.className = 'auto-cell etichetare';
-        td.style.cssText = 'background:var(--gold-pale);color:#8A6A1A;font-style:italic;font-size:11px';
-        if (zi === 0) {
-          td.textContent = carry.eticLuni[r] || '';
-        } else if (zi === 1) {
-          td.textContent = carry.eticMarti[r] || '';
-        } else {
-          td.textContent = '';
-        }
-        tr.appendChild(td);
-      });
-      body.appendChild(tr);
-    }
-  }
 
   for (let r = 0; r < maxRows; r++) {
     const tr = document.createElement('tr');
@@ -1977,14 +2039,14 @@ function buildPersonalSection() {
 }
 
 function updateCentralizare() {
-  // Lapte table
   const tbodyL = document.getElementById('tbodyLapte');
   tbodyL.innerHTML = '';
   let totLv=0, totLc=0, totLo=0, totLd=0;
 
   ZILE.forEach((z, zi) => {
     let lv=0, lc=0, lo=0, ld=0;
-    for (let p = 0; p < 8; p++) {
+    let ldProduced=0; // lapte degresat produs prin degresare smântână
+    for (let p = 0; p < 12; p++) {
       const prod = state.procesare[p][zi];
       if (!prod || prod === '—') continue;
       const ref = PROCESARE_REF[prod];
@@ -1993,10 +2055,19 @@ function updateCentralizare() {
       lc += Number(ref.lc) || 0;
       lo += Number(ref.lo) || 0;
       ld += Number(ref.ld) || 0;
+      // Degresare smântână → produce lapte degresat
+      if (ref.degresare && ref.ldResult) {
+        ldProduced += Number(ref.ldResult);
+      }
     }
-    totLv+=lv; totLc+=lc; totLo+=lo; totLd+=ld;
+    // Scădem laptele degresat produs din degresare
+    const ldNet = Math.max(0, ld - ldProduced);
+    totLv+=lv; totLc+=lc; totLo+=lo; totLd+=ldNet;
     const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${z}</td><td>${lv||'—'}</td><td>${lc||'—'}</td><td>${lo||'—'}</td><td>${ld||'—'}</td><td><strong>${(lv+lc+lo+ld)||'—'}</strong></td>`;
+    const ldDisplay = ldNet !== ld && ldProduced > 0
+      ? `${ldNet} <span style="font-size:10px;color:var(--accent)">(-${ldProduced} din deg.)</span>`
+      : (ldNet||'—');
+    tr.innerHTML = `<td>${z}</td><td>${lv||'—'}</td><td>${lc||'—'}</td><td>${lo||'—'}</td><td>${ldDisplay}</td><td><strong>${(lv+lc+lo+ldNet)||'—'}</strong></td>`;
     tbodyL.appendChild(tr);
   });
   const trTot = document.createElement('tr');
@@ -2008,7 +2079,7 @@ function updateCentralizare() {
   const tbodyR = document.getElementById('tbodyRezultat');
   tbodyR.innerHTML = '';
   const counter = {};
-  for (let p = 0; p < 8; p++) {
+  for (let p = 0; p < 12; p++) {
     for (let z = 0; z < 7; z++) {
       const prod = state.procesare[p][z];
       if (prod && prod !== '—') {
@@ -2019,8 +2090,9 @@ function updateCentralizare() {
   Object.entries(counter).forEach(([prod, cnt]) => {
     const ref = PROCESARE_REF[prod];
     const cantitate = ref && ref.lot > 0 ? ref.lot * cnt : '—';
+    const extra = ref?.degresare ? ` <span style="font-size:10px;color:var(--ink-muted)">(+lapte deg.)</span>` : '';
     const tr = document.createElement('tr');
-    tr.innerHTML = `<td style="text-align:left">${prod}</td><td>KG</td><td>${cantitate}</td><td>${cnt}</td>`;
+    tr.innerHTML = `<td style="text-align:left">${prod}${extra}</td><td>KG</td><td>${cantitate}</td><td>${cnt}</td>`;
     tbodyR.appendChild(tr);
   });
   const totalProc = Object.values(counter).reduce((a,b)=>a+b, 0);
@@ -2091,15 +2163,6 @@ function prodSelectOptions(saved, field) {
   const hasVal = !saved_val || all.includes(saved_val);
 
   return (hasVal ? all : [saved_val, ...all])
-    .map(p => `<option value="${p}" ${saved_val === p ? 'selected' : ''}>${p}</option>`)
-    .join('');
-}
-
-// Dropdown pentru Procesare — exact aceleași produse ca în planificare
-function prodSelectOptionsProc(saved, field) {
-  const saved_val = saved[field] || '';
-  const hasVal = !saved_val || PRODUSE_PROCESARE.includes(saved_val);
-  return (hasVal ? PRODUSE_PROCESARE : [saved_val, ...PRODUSE_PROCESARE])
     .map(p => `<option value="${p}" ${saved_val === p ? 'selected' : ''}>${p}</option>`)
     .join('');
 }
@@ -2197,8 +2260,8 @@ function buildMonitProc(zi, dayLabel) {
   const tbody = document.getElementById('tbodyMonitProc');
   tbody.innerHTML = '';
   const rows = [];
-  for (let p = 0; p < 8; p++) {
-    const prod = state.procesare[p][zi];
+  for (let p = 0; p < 12; p++) {
+      const prod = state.procesare[p][zi];
     if (prod && prod !== '—') rows.push({ slot: `Procesare ${p+1}`, planificat: prod, key: `proc_${p}_${zi}` });
   }
   if (rows.length === 0) {
@@ -2220,7 +2283,7 @@ function buildMonitProc(zi, dayLabel) {
     tr.innerHTML = `
       <td><strong>${row.slot}</strong></td>
       <td style="font-weight:500;color:var(--accent)">${row.planificat}</td>
-      <td><select class="monit-input" onchange="updateMonit('${row.key}','realizat',this.value)" style="width:100%">${prodSelectOptionsProc(saved,'realizat')}</select></td>
+      <td><select class="monit-input" onchange="updateMonit('${row.key}','realizat',this.value)" style="width:100%">${prodSelectOptions(saved,'realizat')}</select></td>
       <td style="text-align:center">${lotDisplay}</td>
       ${qtyTd}
       <td style="text-align:center">${badge}</td>
@@ -2275,49 +2338,12 @@ function buildMonitAmb(zi, dayLabel) {
   tbody.innerHTML = '';
   const rows = [];
 
-  // Carry-over din săptămâna anterioară — doar Luni (zi=0)
-  if (zi === 0) {
-    const carry = state.prevWeekCarry;
-    if (carry && carry.label) {
-      // Produse simple din carry
-      carry.ambalLuni.forEach((prod, idx) => {
-        const timpPlan = calcTimpAmbalare([prod]);
-        rows.push({
-          slot: `↩ ${carry.label}`,
-          planificat: prod,
-          cantPlan: '—',
-          timpPlan,
-          key: `carry_amb_luni_s_${idx}`,
-          isFormat: false,
-          isCarry: true
-        });
-      });
-      // Formate multiple din carry
-      carry.ambalLuniSelectii.forEach((entry, ei) => {
-        entry.selectii.forEach((s, row) => {
-          if (!s.format || s.format === '—') return;
-          const timpPlan = calcTimpAmbalareProportional(s.format, s.cantitate);
-          const refAmb = AMBALARE_REF[s.format] || {};
-          const cantPlan = s.cantitate ? `${s.cantitate} ${refAmb.um||''}` : '—';
-          rows.push({
-            slot: `↩ ${carry.label}`,
-            planificat: s.format,
-            cantPlan,
-            timpPlan,
-            key: `carry_amb_luni_f_${ei}_${row}`,
-            isFormat: true,
-            isCarry: true
-          });
-        });
-      });
-    }
-  }
-
   if (zi > 0) {
-    for (let p = 0; p < 8; p++) {
+    for (let p = 0; p < 12; p++) {
       const prod = state.procesare[p][zi - 1];
       if (!prod || prod === '—') continue;
       if (CAS_DOAR_TOCARE.includes(prod)) continue;
+      if (isSameDayAmbalare(prod)) continue;
 
       const matKey = getMateriePrivaKey(prod);
 
@@ -2370,9 +2396,8 @@ function buildMonitAmb(zi, dayLabel) {
     const timpReal = saved.timpReal || '';
     const { std, real } = calcRandament(refProdA, saved.cantitate);
     const tr = document.createElement('tr');
-    if (row.isCarry) tr.style.background = 'var(--info-pale)';
     tr.innerHTML = `
-      <td><strong style="${row.isCarry ? 'color:var(--info);font-style:italic;font-size:11px' : ''}">${row.slot}</strong></td>
+      <td><strong>${row.slot}</strong></td>
       <td style="font-weight:500;color:var(--info)">${row.planificat}${row.cantPlan !== '—' ? `<br><span style="font-size:10px;color:var(--ink-muted)">Plan: ${row.cantPlan}</span>` : ''}</td>
       <td><select class="monit-input" onchange="updateMonit('${row.key}','realizat',this.value)" style="width:100%">${prodSelectOptions(saved,'realizat')}</select></td>
       <td style="text-align:center">${lotDisplay}</td>
@@ -2411,40 +2436,9 @@ function buildMonitEtic(zi, dayLabel) {
   tbody.innerHTML = '';
   const rows = [];
 
-  // Carry-over din săptămâna anterioară
-  const carry = state.prevWeekCarry;
-  if (carry && carry.label) {
-    // Etichetare Luni (zi=0) — carry din procesare Joi S_prev
-    if (zi === 0) {
-      carry.eticLuni.forEach((prod, idx) => {
-        rows.push({
-          slot: `↩ ${carry.label}`,
-          planificat: prod,
-          cantPlan: '—',
-          key: `carry_etic_luni_${idx}`,
-          sursa: 'Ambalare',
-          isCarry: true
-        });
-      });
-    }
-    // Etichetare Marți (zi=1) — carry din procesare Vineri S_prev
-    if (zi === 1) {
-      carry.eticMarti.forEach((prod, idx) => {
-        rows.push({
-          slot: `↩ ${carry.label}`,
-          planificat: prod,
-          cantPlan: '—',
-          key: `carry_etic_marti_${idx}`,
-          sursa: 'Ambalare',
-          isCarry: true
-        });
-      });
-    }
-  }
-
   // Din ambalare (procesare -2 zile) → afișăm formatele selectate, nu materia primă
   if (zi > 1) {
-    for (let p = 0; p < 8; p++) {
+    for (let p = 0; p < 12; p++) {
       const prod = state.procesare[p][zi - 2];
       if (!prod || prod === '—') continue;
       const matKey = getMateriePrivaKey(prod);
@@ -2479,7 +2473,7 @@ function buildMonitEtic(zi, dayLabel) {
   }
 
   if (rows.length === 0) {
-    const msg = 'Nicio etichetare planificată pentru această zi';
+    const msg = zi < 2 ? 'Primele zile nu au etichetare planificată' : 'Nicio etichetare planificată pentru această zi';
     tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:16px;color:var(--ink-muted)">${msg}</td></tr>`;
     document.getElementById('monitSummaryEtic').textContent = ''; return;
   }
@@ -2503,11 +2497,10 @@ function buildMonitEtic(zi, dayLabel) {
     const { lotDisplay, qtyTd, badge } = renderQtyCols(row.key, lotOptim, um, saved);
     const { std, real } = calcRandament(refProdE, saved.cantitate);
     const tr = document.createElement('tr');
-    if (row.isCarry) tr.style.background = 'var(--gold-pale)';
     tr.innerHTML = `
       <td>
-        <strong style="${row.isCarry ? 'color:#8A6A1A;font-style:italic;font-size:11px' : ''}">${row.slot}</strong>
-        ${!row.isCarry ? `<span style="font-size:10px;padding:1px 5px;border-radius:8px;margin-left:4px;${isBurduf ? 'background:var(--warn-pale);color:var(--warn)' : 'background:var(--info-pale);color:var(--info)'}">${row.sursa}</span>` : ''}
+        <strong>${row.slot}</strong>
+        <span style="font-size:10px;padding:1px 5px;border-radius:8px;margin-left:4px;${isBurduf ? 'background:var(--warn-pale);color:var(--warn)' : 'background:var(--info-pale);color:var(--info)'}">${row.sursa}</span>
       </td>
       <td style="font-weight:500;color:${isBurduf ? 'var(--warn)' : '#8A6A1A'}">${row.planificat}${row.cantPlan !== '—' ? `<br><span style="font-size:10px;color:var(--ink-muted)">Plan: ${row.cantPlan}</span>` : ''}</td>
       <td><select class="monit-input" onchange="updateMonit('${row.key}','realizat',this.value)" style="width:100%">${prodSelectOptions(saved,'realizat')}</select></td>
@@ -2567,7 +2560,7 @@ function buildMonitToc(zi, dayLabel) {
   // Tocare zi = CAS procesate zi-1
   const rows = [];
   if (zi > 0) {
-    for (let p = 0; p < 8; p++) {
+    for (let p = 0; p < 12; p++) {
       const prod = state.procesare[p][zi - 1];
       if (isCas(prod)) {
         rows.push({ slot: `Proc. ${p+1}`, prod, key: `toc_${p}_${zi}` });
@@ -2690,37 +2683,13 @@ function generatePrint() {
       </tr></thead>
       <tbody>
         ${(() => {
-          // Rânduri carry-over din săptămâna anterioară (Luni)
+          // Rânduri pentru produse simple (auto)
           const ambRows = [];
-          const carry = state.prevWeekCarry;
-          if (carry && carry.label && (carry.ambalLuni.length > 0 || carry.ambalLuniSelectii.length > 0)) {
-            const carryProds = [
-              ...carry.ambalLuni,
-              ...carry.ambalLuniSelectii.flatMap(e => e.selectii.filter(s => s.format && s.format !== '—').map(s => s.format))
-            ];
-            carryProds.forEach((prod, r) => {
-              ambRows.push(`<tr style="background:#EFF6FF">
-                <td class="label-col" style="color:#1A4A7A;font-size:9px;font-style:italic">${r===0?`↩ ${carry.label}`:''}</td>
-                ${ZILE.map((_,zi) => zi === 0 ? `<td class="amb-col" style="color:#1A4A7A;font-style:italic;font-size:10px">${prod}</td>` : '<td></td>').join('')}
-              </tr>`);
-            });
-          }
-          // Rânduri pentru produse simple (auto) — excludem produsele cu formate multiple
-          // (acestea apar deja mai jos cu cantitate în rândurile P1F1/P1F2)
-          const ambSimple = Array(7).fill(null).map(() => []);
-          for (let z = 1; z < 7; z++) {
-            for (let p = 0; p < 8; p++) {
-              const prod = state.procesare[p][z - 1];
-              if (!prod || prod === '—' || CAS_DOAR_TOCARE.includes(prod)) continue;
-              if (getMateriePrivaKey(prod)) continue; // sărim formatele multiple — apar la P1F1/P1F2
-              ambSimple[z].push(prod);
-            }
-          }
-          const maxAuto = Math.max(...ambSimple.map(a=>a.length), 0);
+          const maxAuto = Math.max(...amb.map(a=>a.length), 0);
           for (let r = 0; r < maxAuto; r++) {
             ambRows.push(`<tr>
               <td class="label-col">${r===0?'Ambalare':''}</td>
-              ${ZILE.map((_,zi)=>`<td class="amb-col">${ambSimple[zi][r]||''}</td>`).join('')}
+              ${ZILE.map((_,zi)=>`<td class="amb-col">${amb[zi][r]||''}</td>`).join('')}
             </tr>`);
           }
           // Rânduri pentru formate multiple cu cantitate
@@ -2775,27 +2744,11 @@ function generatePrint() {
         ${(() => {
           const eticRows = [];
 
-          // Carry-over din săptămâna anterioară (Luni + Marți)
-          const carry = state.prevWeekCarry;
-          if (carry && carry.label && (carry.eticLuni.length > 0 || carry.eticMarti.length > 0)) {
-            const maxCarry = Math.max(carry.eticLuni.length, carry.eticMarti.length, 1);
-            for (let r = 0; r < maxCarry; r++) {
-              eticRows.push(`<tr style="background:#FEFCE8">
-                <td class="label-col" style="color:#8A6A1A;font-size:9px;font-style:italic">${r===0?`↩ ${carry.label}`:''}</td>
-                ${ZILE.map((_,zi) => {
-                  if (zi === 0) return `<td class="etic-col" style="color:#8A6A1A;font-style:italic;font-size:10px">${carry.eticLuni[r]||''}</td>`;
-                  if (zi === 1) return `<td class="etic-col" style="color:#8A6A1A;font-style:italic;font-size:10px">${carry.eticMarti[r]||''}</td>`;
-                  return '<td></td>';
-                }).join('')}
-              </tr>`);
-            }
-          }
-
           // Produse simple din ambalare (auto) — +1 zi față de ambalare = +2 față de procesare
           const eticAuto = Array(7).fill(null).map(() => []);
           for (let zi = 2; zi < 7; zi++) {
-            for (let p = 0; p < 8; p++) {
-              const prod = state.procesare[p][zi - 2];
+            for (let p = 0; p < 12; p++) {
+      const prod = state.procesare[p][zi - 2];
               if (!prod || prod === '—' || CAS_DOAR_TOCARE.includes(prod) || getMateriePrivaKey(prod)) continue;
               eticAuto[zi].push(prod);
             }
@@ -2989,29 +2942,27 @@ function parseSheetRows(rows) {
   state.year = parseInt(rows[1][1]) || state.year;
   state.firstLot = String(rows[1][2] || state.firstLot);
   document.getElementById('firstLot').value = state.firstLot;
-  // Resetăm carry-over — va fi restaurat mai jos dacă există în sheet
-  state.prevWeekCarry = { label: '', ambalLuni: [], ambalLuniSelectii: [], eticLuni: [], eticMarti: [] };
 
   // Rows 2-9: Procesare
-  for (let pi = 0; pi < 8; pi++) {
+  for (let pi = 0; pi < 12; pi++) {
     const row = rows[2 + pi];
     if (row) state.procesare[pi] = ZILE.map((_, zi) => row[3 + zi] || '—');
   }
-  // Rows 10-14: Burduf (5 rânduri)
+  // Rows 14-18: Burduf (5 rânduri)
   for (let ri = 0; ri < 5; ri++) {
-    const row = rows[10 + ri];
+    const row = rows[14 + ri];
     if (row) state.burduf[ri] = ZILE.map((_, zi) => row[3 + zi] || '—');
   }
-  // Rows 15-23: Personal (3 schimburi × 3 persoane = 9 rânduri)
+  // Rows 19-27: Personal (3 schimburi × 3 persoane = 9 rânduri)
   ['schimb1','schimb2','schimb3'].forEach((s, si) => {
     [0,1,2].forEach(p => {
-      const row = rows[15 + si*3 + p];
+      const row = rows[19 + si*3 + p];
       if (row) ZILE.forEach((_, zi) => { state.personal[s][zi][p] = row[3 + zi] || '—'; });
     });
   });
-  // Rows 24-39: Ambalare selectii (8 procesări × 2 rânduri = 16)
-  const ambStart = 24;
-  for (let pi = 0; pi < 8; pi++) {
+  // Rows 28-51: Ambalare selectii (12 procesări × 2 rânduri = 24)
+  const ambStart = 28;
+  for (let pi = 0; pi < 12; pi++) {
     for (let row = 0; row < 2; row++) {
       const sheetRow = rows[ambStart + pi * 2 + row];
       if (sheetRow) {
@@ -3025,18 +2976,6 @@ function parseSheetRows(rows) {
         });
       }
     }
-  }
-  // Caută rândul PrevWeekCarry oriunde în sheet (nu depinde de index fix)
-  const carryRow = rows.find(r => r && r[0] === 'PrevWeekCarry');
-  console.log('[Carry] Total rows from sheet:', rows.length, '| carryRow found:', !!carryRow, '| value:', carryRow ? carryRow[3] : 'N/A');
-  if (carryRow && carryRow[3]) {
-    try {
-      const parsed = JSON.parse(String(carryRow[3]));
-      if (parsed && typeof parsed === 'object') {
-        state.prevWeekCarry = parsed;
-        console.log('[Carry] Restored:', parsed.label, '| ambalLuni:', parsed.ambalLuni, '| eticLuni:', parsed.eticLuni, '| eticMarti:', parsed.eticMarti);
-      }
-    } catch(e) { console.warn('[Carry] Parse error:', e); }
   }
   // Sync selector
   const sel = document.getElementById('weekSelector');
@@ -3071,89 +3010,35 @@ async function sheetsRead(sheetName) {
   return JSON.parse(clean);
 }
 
-// Calculează carry-over din rândurile brute ale săptămânii anterioare (din Sheets)
-// fără să modifice state-ul curent
-function computeCarryOverFromRows(rows, prevWeekLabel) {
-  if (!rows || rows.length < 10) return null;
+async function saveToSheets() {
+  if (!config.sheetsUrl) { alert('Configurează URL-ul Google Sheets mai întâi (⚙)'); return; }
+  setSyncStatus('loading', 'Se salvează...');
+  try {
+    const sheetKey = planifSheetKey();
+    const monitKey = monitSheetKey();
 
-  // Citim procesare din rows (rows[2..9], coloanele 3..9 = ZILE 0..6)
-  const procesare = Array(8).fill(null).map(() => Array(7).fill('—'));
-  for (let pi = 0; pi < 8; pi++) {
-    const row = rows[2 + pi];
-    if (row) procesare[pi] = ZILE.map((_, zi) => String(row[3 + zi] || '—'));
-  }
+    // POST 1: planificare
+    await sheetsPost({ action: 'write', sheet: sheetKey, rows: buildPlanifRows() });
 
-  // Citim ambalareSelectii din rows (rows[24..39])
-  const ambalareSelectii = Array(8).fill(null).map(() =>
-    Array(7).fill(null).map(() => [
-      { format: '—', cantitate: '' },
-      { format: '—', cantitate: '' }
-    ])
-  );
-  const ambStart = 24;
-  for (let pi = 0; pi < 8; pi++) {
-    for (let row = 0; row < 2; row++) {
-      const sheetRow = rows[ambStart + pi * 2 + row];
-      if (sheetRow) {
-        ZILE.forEach((_, zi) => {
-          const val = String(sheetRow[3 + zi] || '');
-          const parts = val.split('||');
-          ambalareSelectii[pi][zi][row] = {
-            format: parts[0] || '—',
-            cantitate: parts[1] || ''
-          };
-        });
-      }
+    // POST 2: monitorizare
+    const monitRows = [['key','realizat','cantitate','timpReal','motiv','cantTocata','matPrimaRecup']];
+    Object.entries(state.monitorizare).forEach(([key, val]) => {
+      monitRows.push([key, val.realizat||'', val.cantitate||'', val.timpReal||'', val.motiv||'', val.cantTocata||'', val.matPrimaRecup||'']);
+    });
+    await sheetsPost({ action: 'write', sheet: monitKey, rows: monitRows });
+
+    setSyncStatus('ok', `Salvat S${state.week}_${state.year} · ${new Date().toLocaleTimeString('ro-RO')}`);
+
+    // Refresh lista săptămâni (citește sheet-urile existente direct)
+    await loadWeekList();
+    const sel = document.getElementById('weekSelector');
+    for (let i = 0; i < sel.options.length; i++) {
+      if (sel.options[i].value === sheetKey) { sel.selectedIndex = i; break; }
     }
+  } catch(e) {
+    setSyncStatus('error', 'Eroare conexiune');
+    console.error(e);
   }
-
-  const carry = {
-    label: prevWeekLabel,
-    ambalLuni: [],
-    ambalLuniSelectii: [],
-    eticLuni: [],
-    eticMarti: []
-  };
-
-  // Procesare Joi (idx 3) → Ambalare Vineri (idx 4) din S_prev → Ambalare Luni S_new + Etichetare Luni S_new
-  for (let p = 0; p < 8; p++) {
-    const prod = procesare[p][3]; // Joi
-    if (!prod || prod === '—') continue;
-    if (CAS_DOAR_TOCARE.includes(prod)) continue;
-    const matKey = getMateriePrivaKey(prod);
-    if (matKey) {
-      carry.ambalLuniSelectii.push({
-        procesareIdx: p,
-        prod,
-        matKey,
-        selectii: ambalareSelectii[p][3].map(s => ({ ...s }))
-      });
-      // Etichetare Luni = formatele selectate pentru Vineri (ambalare din Joi)
-      ambalareSelectii[p][3].forEach(s => {
-        if (s.format && s.format !== '—') carry.eticLuni.push(s.format);
-      });
-    } else {
-      carry.ambalLuni.push(prod);
-      carry.eticLuni.push(prod);
-    }
-  }
-
-  // Procesare Vineri (idx 4) → Ambalare Sâmbătă (idx 5) → Etichetare Marți S_new
-  for (let p = 0; p < 8; p++) {
-    const prod = procesare[p][4]; // Vineri
-    if (!prod || prod === '—') continue;
-    if (CAS_DOAR_TOCARE.includes(prod)) continue;
-    const matKey = getMateriePrivaKey(prod);
-    if (matKey) {
-      ambalareSelectii[p][4].forEach(s => {
-        if (s.format && s.format !== '—') carry.eticMarti.push(s.format);
-      });
-    } else {
-      carry.eticMarti.push(prod);
-    }
-  }
-
-  return carry;
 }
 
 async function saveToSheets() {
@@ -3162,26 +3047,6 @@ async function saveToSheets() {
   try {
     const sheetKey = planifSheetKey();
     const monitKey = monitSheetKey();
-
-    // Dacă carry-over-ul e gol, încearcă să îl calculeze din săptămâna anterioară din Sheets
-    if (!state.prevWeekCarry || !state.prevWeekCarry.label) {
-      const prevWeek = state.week - 1;
-      const prevYear = state.year;
-      const prevKey = `S${prevWeek}_${prevYear}`;
-      try {
-        setSyncStatus('loading', 'Se încarcă săptămâna anterioară pentru carry-over...');
-        const prevData = await sheetsRead(prevKey);
-        if (prevData && prevData.data && prevData.data.length > 10) {
-          const carry = computeCarryOverFromRows(prevData.data, `S${prevWeek}/${prevYear}`);
-          if (carry) {
-            state.prevWeekCarry = carry;
-            console.log('[Carry] Computed from prev sheet:', carry.label, carry.ambalLuni, carry.eticLuni, carry.eticMarti);
-          }
-        }
-      } catch(e) {
-        console.warn('[Carry] Could not load prev week:', e);
-      }
-    }
 
     // POST 1: planificare date brute (backup)
     await sheetsPost({ action: 'write', sheet: sheetKey, rows: buildPlanifRows() });
@@ -3232,10 +3097,10 @@ function buildPlanifRows() {
       ]);
     });
   });
-  // Carry-over din săptămâna anterioară (1 rând JSON)
-  rows.push(['PrevWeekCarry', '', '', JSON.stringify(state.prevWeekCarry), ...Array(6).fill('')]);
   return rows;
 }
+
+// Construiește datele pentru fișa formatată de planificare
 function buildFormattedPlanif() {
   const dates = getWeekDates(state.week, state.year);
   const lots = getLots();
@@ -3378,7 +3243,7 @@ function buildFormattedMonit() {
 
   ZILE.forEach((zi, ziIdx) => {
     const dateStr = formatDate(dates[ziIdx]);
-    for (let p = 0; p < 8; p++) {
+    for (let p = 0; p < 12; p++) {
       const prod = state.procesare[p][ziIdx];
       if (!prod || prod === '—') continue;
       const key = `proc_${p}_${ziIdx}`;
@@ -3454,7 +3319,7 @@ function buildFormattedMonit() {
   ZILE.forEach((zi, ziIdx) => {
     if (ziIdx === 0) return;
     const dateStr = formatDate(dates[ziIdx]);
-    for (let p = 0; p < 8; p++) {
+    for (let p = 0; p < 12; p++) {
       const prod = state.procesare[p][ziIdx - 1];
       if (!prod || prod === '—') continue;
       const key = `amb_${p}_${ziIdx}`;
@@ -3496,8 +3361,8 @@ function buildFormattedMonit() {
   ZILE.forEach((zi, ziIdx) => {
     const dateStr = formatDate(dates[ziIdx]);
     if (ziIdx > 1) {
-      for (let p = 0; p < 8; p++) {
-        const prod = state.procesare[p][ziIdx - 2];
+      for (let p = 0; p < 12; p++) {
+      const prod = state.procesare[p][ziIdx - 2];
         if (!prod || prod === '—') continue;
         const key = `etic_proc_${p}_${ziIdx}`;
         const saved = state.monitorizare[key] || {};
@@ -3616,114 +3481,148 @@ function closeNewWeekModal() {
   document.getElementById('newWeekModal').classList.remove('open');
 }
 
-// ── Calculează carry-over din săptămâna curentă (înainte de reset) ──────────
-function computeCarryOver() {
-  // Procesare Joi (idx 3) → Ambalare Vineri (idx 4) din S_prev
-  //   → Etichetare Sâmbătă (idx 5) din S_prev
-  //   → Trebuie la Etichetare Luni (idx 0) din S_new
-  //
-  // Procesare Vineri (idx 4) → Ambalare Sâmbătă (idx 5) din S_prev
-  //   → Trebuie la Ambalare Luni (idx 0) din S_new
-  //   → Etichetare Duminică (idx 6) din S_prev
-  //   → Trebuie la Etichetare Marți (idx 1) din S_new
-
-  const carry = {
-    label: `S${state.week}/${state.year}`,
-    ambalLuni: [],
-    ambalLuniSelectii: [],
-    eticLuni: [],
-    eticMarti: []
-  };
-
-  // Ambalare Luni = ce se procesa Joi (zi idx 3) în S_prev
-  // (produse simple)
-  for (let p = 0; p < 8; p++) {
-    const prod = state.procesare[p][3]; // Joi
-    if (!prod || prod === '—') continue;
-    if (CAS_DOAR_TOCARE.includes(prod)) continue;
-    const matKey = getMateriePrivaKey(prod);
-    if (matKey) {
-      // Format multiplu: păstrăm selecțiile de la ambalareSelectii[p][3]
-      // (adică ce era selectat pentru ambalare Vineri = selectii[p][zi=4, zi-1=3])
-      // ATENȚIE: ambalareSelectii[p][zi][row] unde zi = ziua de ambalare
-      // Ambalare Vineri (zi=4) folosește selectii[p][4-1=3]... deci corect [p][3]
-      carry.ambalLuniSelectii.push({
-        procesareIdx: p,
-        prod,
-        matKey,
-        selectii: state.ambalareSelectii[p][3].map(s => ({ ...s }))
-      });
-    } else {
-      carry.ambalLuni.push(prod);
-    }
-  }
-
-  // Etichetare Luni = Ambalare Vineri (zi=4) din S_prev
-  // = ce se procesa Joi (zi=3) din S_prev — produse simple
-  carry.eticLuni.push(...carry.ambalLuni);
-  // + formate selectate Vineri (din procesare Joi) cu formate multiple
-  carry.ambalLuniSelectii.forEach(entry => {
-    entry.selectii.forEach(s => {
-      if (s.format && s.format !== '—') carry.eticLuni.push(s.format);
-    });
-  });
-
-  // Etichetare Marți = Ambalare Sâmbătă (zi=5) din S_prev
-  // = ce se procesa Vineri (zi=4) din S_prev
-  for (let p = 0; p < 8; p++) {
-    const prod = state.procesare[p][4]; // Vineri
-    if (!prod || prod === '—') continue;
-    if (CAS_DOAR_TOCARE.includes(prod)) continue;
-    const matKey = getMateriePrivaKey(prod);
-    if (matKey) {
-      // selectii pentru ambalare Sâmbătă (zi=5) = ambalareSelectii[p][4]
-      state.ambalareSelectii[p][4].forEach(s => {
-        if (s.format && s.format !== '—') carry.eticMarti.push(s.format);
-      });
-    } else {
-      carry.eticMarti.push(prod);
-    }
-  }
-
-  return carry;
-}
-
-function createNewWeek() {
+async function createNewWeek() {
   const w = parseInt(document.getElementById('newWeekNr').value);
   const y = parseInt(document.getElementById('newWeekYear').value);
   const lot = document.getElementById('newWeekLot').value.trim();
   if (!w || !y) { alert('Completează săptămâna și anul'); return; }
 
-  // Calculează carry-over ÎNAINTE de reset (dacă există date în săptămâna curentă)
-  const hasCurrentData = state.procesare.some(row => row.some(v => v && v !== '—'));
-  const carry = hasCurrentData ? computeCarryOver() : {
-    label: '', ambalLuni: [], ambalLuniSelectii: [], eticLuni: [], eticMarti: []
-  };
+  // Calculăm săptămâna anterioară
+  const prevW = w === 1 ? 52 : w - 1;
+  const prevY = w === 1 ? y - 1 : y;
+  const prevSheetKey = `S${prevW}_${prevY}`;
 
-  // Reset state to blank week
+  // Reset state
   state.week = w;
   state.year = y;
   state.firstLot = lot || String(w * 100 + 1);
-  state.procesare = Array(8).fill(null).map(() => Array(7).fill('—'));
+  state.procesare = Array(12).fill(null).map(() => Array(7).fill('—'));
   state.burduf = Array(5).fill(null).map(() => Array(7).fill('—'));
-  state.ambalareSelectii = Array(8).fill(null).map(() =>
+  state.ambalareSelectii = Array(12).fill(null).map(() =>
     Array(7).fill(null).map(() => [
       { format: '—', cantitate: '' },
       { format: '—', cantitate: '' }
     ])
   );
+  state.ambSA = Array(12).fill(null).map(() => [
+    { format: '—', cantitate: '' },
+    { format: '—', cantitate: '' }
+  ]);
+  state.burdufSA = Array(5).fill('—');
+  state.eticSA = { auto: [], formate: [] };
   state.personal = {
     schimb1: Array(7).fill(null).map(() => ['—','—','—']),
     schimb2: Array(7).fill(null).map(() => ['—','—','—']),
     schimb3: Array(7).fill(null).map(() => ['—','—','—']),
   };
   state.monitorizare = {};
-  state.prevWeekCarry = carry;
+
+  // Încercăm să preluăm datele din săptămâna anterioară
+  if (config.sheetsUrl) {
+    try {
+      setSyncStatus('loading', `Se preia din ${prevSheetKey}...`);
+      const prevData = await sheetsRead(prevSheetKey);
+
+      if (prevData.data && prevData.data.length > 1) {
+        const rows = prevData.data;
+        const JOI = 3;    // index Joi în S_prev
+        const VINERI = 4; // index Vineri în S_prev
+        const LUNI_NOU = 0;
+        const MARTI_NOU = 1;
+
+        // Citim procesarea din S_prev
+        const prevProcesare = Array(12).fill(null).map(() => Array(7).fill('—'));
+        for (let pi = 0; pi < 12; pi++) {
+          const row = rows[2 + pi];
+          if (row) prevProcesare[pi] = ZILE.map((_, zi) => row[3 + zi] || '—');
+        }
+
+        // Citim burduf din S_prev
+        const prevBurduf = Array(5).fill(null).map(() => Array(7).fill('—'));
+        for (let ri = 0; ri < 5; ri++) {
+          const row = rows[10 + ri];
+          if (row) prevBurduf[ri] = ZILE.map((_, zi) => row[3 + zi] || '—');
+        }
+
+        // Citim ambalareSelectii din S_prev (rânduri 24+)
+        const prevAmbSel = Array(12).fill(null).map(() =>
+          Array(7).fill(null).map(() => [
+            { format: '—', cantitate: '' },
+            { format: '—', cantitate: '' }
+          ])
+        );
+        for (let pi = 0; pi < 12; pi++) {
+          for (let row = 0; row < 2; row++) {
+            const sheetRow = rows[28 + pi * 2 + row];
+            if (sheetRow) {
+              ZILE.forEach((_, zi) => {
+                const val = String(sheetRow[3 + zi] || '');
+                const parts = val.split('||');
+                prevAmbSel[pi][zi][row] = {
+                  format: parts[0] || '—',
+                  cantitate: parts[1] || ''
+                };
+              });
+            }
+          }
+        }
+
+        // ── 1. Ambalare Luni S_nou = Procesare Vineri S_prev ──
+        for (let pi = 0; pi < 12; pi++) {
+          const prodVineri = prevProcesare[pi][VINERI];
+          if (!prodVineri || prodVineri === '—' || CAS_DOAR_TOCARE.includes(prodVineri)) continue;
+          if (getMateriePrivaKey(prodVineri)) {
+            state.ambSA[pi][0] = { ...prevAmbSel[pi][VINERI][0] };
+            state.ambSA[pi][1] = { ...prevAmbSel[pi][VINERI][1] };
+          } else {
+            state.ambSA[pi][0] = { format: prodVineri, cantitate: '' };
+          }
+        }
+
+        // ── 2. Etichetare Luni S_nou = Ambalare Vineri S_prev = Procesare Joi S_prev ──
+        state.eticSA = { auto: [], formate: [] };
+        for (let pi = 0; pi < 12; pi++) {
+          const prodJoi = prevProcesare[pi][JOI];
+          if (!prodJoi || prodJoi === '—' || CAS_DOAR_TOCARE.includes(prodJoi)) continue;
+          if (getMateriePrivaKey(prodJoi)) {
+            // Produse cu formate multiple: selecțiile de ambalare Vineri = procZi=JOI
+            let hasFormat = false;
+            [0,1].forEach(row => {
+              const sel = prevAmbSel[pi][JOI][row];
+              if (sel && sel.format !== '—') {
+                state.eticSA.formate.push({ ...sel });
+                hasFormat = true;
+              }
+            });
+            // Dacă nu există selecții salvate, adăugăm materia primă ca fallback
+            if (!hasFormat) state.eticSA.auto.push(prodJoi);
+          } else {
+            // Produse simple: ambalate Vineri → etichetare Luni S_nou
+            state.eticSA.auto.push(prodJoi);
+          }
+        }
+
+        // ── 3. Burduf Vineri S_prev → Etichetare Luni S_nou ──
+        state.burdufSA = Array(5).fill('—');
+        for (let ri = 0; ri < 5; ri++) {
+          const prod = prevBurduf[ri][VINERI];
+          if (prod && prod !== '—') state.burdufSA[ri] = prod;
+        }
+
+        setSyncStatus('ok', `Săptămână nouă S${w}_${y} — preluare din ${prevSheetKey} ✓`);
+      } else {
+        setSyncStatus('ok', `Săptămână nouă S${w}_${y} — ${prevSheetKey} nu există, start gol`);
+      }
+    } catch(e) {
+      console.warn('Nu s-a putut prelua din săptămâna anterioară:', e);
+      setSyncStatus('ok', `Săptămână nouă S${w}_${y} — nesalvată`);
+    }
+  }
 
   document.getElementById('firstLot').value = state.firstLot;
   closeNewWeekModal();
   recalcDates();
-  setSyncStatus('ok', `Săptămână nouă S${w}_${y} — nesalvată`);
+  rebuildAll();
 }
 
 async function testConnection() {
