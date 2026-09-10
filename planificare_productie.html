@@ -723,7 +723,7 @@
 </nav>
 
 <!-- ═══════════════════════════════════ TAB: PLANIFICARE ═══════════════════════════════════ -->
-<div class="tab-content active" id="tab-plan">
+<div class="tab-content active" id="tab-plan" style="display:block">
 
   <!-- Week Setup -->
   <div class="week-setup">
@@ -895,7 +895,7 @@
 </div>
 
 <!-- ═══════════════════════════════════ TAB: PRINT ═══════════════════════════════════ -->
-<div class="tab-content" id="tab-print">
+<div class="tab-content" id="tab-print" style="display:none">
   <div class="section-header no-print">
     <div class="section-title">Fișă Planificare</div>
     <div style="display:flex; gap:8px;">
@@ -907,7 +907,7 @@
 </div>
 
 <!-- ═══════════════════════════════════ TAB: MONITORIZARE ═══════════════════════════════════ -->
-<div class="tab-content" id="tab-monit">
+<div class="tab-content" id="tab-monit" style="display:none">
 
   <div class="section-header">
     <div class="section-title">Monitorizare Zilnică — Realizat vs Planificat</div>
@@ -1076,7 +1076,7 @@
 
 
 <!-- TAB AMBALAJE -->
-<div id="tab-ambalaje" class="tab-content">
+<div id="tab-ambalaje" class="tab-content" style="display:none">
   <div class="card" style="margin-bottom:16px">
     <div class="card-header">
       <div class="card-title">
@@ -3838,14 +3838,12 @@ function buildAmbalajePage() {
 }
 
 function showTab(tab) {
-  document.querySelectorAll('.tab-content').forEach(el => {
-    el.classList.remove('active');
+  ['plan','print','monit','ambalaje'].forEach(t => {
+    const el = document.getElementById('tab-' + t);
+    const btn = document.getElementById('tabBtn-' + t);
+    if (el) { el.style.display = (t === tab) ? 'block' : 'none'; }
+    if (btn) btn.classList.toggle('active', t === tab);
   });
-  document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
-  const tabEl = document.getElementById(`tab-${tab}`);
-  if (tabEl) tabEl.classList.add('active');
-  const btnEl = document.getElementById(`tabBtn-${tab}`);
-  if (btnEl) btnEl.classList.add('active');
   if (tab === 'print') generatePrint();
   if (tab === 'monit') buildMonitDaySelector();
   if (tab === 'ambalaje') buildAmbalajePage();
