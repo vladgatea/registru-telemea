@@ -717,6 +717,9 @@
   <button class="tab-btn" onclick="showTab('monit')" id="tabBtn-monit">
     <span class="tab-icon">📊</span> Monitorizare
   </button>
+  <button class="tab-btn" onclick="showTab('ambalaje')" id="tabBtn-ambalaje">
+    <span class="tab-icon">📦</span> Necesar Ambalaje
+  </button>
 </nav>
 
 <!-- ═══════════════════════════════════ TAB: PLANIFICARE ═══════════════════════════════════ -->
@@ -1070,6 +1073,50 @@
       </table>
     </div>
   </div>
+
+
+<!-- TAB AMBALAJE -->
+<div id="tab-ambalaje" class="tab-content">
+  <div class="card" style="margin-bottom:16px">
+    <div class="card-header">
+      <div class="card-title">
+        <span class="stage-badge" style="background:#F3E8FF;color:#6B21A8">📦</span>
+        Necesar Ambalaje — Săptămâna Curentă
+        <span style="font-size:11px;font-weight:400;color:var(--ink-muted)">calculat automat din cantitățile planificate la ambalare</span>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <select id="ambalajeZiFilter" onchange="buildAmbalajePage()" class="cell-select" style="font-size:12px">
+          <option value="all">Toate zilele</option>
+          <option value="0">Luni</option>
+          <option value="1">Marți</option>
+          <option value="2">Miercuri</option>
+          <option value="3">Joi</option>
+          <option value="4">Vineri</option>
+        </select>
+        <button class="btn btn-secondary btn-sm" onclick="buildAmbalajePage()">🔄 Recalculează</button>
+      </div>
+    </div>
+    <div style="padding:16px;overflow-x:auto">
+      <table class="monit-table" id="tblAmbalaje">
+        <thead>
+          <tr>
+            <th style="min-width:280px;text-align:left">Material / Ambalaj</th>
+            <th style="min-width:80px">UM</th>
+            <th style="min-width:80px">Luni</th>
+            <th style="min-width:80px">Marți</th>
+            <th style="min-width:80px">Miercuri</th>
+            <th style="min-width:80px">Joi</th>
+            <th style="min-width:80px">Vineri</th>
+            <th style="min-width:100px;background:var(--accent-pale);color:var(--accent)">TOTAL</th>
+          </tr>
+        </thead>
+        <tbody id="tbodyAmbalaje">
+          <tr><td colspan="8" style="text-align:center;padding:20px;color:var(--ink-muted)">Se calculează...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
 
 </div>
 <div class="modal-overlay" id="setupModal">
@@ -3660,13 +3707,148 @@ function saveConfig() {
 // TAB NAVIGATION
 // ═══════════════════════════════════════════════════════════════
 
+
+// ═══════════════════════════════════════════════════════════════
+// NECESAR AMBALAJE
+// ═══════════════════════════════════════════════════════════════
+
+const RETETE_AMBALAJE = {"TVPS 4KG":[{"mat":"GALEATA 4KG IMPRIMATA-TELEMEA PUTIN SARATA","qty":0.25,"uom":"BUC"},{"mat":"CAPAC GALEATA 4 KG/8 KG","qty":0.25,"uom":"BUC"},{"mat":"ETICHETA ALBA 34*15MM-PLASTICATA","qty":0.25,"uom":"BUC"}],"TVPS 800G":[{"mat":"CASEROLA IMPRIMATA TVPS 800G","qty":1.0,"uom":"BUC"},{"mat":"CAPAC IMPRIMAT TVPS 800G","qty":1.0,"uom":"BUC"}],"TVPS 375 G":[{"mat":"CAPAC IMPRIMAT TVPS 375G","qty":1.0,"uom":"BUC"},{"mat":"CASEROLA IMPRIMATA TVPS 375G","qty":1.0,"uom":"BUC"}],"TV MOLD 4KG":[{"mat":"GALEATA IMPRIMATA 4KG  TELEMEA PROASPATA","qty":0.25,"uom":"BUC"},{"mat":"CAPAC GALEATA 4 KG/8 KG","qty":0.25,"uom":"BUC"},{"mat":"ETICHETA ALBA 34*15MM-PLASTICATA","qty":0.00163,"uom":"BUC"}],"TV MOLD 800G":[{"mat":"CASEROLA IMPRIMATA TELEMEA PROASPATA 800G DLF","qty":1.0,"uom":"BUC"},{"mat":"CAPAC IMPRIMAT TELEMEA PROASPATA 800G DLF","qty":1.0,"uom":"BUC"}],"TV+O 4KG":[{"mat":"CAPAC GALEATA 4 KG/8 KG","qty":0.25,"uom":"BUC"},{"mat":"GALEATA IMPRIMATA 4KG  TELEMEA DE VACA SI OAIE","qty":0.25,"uom":"BUC"},{"mat":"ETICHETA ALBA 30*10MM-PLASTICATA","qty":0.25,"uom":"BUC"},{"mat":"ETICHETA TELEMEA DE VACA SI OAIE CAPAC","qty":0.25,"uom":"BUC"}],"TV+C 4KG":[{"mat":"GALEATA 4 KG","qty":0.25,"uom":"BUC"},{"mat":"CAPAC GALEATA 4 KG/8 KG","qty":0.25,"uom":"BUC"},{"mat":"ETICHETA Telemea de vaca si capra 4 kg - spate","qty":0.25,"uom":"BUC"}],"BV 5KG":[{"mat":"ETICHETA BRANZA DE VACI 5 KG FATA","qty":0.2,"uom":"BUC"},{"mat":"CAPAC GALEATA 4 KG/8 KG","qty":0.2,"uom":"BUC"},{"mat":"GALEATA 4 KG","qty":0.2,"uom":"BUC"},{"mat":"ETICHETA BRANZA DE VACI 5 KG SPATE","qty":0.2,"uom":"BUC"}],"BV 400G":[{"mat":"CAPAC GALEATA JETS 0.6","qty":1.0,"uom":"BUC"},{"mat":"GALEATA PATRATA JETS 0,6L","qty":1.0,"uom":"BUC"},{"mat":"ETICHETA BB PDA 350G VERSO (CLIPSAT)","qty":0.14932,"uom":"BUC"}],"TOPS 800G":[{"mat":"CASEROLA 800 G","qty":1.0,"uom":"BUC"},{"mat":"CAPAC CASEROLA 800 G","qty":1.0,"uom":"BUC"},{"mat":"ETICHETA ALBA 65*99","qty":0.5,"uom":"BUC"},{"mat":"ETICHETA Telemea de oaie putin sarata 800g","qty":1.0,"uom":"BUC"}],"TOPS":[{"mat":"GALEATA 4 KG","qty":0.25,"uom":"BUC"},{"mat":"CAPAC GALEATA 4 KG/8 KG","qty":0.25,"uom":"BUC"},{"mat":"Eticheta produs in Romaina","qty":0.25,"uom":"BUC"}],"TCPS 800G":[{"mat":"CASEROLA 800 G","qty":1.0,"uom":"BUC"},{"mat":"CAPAC CASEROLA 800 G","qty":1.0,"uom":"BUC"},{"mat":"ETICHETA TELEMEA DE CAPRA PUTIN SARATA 800g","qty":1.0,"uom":"BUC"}],"TCPS":[{"mat":"GALEATA 4 KG","qty":0.25,"uom":"BUC"},{"mat":"CAPAC GALEATA 4 KG/8 KG","qty":0.25,"uom":"BUC"}],"CAS V 300G":[{"mat":"ETICHETA ALBA 65*99","qty":0.18082,"uom":"BUC"},{"mat":"CAPAC CUTII CARTON UNLCD 03","qty":0.17,"uom":"BUC"},{"mat":"ETICHETA CAS PROASPAT DE VACA 300G FATA DLF","qty":1.0,"uom":"BUC"}],"CAS V 800G":[{"mat":"DVS BS-20 (10buc/cutie)","qty":0.00032,"uom":"BUC"},{"mat":"CUTIE BRANZA BURDUF 2 KG","qty":0.1667,"uom":"BUC"},{"mat":"ETICHETA ALBA 65*99","qty":0.1667,"uom":"BUC"},{"mat":"ETICHETA CAS PROASPAT DE VACA 300G Fata PDA","qty":1.0,"uom":"BUC"},{"mat":"ETICHETA ALBA BIZERBA 77X58MM","qty":1.0,"uom":"BUC"}],"CAS V+O 300G":[{"mat":"ETICHETA ALBA 65*99","qty":0.26,"uom":"BUC"},{"mat":"ETICHETA ALBA BIZERBA 77X58MM","qty":0.06201,"uom":"BUC"},{"mat":"ETICHETA CAS DE VACA SI OAIE PDA 300G FATA","qty":1.0,"uom":"BUC"},{"mat":"ETICHETA CAS DE VACA SI OAIE PDA 300G SPATE","qty":1.0,"uom":"BUC"},{"mat":"CAPAC CUTII CARTON UNLCD 03","qty":0.16667,"uom":"BUC"}],"CAS V+O 800G":[{"mat":"DVS BS-20 (10buc/cutie)","qty":0.00032,"uom":"BUC"},{"mat":"CUTIE BRANZA BURDUF 2 KG","qty":0.1667,"uom":"BUC"},{"mat":"ETICHETA ALBA 65*99","qty":0.1667,"uom":"BUC"},{"mat":"ETICHETA CAS DE VACA SI OAIE PDA 300G FATA","qty":1.0,"uom":"BUC"},{"mat":"ETICHETA ALBA BIZERBA 77X58MM","qty":1.0,"uom":"BUC"}],"TV DEG 4KG":[{"mat":"GALEATA 4 KG","qty":0.258,"uom":"BUC"},{"mat":"CAPAC GALEATA 4 KG/8 KG","qty":0.25,"uom":"BUC"},{"mat":"ETICHETA TELEMEA USOARA DLF 4 KG 70x190mm fata","qty":0.25,"uom":"BUC"},{"mat":"ETICHETA TELEMEA USOARA DLF 4 KG 70x190mm spate","qty":0.25,"uom":"BUC"}],"TV":[{"mat":"PUNGA TERMO SB 230 X 400","qty":0.72953,"uom":"BUC"},{"mat":"ETICHETA ALBA BIZERBA 77X58MM","qty":0.7619,"uom":"BUC"},{"mat":"CUTIE BRANZA BURDUF 2 KG","qty":0.14436,"uom":"BUC"},{"mat":"ETICHETA ALBA 65*99","qty":0.72953,"uom":"BUC"}],"DLF 350G - 1500":[{"mat":"ETICHETA ALBA 65*99","qty":0.0181818,"uom":"BUC"},{"mat":"ETICHETA ALBA BIZERBA 77X58MM","qty":0.0045045,"uom":"BUC"},{"mat":"ETICHETA ALBA 65*99","qty":0.0045045,"uom":"BUC"},{"mat":"ETICHETA CARTON BB 350G DLF RO","qty":1.0,"uom":"BUC"},{"mat":"ETICHETA ALBA 65*99","qty":0.13,"uom":"BUC"},{"mat":"CAPAC CUTIE DLF BB 350G","qty":0.13,"uom":"BUC"},{"mat":"CUTIE BRANZA BURDUF OU","qty":0.126,"uom":"BUC"}],"PDA 300G - 2000":[{"mat":"ETICHETA ALBA BIZERBA 77X58MM","qty":0.006957036,"uom":"BUC"},{"mat":"ETICHETA ALBA BIZERBA 77X58MM","qty":0.00098472,"uom":"BUC"},{"mat":"ETICHETA ALBA 65*99","qty":0.00098472,"uom":"BUC"},{"mat":"ETICHETA BRANZA BURDUF SPATE PDA 300G","qty":1.06706,"uom":"BUC"},{"mat":"ETICHETA BRANZA BURDUF FATA PDA 350G (CLIPSAT)","qty":1.0,"uom":"BUC"},{"mat":"ETICHETA ALBA 65*99","qty":0.006957036,"uom":"BUC"},{"mat":"ETICHETA ALBA 65*99","qty":0.09154,"uom":"BUC"},{"mat":"CAPAC CUTII CARTON UNLCD 03","qty":0.12853,"uom":"BUC"}],"BB FRA - 600":[{"mat":"ETICHETA ALBA BIZERBA 77X58MM","qty":0.06762294,"uom":"BUC"},{"mat":"ETICHETA ALBA 65*99","qty":0.06762294,"uom":"BUC"},{"mat":"ETICHETA ALBA BIZERBA 77X58MM","qty":1.14286,"uom":"BUC"},{"mat":"CUTIE BRANZA BURDUF 2 KG","qty":1.0,"uom":"BUC"}],"BB 4X60DLF - 2000":[{"mat":"ETICHETA ALBA 65*99","qty":0.012801186,"uom":"BUC"},{"mat":"ETICHETA ALBA BIZERBA 77X58MM","qty":0.003036,"uom":"BUC"},{"mat":"ETICHETA ALBA 65*99","qty":0.003036,"uom":"BUC"},{"mat":"ETICHETA ALBA 65*99","qty":0.13,"uom":"BUC"},{"mat":"ETICHETA MINI BURDUF 4x60","qty":1.05805,"uom":"BUC"},{"mat":"ETICHETA ALBA CODURI DE BARE 30X60","qty":0.0045,"uom":"BUC"},{"mat":"CUTIE MINIBURDUF","qty":0.11,"uom":"BUC"},{"mat":"CAPAC MINIBURDUF","qty":0.11,"uom":"BUC"}],"BB PDA 2KG - 300":[{"mat":"ETICHETA ALBA BIZERBA 77X58MM","qty":0.02006928,"uom":"BUC"},{"mat":"ETICHETA ALBA 65*99","qty":0.02006928,"uom":"BUC"},{"mat":"CUTIE BRANZA BURDUF 2 KG","qty":0.125,"uom":"BUC"},{"mat":"ETICHETA BB PDA SPATE 2KG 95x155mm","qty":0.5,"uom":"BUC"},{"mat":"ETICHETA ALBA 65*99","qty":0.125,"uom":"BUC"},{"mat":"ETICHETA ALBA 65*99","qty":0.029698272,"uom":"BUC"}],"BB DLF 2KG - 300":[{"mat":"ETICHETA ALBA 65*99","qty":0.051074874,"uom":"BUC"},{"mat":"ETICHETA ALBA BIZERBA 77X58MM","qty":0.01392468,"uom":"BUC"},{"mat":"ETICHETA ALBA 65*99","qty":0.01392468,"uom":"BUC"},{"mat":"ETICHETA DLF UNIVERSALA NOUA VERSO","qty":0.625,"uom":"BUC"},{"mat":"CUTIE BRANZA BURDUF 2 KG","qty":0.12821,"uom":"BUC"}],"BB PDA 1KG - 240":[{"mat":"ETICHETA ALBA BIZERBA 77X58MM","qty":0.02006928,"uom":"BUC"},{"mat":"ETICHETA ALBA 65*99","qty":0.02006928,"uom":"BUC"},{"mat":"CUTIE BRANZA BURDUF 2 KG","qty":0.16667,"uom":"BUC"},{"mat":"ETICHETA ALBA 65*99","qty":0.029698272,"uom":"BUC"},{"mat":"ETICHETA BB PDA SPATE 1KG 125x95mm","qty":1.0,"uom":"BUC"},{"mat":"ETICHETA BB PDA FATA 1KG+2KG 125x95mm","qty":1.0,"uom":"BUC"},{"mat":"ETICHETA ALBA 65*99","qty":0.16667,"uom":"BUC"}],"BB DLF 1KG - 240":[{"mat":"ETICHETA ALBA 65*99","qty":0.051074874,"uom":"BUC"},{"mat":"ETICHETA ALBA BIZERBA 77X58MM","qty":0.01392468,"uom":"BUC"},{"mat":"ETICHETA ALBA 65*99","qty":0.01392468,"uom":"BUC"},{"mat":"ETICHETA DLF UNIVERSALA NOUA VERSO","qty":1.16,"uom":"BUC"},{"mat":"CUTIE BRANZA BURDUF 2 KG","qty":0.16667,"uom":"BUC"},{"mat":"ETICHETA BB DLF FATA 1KG+2KG 95x80mm transparent","qty":1.0,"uom":"BUC"}],"Smântână 32% 5kg":[{"mat":"GALEATA 4 KG","qty":0.2,"uom":"BUC"},{"mat":"CAPAC GALEATA 4 KG/8 KG","qty":0.2,"uom":"BUC"},{"mat":"ETICHETA SMANTANA CREMOASA 30% DLF 70X190mm FATA","qty":0.2,"uom":"BUC"},{"mat":"ETICHETA SMANTANA CREMOASA 30% DLF 70X190mm SPATE","qty":0.2,"uom":"BUC"}],"Smântână 50% 15kg":[{"mat":"GALEATA+CAPAC  18L","qty":0.069,"uom":"BUC"}]};
+
+function getCantitateAmbalata(prod, zi) {
+  let total = 0;
+  // Normal: ambalare zi → procZi = zi-1 (Marți-Vineri, zi=1..4)
+  if (zi >= 1 && zi <= 4) {
+    for (let p = 0; p < 12; p++) {
+      for (let row = 0; row < 2; row++) {
+        const sel = state.ambalareSelectii[p][zi-1][row];
+        if (sel && sel.format === prod && sel.cantitate) {
+          total += parseFloat(sel.cantitate) || 0;
+        }
+      }
+    }
+  }
+  // Luni din S.A. (zi=0)
+  if (zi === 0 && state.ambSA) {
+    for (let p = 0; p < 12; p++) {
+      if (!state.ambSA[p]) continue;
+      for (let row = 0; row < 2; row++) {
+        const sel = state.ambSA[p][row];
+        if (sel && sel.format === prod && sel.cantitate) {
+          total += parseFloat(sel.cantitate) || 0;
+        }
+      }
+    }
+  }
+  // SMÂNTÂNĂ aceeași zi (zi=0..4)
+  for (let p = 0; p < 12; p++) {
+    const prodProc = state.procesare[p] ? state.procesare[p][zi] : null;
+    if (!prodProc || !isSameDayAmbalare(prodProc)) continue;
+    for (let row = 0; row < 2; row++) {
+      const sel = state.ambalareSelectii[p][zi] ? state.ambalareSelectii[p][zi][row] : null;
+      if (sel && sel.format === prod && sel.cantitate) {
+        total += parseFloat(sel.cantitate) || 0;
+      }
+    }
+  }
+  return total;
+}
+
+function buildAmbalajePage() {
+  const tbody = document.getElementById('tbodyAmbalaje');
+  if (!tbody) return;
+  tbody.innerHTML = '';
+
+  const filterZi = document.getElementById('ambalajeZiFilter')?.value || 'all';
+  const ziList = filterZi === 'all' ? [0,1,2,3,4] : [parseInt(filterZi)];
+
+  const produsePlanificate = new Set();
+  for (let p = 0; p < 12; p++) {
+    for (let zi = 0; zi <= 4; zi++) {
+      if (!state.ambalareSelectii[p] || !state.ambalareSelectii[p][zi]) continue;
+      for (let row = 0; row < 2; row++) {
+        const sel = state.ambalareSelectii[p][zi][row];
+        if (sel && sel.format && sel.format !== '—' && sel.cantitate) produsePlanificate.add(sel.format);
+      }
+    }
+    if (state.ambSA && state.ambSA[p]) {
+      state.ambSA[p].forEach(sel => {
+        if (sel && sel.format !== '—' && sel.cantitate) produsePlanificate.add(sel.format);
+      });
+    }
+  }
+
+  const materialTotals = {};
+  produsePlanificate.forEach(prod => {
+    const reteta = RETETE_AMBALAJE[prod];
+    if (!reteta) return;
+    ziList.forEach(zi => {
+      const cant = getCantitateAmbalata(prod, zi);
+      if (cant <= 0) return;
+      reteta.forEach(item => {
+        const key = item.mat + '||' + item.uom;
+        if (!materialTotals[key]) materialTotals[key] = { mat: item.mat, uom: item.uom, ziQty: [0,0,0,0,0] };
+        materialTotals[key].ziQty[zi] += cant * item.qty;
+      });
+    });
+  });
+
+  if (Object.keys(materialTotals).length === 0) {
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:20px;color:var(--ink-muted)">Nicio cantitate planificată la ambalare. Completează secțiunea Ambalare din Planificare.</td></tr>';
+    return;
+  }
+
+  const groups = {};
+  Object.values(materialTotals).forEach(item => {
+    const m = item.mat.toUpperCase();
+    const type = (m.includes('GALEATA') || m.includes('CASEROLA') || m.includes('CUTIE') || m.includes('PUNGA')) ? 'Recipiente'
+      : m.includes('CAPAC') ? 'Capace'
+      : m.includes('ETICHETA') ? 'Etichete'
+      : 'Alte materiale';
+    if (!groups[type]) groups[type] = [];
+    groups[type].push(item);
+  });
+
+  const groupOrder = ['Recipiente', 'Capace', 'Etichete', 'Alte materiale'];
+  const groupBg = { 'Recipiente':'#EAF0F8','Capace':'#EEF5E8','Etichete':'#FBF5E8','Alte materiale':'#F5F5F0' };
+  const groupHdr = { 'Recipiente':'#1A4A7A','Capace':'#2D5016','Etichete':'#8A6A1A','Alte materiale':'#4A4A45' };
+
+  groupOrder.forEach(group => {
+    if (!groups[group]) return;
+    const trGrp = document.createElement('tr');
+    trGrp.innerHTML = `<td colspan="8" style="background:${groupHdr[group]};color:#fff;font-weight:700;font-size:11px;padding:6px 12px;text-transform:uppercase;letter-spacing:0.5px">${group}</td>`;
+    tbody.appendChild(trGrp);
+
+    groups[group].sort((a,b) => a.mat.localeCompare(b.mat)).forEach(item => {
+      const total = item.ziQty.reduce((s,v)=>s+v,0);
+      if (total < 0.001) return;
+      const fmt = v => v > 0.001 ? Math.ceil(v).toLocaleString('ro-RO') : '—';
+      const tr = document.createElement('tr');
+      tr.style.background = groupBg[group] || '#FFF';
+      const cols = filterZi === 'all'
+        ? [0,1,2,3,4].map(zi => `<td style="text-align:right;font-family:'JetBrains Mono',monospace;font-size:12px">${fmt(item.ziQty[zi])}</td>`).join('')
+        : `<td colspan="5" style="text-align:right;font-family:'JetBrains Mono',monospace;font-size:12px">${fmt(item.ziQty[parseInt(filterZi)])}</td>`;
+      tr.innerHTML = `
+        <td style="font-size:12px;padding:6px 10px">${item.mat}</td>
+        <td style="font-size:11px;color:var(--ink-muted);text-align:center">${item.uom}</td>
+        ${cols}
+        <td style="text-align:right;font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:var(--accent);background:var(--accent-pale)">${Math.ceil(total).toLocaleString('ro-RO')}</td>`;
+      tbody.appendChild(tr);
+    });
+  });
+}
+
 function showTab(tab) {
-  document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(el => {
+    el.classList.remove('active');
+  });
   document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
-  document.getElementById(`tab-${tab}`).classList.add('active');
-  document.getElementById(`tabBtn-${tab}`).classList.add('active');
+  const tabEl = document.getElementById(`tab-${tab}`);
+  if (tabEl) tabEl.classList.add('active');
+  const btnEl = document.getElementById(`tabBtn-${tab}`);
+  if (btnEl) btnEl.classList.add('active');
   if (tab === 'print') generatePrint();
   if (tab === 'monit') buildMonitDaySelector();
+  if (tab === 'ambalaje') buildAmbalajePage();
 }
 
 // ═══════════════════════════════════════════════════════════════
