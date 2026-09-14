@@ -3863,6 +3863,9 @@ function buildAmbalajePage() {
 
   console.log('Cu rețetă:', prodsWithReteta);
   console.log('Fără rețetă:', prodsWithoutReteta);
+  console.log('ziList:', ziList, 'filterZi:', filterZi);
+  console.log('materialTotals keys:', Object.keys(materialTotals).length);
+  if (Object.keys(materialTotals).length > 0) console.log('Sample:', Object.values(materialTotals)[0]);
 
   if (Object.keys(materialTotals).length === 0) {
     tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:30px">
@@ -3931,12 +3934,19 @@ function showTab(tab) {
   ['plan','print','monit','ambalaje'].forEach(t => {
     const el = document.getElementById('tab-' + t);
     const btn = document.getElementById('tabBtn-' + t);
-    if (el) { el.style.display = (t === tab) ? 'block' : 'none'; }
+    if (el) el.style.display = (t === tab) ? 'block' : 'none';
     if (btn) btn.classList.toggle('active', t === tab);
   });
   if (tab === 'print') generatePrint();
   if (tab === 'monit') buildMonitDaySelector();
-  if (tab === 'ambalaje') buildAmbalajePage();
+  if (tab === 'ambalaje') {
+    try { buildAmbalajePage(); }
+    catch(e) {
+      console.error('buildAmbalajePage error:', e);
+      const tbody = document.getElementById('tbodyAmbalaje');
+      if (tbody) tbody.innerHTML = `<tr><td colspan="8" style="padding:20px;color:red">Eroare: ${e.message}</td></tr>`;
+    }
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════
