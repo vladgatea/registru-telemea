@@ -3864,6 +3864,7 @@ function buildAmbalajePage() {
     prodsWithReteta.push(prod);
     ziList.forEach(zi => {
       const cant = getCantitateAmbalata(prod, zi);
+      if (cant > 0) console.log(`  ✓ ${prod} zi${zi}: ${cant}`);
       if (cant <= 0) return;
       reteta.forEach(item => {
         const key = item.mat + '||' + item.uom;
