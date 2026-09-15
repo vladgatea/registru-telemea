@@ -717,9 +717,6 @@
   <button class="tab-btn" onclick="showTab('monit')" id="tabBtn-monit">
     <span class="tab-icon">📊</span> Monitorizare
   </button>
-  <button class="tab-btn" onclick="showTab('ambalaje')" id="tabBtn-ambalaje">
-    <span class="tab-icon">📦</span> Necesar Ambalaje
-  </button>
 </nav>
 
 <!-- ═══════════════════════════════════ TAB: PLANIFICARE ═══════════════════════════════════ -->
@@ -768,6 +765,9 @@
       <div class="modal-actions">
         <button class="btn btn-secondary" onclick="closeNewWeekModal()">Anulează</button>
         <button class="btn btn-primary" onclick="createNewWeek()">Creează</button>
+        <p style="font-size:11px;color:var(--ink-muted);margin-top:8px;text-align:center">
+          ↩ Se va prelua automat ambalarea și burduful din Vineri săptămâna anterioară
+        </p>
       </div>
     </div>
   </div>
@@ -779,7 +779,7 @@
         <span class="stage-badge badge-procesare">Etapa 1</span>
         Procesare Lapte
       </div>
-      <div class="text-muted" style="font-size:11px">8 procesări/zi · Slot 7 rezervat BV</div>
+      <div class="text-muted" style="font-size:11px">12 procesări/zi</div>
     </div>
     <div class="planning-grid">
       <table class="planning-table" id="tblProcesare">
@@ -1072,27 +1072,6 @@
   </div>
 
 </div>
-<div id="tab-ambalaje" style="display:none;padding:20px 24px">
-  <div class="card">
-    <div class="card-header">
-      <div class="card-title">📦 Necesar Ambalaje</div>
-      <button class="btn btn-secondary btn-sm" onclick="buildAmbalajePage()">🔄 Recalculează</button>
-    </div>
-    <div style="padding:12px;overflow-x:auto">
-      <table class="monit-table">
-        <thead><tr>
-          <th style="min-width:260px;text-align:left">Material</th>
-          <th>UM</th><th>Luni</th><th>Marți</th><th>Miercuri</th><th>Joi</th><th>Vineri</th>
-          <th style="background:#EEF5E8;color:#2D5016">TOTAL</th>
-        </tr></thead>
-        <tbody id="tbodyAmbalaje">
-          <tr><td colspan="8" style="text-align:center;padding:20px;color:#888">Apasă 🔄 Recalculează</td></tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-</div>
-
 <div class="modal-overlay" id="setupModal">
   <div class="modal">
     <h2>⚙ Configurare Google Sheets</h2>
@@ -1207,13 +1186,14 @@ const ZILE = ['Luni', 'Marți', 'Miercuri', 'Joi', 'Vineri', 'Sâmbătă', 'Dumi
 
 const PROCESARI = [
   'Procesare 1','Procesare 2','Procesare 3','Procesare 4',
-  'Procesare 5','Procesare 6','Procesare 7','Procesare 8'
+  'Procesare 5','Procesare 6','Procesare 7','Procesare 8',
+  'Procesare 9','Procesare 10','Procesare 11','Procesare 12'
 ];
 
 const PRODUSE_PROCESARE = [
   '—',
   'TVPS','TV MOLD','BV','TOPS','TCPS',
-  'CAS V+O','CAS V',
+  'CAS V+O','CAS V','SMÂNTÂNĂ',
   'TV+O 4KG','TV+C 4KG',
   'CAS V MP','CAS V+O MP DLF',
   'CAS O 100%',
@@ -1229,41 +1209,48 @@ const PRODUSE_BURDUF = [
 
 // Date din sheet-ul Procesare — se încarcă din Google Sheets la pornire
 let PROCESARE_REF = {
-  // Materii prime cu formate multiple (lot = kg rezultat per procesare)
-  'TVPS':             {lot:650, buc:0,   lv:3000, lc:0, lo:0, ld:0, um:'KG'},
-  'TV MOLD':          {lot:600, buc:0,   lv:3000, lc:0, lo:0, ld:0, um:'KG'},
-  'BV':               {lot:550, buc:0,   lv:3000, lc:0, lo:0, ld:0, um:'KG'},
-  'TOPS':             {lot:600, buc:0,   lv:0,    lc:0, lo:3000, ld:0, um:'KG'},
-  'TCPS':             {lot:600, buc:0,   lv:0,    lc:3000, lo:0, ld:0, um:'KG'},
+  // Materii prime cu formate multiple — laptele e per procesare indiferent de ambalaj
+  'TVPS':             {lot:650, buc:0,   lv:3000, lc:0,    lo:0,   ld:0,    um:'KG'},
+  'TV MOLD':          {lot:600, buc:0,   lv:3000, lc:0,    lo:0,   ld:0,    um:'KG'},
+  'BV':               {lot:550, buc:0,   lv:3000, lc:0,    lo:0,   ld:0,    um:'KG'},
+  'TOPS':             {lot:600, buc:0,   lv:0,    lc:0,    lo:3000,ld:0,    um:'KG'},
+  'TCPS':             {lot:600, buc:0,   lv:0,    lc:3000, lo:0,   ld:0,    um:'KG'},
+  'CAS V':            {lot:195, buc:650, lv:3000, lc:0,    lo:0,   ld:0,    um:'BUC'},
+  'CAS V+O':          {lot:195, buc:650, lv:2950, lc:0,    lo:0,   ld:0,    um:'BUC'},
   // Produse finale directe
-  'TVPS 4KG':         {lot:650, buc:162, lv:3000, lc:0, lo:0, ld:0, um:'KG'},
-  'TVPS 800G':        {lot:650, buc:812, lv:3000, lc:0, lo:0, ld:0, um:'BUC'},
-  'TVPS 375 G':       {lot:650, buc:1733,lv:3000, lc:0, lo:0, ld:0, um:'BUC'},
-  'TV MOLD 4KG':      {lot:600, buc:150, lv:3000, lc:0, lo:0, ld:0, um:'KG'},
-  'TV MOLD 800G':     {lot:600, buc:750, lv:3000, lc:0, lo:0, ld:0, um:'BUC'},
-  'TV+O 4KG':         {lot:650, buc:162, lv:3000, lc:0, lo:0, ld:0, um:'KG'},
-  'TV+C 4KG':         {lot:650, buc:162, lv:2400, lc:600, lo:0, ld:0, um:'KG'},
-  'BV 5KG':           {lot:550, buc:110, lv:3000, lc:0, lo:0, ld:0, um:'KG'},
-  'BV 400G':          {lot:550, buc:1375,lv:3000, lc:0, lo:0, ld:0, um:'BUC'},
-  'TOPS 800G':        {lot:600, buc:750, lv:0,    lc:0, lo:3000, ld:0, um:'BUC'},
-  'TCPS 800G':        {lot:600, buc:750, lv:0,    lc:3000, lo:0, ld:0, um:'BUC'},
-  'CAS V':            {lot:195, buc:650, lv:3000, lc:0, lo:0, ld:0, um:'BUC'},
-  'CAS V 300G':       {lot:195, buc:650, lv:3000, lc:0, lo:0, ld:0, um:'BUC'},
-  'CAS V 800G':         {lot:128, buc:160, lv:3000, lc:0, lo:0, ld:0, um:'BUC'},
-  'CAS V MP':         {lot:450, buc:0,   lv:3000, lc:0, lo:0, ld:0, um:'KG'},
-  'CAS V+O':  {lot:195, buc:650, lv:3000, lc:0, lo:0, ld:0, um:'BUC'},
-  'TV DEG 4KG':       {lot:500, buc:0,   lv:1500, lc:0, lo:0, ld:1500, um:'KG'},
-  'TV':               {lot:650, buc:0,   lv:3000, lc:0, lo:0, ld:0, um:'KG'},
-  'CAS V+O':          {lot:195, buc:650, lv:3000, lc:0, lo:0, ld:0, um:'BUC'},
-  'CAS V+O 300G':     {lot:195, buc:650, lv:3000, lc:0, lo:0, ld:0, um:'BUC'},
-  'CAS V+O 800G':     {lot:128, buc:160, lv:3000, lc:0, lo:0, ld:0, um:'BUC'},
-  'CAS O 100%':       {lot:550, buc:0,   lv:0,    lc:0, lo:3000, ld:0, um:'KG'},
-  'CAS V+O MP DLF':   {lot:450, buc:0,   lv:2400, lc:0, lo:600, ld:0, um:'KG'},
+  'TVPS 4KG':         {lot:650, buc:162, lv:3000, lc:0,    lo:0,   ld:0,    um:'KG'},
+  'TVPS 800G':        {lot:650, buc:300, lv:3000, lc:0,    lo:0,   ld:0,    um:'BUC'},
+  'TVPS 375 G':       {lot:650, buc:650, lv:3000, lc:0,    lo:0,   ld:0,    um:'BUC'},
+  'TV MOLD 4KG':      {lot:600, buc:150, lv:3000, lc:0,    lo:0,   ld:0,    um:'KG'},
+  'TV MOLD 800G':     {lot:600, buc:300, lv:3000, lc:0,    lo:0,   ld:0,    um:'BUC'},
+  'TV+O 4KG':         {lot:650, buc:162, lv:2950, lc:0,    lo:0,   ld:0,    um:'KG'},
+  'TV+C 4KG':         {lot:650, buc:162, lv:2400, lc:600,  lo:0,   ld:0,    um:'KG'},
+  'BV 5KG':           {lot:550, buc:110, lv:3000, lc:0,    lo:0,   ld:0,    um:'KG'},
+  'BV 400G':          {lot:550, buc:1375,lv:3000, lc:0,    lo:0,   ld:0,    um:'BUC'},
+  'TOPS 800G':        {lot:600, buc:300, lv:0,    lc:0,    lo:3000,ld:0,    um:'BUC'},
+  'TCPS 800G':        {lot:600, buc:300, lv:0,    lc:3000, lo:0,   ld:0,    um:'BUC'},
+  'CAS V 300G':       {lot:195, buc:650, lv:3000, lc:0,    lo:0,   ld:0,    um:'BUC'},
+  'CAS V 800G':       {lot:128, buc:160, lv:3000, lc:0,    lo:0,   ld:0,    um:'BUC'},
+  'CAS V MP':         {lot:450, buc:0,   lv:3000, lc:0,    lo:0,   ld:0,    um:'KG'},
+  'CAS V+O 300G':     {lot:195, buc:650, lv:2950, lc:0,    lo:0,   ld:0,    um:'BUC'},
+  'CAS V+O 800G':     {lot:128, buc:160, lv:2950, lc:0,    lo:0,   ld:0,    um:'BUC'},
+  'CAS V+O MP DLF':   {lot:450, buc:0,   lv:2400, lc:0,    lo:600, ld:0,    um:'KG'},
+  'CAS O 100%':       {lot:550, buc:0,   lv:0,    lc:0,    lo:3000,ld:0,    um:'KG'},
+  'TV DEG 4KG':       {lot:500, buc:0,   lv:1500, lc:0,    lo:0,   ld:1500, um:'KG'},
+  'TV':               {lot:650, buc:0,   lv:3000, lc:0,    lo:0,   ld:0,    um:'KG'},
+  // Smântână — procesare prin degresare lapte integral
+  // 3000L integral → 300kg smântână 32% + 2700L lapte degresat
+  // 3000L integral → 200kg smântână 50% + 2800L lapte degresat
+  'SMÂNTÂNĂ':          {lot:300, buc:0,  lv:3000, lc:0,    lo:0,   ld:0,    um:'KG', degresare:true},
+  'Smântână 32% 5kg':  {lot:300, buc:60, lv:3000, lc:0,    lo:0,   ld:0,    um:'KG', degresare:true, pct:32, ldResult:2700},
+  'Smântână 32% 200g': {lot:300, buc:1500,lv:3000,lc:0,    lo:0,   ld:0,    um:'BUC',degresare:true, pct:32, ldResult:2700},
+  'Smântână 32% 400g': {lot:300, buc:750,lv:3000, lc:0,    lo:0,   ld:0,    um:'BUC',degresare:true, pct:32, ldResult:2700},
+  'Smântână 50% 15kg': {lot:200, buc:13, lv:3000, lc:0,    lo:0,   ld:0,    um:'KG', degresare:true, pct:50, ldResult:2800},
 };
 
 // Date din sheet-ul Ambalare — se încarcă din Google Sheets la pornire
 // AMBALARE_REF: { timp (ore per lot optim), lotOptim, um }
-const AMBALARE_REF = {
+let AMBALARE_REF = {
   'DLF 350G':           { timp: 3.0,  lotOptim: 1500, um: 'BUC' },
   'PDA 300G':           { timp: 4.0,  lotOptim: 2000, um: 'BUC' },
   'BB FRA':             { timp: 2.75, lotOptim: 600,  um: 'KG'  },
@@ -1292,14 +1279,19 @@ const AMBALARE_REF = {
   'TV DEG 4KG':         { timp: 1.16, lotOptim: 500,  um: 'KG'  },
   'TV':                 { timp: 1.16, lotOptim: 550,  um: 'KG'  },
   'BB 5X60DLF':         { timp: 4.0,  lotOptim: 1500, um: 'BUC' },
-  'TVPS 4KG':           { timp: 1.16, lotOptim: 162,  um: 'KG'  },
-  'TV MOLD 4KG':        { timp: 1.16, lotOptim: 150,  um: 'KG'  },
-  'TV+O 4KG':           { timp: 1.16, lotOptim: 162,  um: 'KG'  },
-  'TV+C 4KG':           { timp: 1.16, lotOptim: 162,  um: 'KG'  },
+  'TVPS 4KG':           { timp: 1.16, lotOptim: 650,  um: 'KG'  },
+  'TV MOLD 4KG':        { timp: 1.16, lotOptim: 600,  um: 'KG'  },
+  'TV+O 4KG':           { timp: 1.16, lotOptim: 650,  um: 'KG'  },
+  'TV+C 4KG':           { timp: 1.16, lotOptim: 650,  um: 'KG'  },
   'CAS O 100%':         { timp: 1.5,  lotOptim: 550,  um: 'KG'  },
   'CAS V+O MP DLF':     { timp: 1.25, lotOptim: 200,  um: 'KG'  },
   'BB PDA 1KG':         { timp: 1.6,  lotOptim: 240,  um: 'KG'  },
   'BB DLF 1KG':         { timp: 1.6,  lotOptim: 240,  um: 'KG'  },
+  // Smântână — loturi optime TBD
+  'Smântână 32% 5kg':   { timp: 1.0,  lotOptim: 300,  um: 'KG'  },
+  'Smântână 32% 200g':  { timp: 1.0,  lotOptim: 1500, um: 'BUC' },
+  'Smântână 32% 400g':  { timp: 1.0,  lotOptim: 750,  um: 'BUC' },
+  'Smântână 50% 15kg':  { timp: 1.0,  lotOptim: 200,  um: 'KG'  },
 };
 
 // Materii prime cu formate multiple de ambalare
@@ -1311,13 +1303,15 @@ const FORMATE_AMBALARE = {
   'BV':      ['—', 'BV 400G', 'BV 5KG'],
   'CAS V+O': ['—', 'CAS V+O 300G', 'CAS V+O 800G'],
   'CAS V':   ['—', 'CAS V 300G', 'CAS V 800G'],
+  'SMÂNTÂNĂ':['—', 'Smântână 32% 5kg', 'Smântână 32% 200g', 'Smântână 32% 400g', 'Smântână 50% 15kg'],
 };
 
 // Returnează materia primă din care provine un produs de procesare
 function getMateriePrivaKey(prod) {
   if (!prod || prod === '—') return null;
+  // Produsele care merg doar la tocare nu au format multiplu de ambalare
+  if (CAS_DOAR_TOCARE.includes(prod)) return null;
   // Sortăm cheile după lungime descrescător (cele mai specifice primul)
-  // ex: 'CAS V+O' înainte de 'CAS V' ca să nu prindă 'CAS V+O' ca 'CAS V'
   const keys = Object.keys(FORMATE_AMBALARE).sort((a, b) => b.length - a.length);
   for (const key of keys) {
     if (prod === key) return key;
@@ -1331,15 +1325,24 @@ let state = {
   week: 27,
   year: 2026,
   firstLot: '27173',
-  procesare: Array(8).fill(null).map(() => Array(7).fill('—')),  // [procesare][zi]
+  procesare: Array(12).fill(null).map(() => Array(7).fill('—')),  // [procesare][zi]
   burduf: Array(5).fill(null).map(() => Array(7).fill('—')),     // 5 randuri burduf
-  // ambalareSelectii[procIdx][zi][0/1] = { format, cantitate }
-  ambalareSelectii: Array(8).fill(null).map(() =>
+  // ambalareSelectii[procIdx][procZi][0/1] = { format, cantitate }
+  ambalareSelectii: Array(12).fill(null).map(() =>
     Array(7).fill(null).map(() => [
       { format: '—', cantitate: '' },
       { format: '—', cantitate: '' }
     ])
   ),
+  // ambSA[procIdx][0/1] = date preluate din Vineri S_prev → afișate la Ambalare Luni S_nou
+  ambSA: Array(12).fill(null).map(() => [
+    { format: '—', cantitate: '' },
+    { format: '—', cantitate: '' }
+  ]),
+  // burdufSA[randIdx] = produs burduf din Vineri S_prev → Etichetare Luni S_nou
+  burdufSA: Array(5).fill('—'),
+  // eticSA = produse de etichetat Luni S_nou (din Ambalare Vineri S_prev = Procesare Joi S_prev)
+  eticSA: { auto: [], formate: [] }, // auto = produse simple, formate = { format, cantitate }[]
   personal: {
     schimb1: Array(7).fill(null).map(() => ['—','—','—']),
     schimb2: Array(7).fill(null).map(() => ['—','—','—']),
@@ -1400,16 +1403,21 @@ function isCas(prod) {
   return prod && prod !== '—' && prod.toUpperCase().startsWith('CAS');
 }
 
+function isSameDayAmbalare(prod) {
+  return prod === 'SMÂNTÂNĂ';
+}
+
 function getAmbalareFromProcesare() {
   const amb = Array(7).fill(null).map(() => []);
-  for (let z = 1; z < 7; z++) {
-    for (let p = 0; p < 8; p++) {
+  // Ambalare Marți-Vineri (z=1..4): din procesarea zilei z-1 (exclusiv SMÂNTÂNĂ)
+  for (let z = 1; z <= 4; z++) {
+    for (let p = 0; p < 12; p++) {
       const prod = state.procesare[p][z - 1];
       if (!prod || prod === '—') continue;
       if (CAS_DOAR_TOCARE.includes(prod)) continue;
+      if (isSameDayAmbalare(prod)) continue;
       const matKey = getMateriePrivaKey(prod);
       if (matKey) {
-        // Produs cu formate multiple → folosim selecțiile editabile
         const sel = state.ambalareSelectii[p][z - 1];
         sel.forEach(s => { if (s.format && s.format !== '—') amb[z].push(s.format); });
       } else {
@@ -1417,27 +1425,59 @@ function getAmbalareFromProcesare() {
       }
     }
   }
+  // SMÂNTÂNĂ — ambalare în aceeași zi (z=0..4, Luni-Vineri)
+  for (let z = 0; z <= 4; z++) {
+    for (let p = 0; p < 12; p++) {
+      const prod = state.procesare[p][z];
+      if (!isSameDayAmbalare(prod)) continue;
+      const matKey = getMateriePrivaKey(prod);
+      if (matKey) {
+        const sel = state.ambalareSelectii[p][z];
+        sel.forEach(s => { if (s.format && s.format !== '—') amb[z].push(s.format); });
+      } else {
+        amb[z].push(prod);
+      }
+    }
+  }
+  // Luni (z=0): preluare din S.A.
+  if (state.ambSA) {
+    for (let p = 0; p < 12; p++) {
+      state.ambSA[p].forEach(s => { if (s.format && s.format !== '—') amb[0].push(s.format); });
+    }
+  }
   return amb;
 }
 
 function getBurdufEtichetareFromBurduf() {
-  // Burduf planificat zi X → Etichetare zi X+1
+  // Burduf zi X → Etichetare zi X+1, Luni..Joi (z=0..3) → Marți..Vineri
   const etic = Array(7).fill(null).map(() => []);
-  for (let z = 0; z < 6; z++) {
+  for (let z = 0; z <= 3; z++) {
     for (let r = 0; r < 5; r++) {
       const prod = state.burduf[r][z];
       if (prod && prod !== '—') etic[z + 1].push(prod + ' ★');
     }
+  }
+  // burdufSA (Burduf Vineri S_prev) → Etichetare Luni S_nou
+  if (state.burdufSA) {
+    state.burdufSA.forEach(prod => {
+      if (prod && prod !== '—') etic[0].push(prod + ' ★');
+    });
   }
   return etic;
 }
 
 function getEtichetareFromAmbalare() {
   const amb = getAmbalareFromProcesare();
-  // Etichetare[zi] = ce a fost la ambalare[zi-1]
+  // Etichetare zi X = Ambalare zi X-1
+  // Marți(1)=Ambalare Luni(0 SA), Miercuri(2)=Ambalare Marți(1), ..., Vineri(4)=Ambalare Joi(3)
   const etic = Array(7).fill(null).map(() => []);
-  for (let z = 1; z < 7; z++) {
+  for (let z = 1; z <= 4; z++) {
     etic[z].push(...amb[z - 1]);
+  }
+  // eticSA: Etichetare Luni S_nou = Ambalare Vineri S_prev (Procesare Joi S_prev)
+  if (state.eticSA) {
+    state.eticSA.auto.forEach(prod => { if (prod && prod !== '—') etic[0].push(prod); });
+    state.eticSA.formate.forEach(s => { if (s.format && s.format !== '—') etic[0].push(s.format); });
   }
   return etic;
 }
@@ -1500,7 +1540,7 @@ function calcTimpAmbalareZi(zi) {
 function getTocareFromProcesare() {
   const toc = Array(7).fill(null).map(() => []);
   for (let z = 1; z < 7; z++) {
-    for (let p = 0; p < 8; p++) {
+    for (let p = 0; p < 12; p++) {
       const prod = state.procesare[p][z - 1];
       if (isCas(prod)) toc[z].push({ prod, slot: p });
     }
@@ -1607,7 +1647,7 @@ function buildProcesareTable() {
     const tdLabel = document.createElement('td');
     tdLabel.className = 'row-label';
     tdLabel.textContent = proc;
-    if (pi === 6) tdLabel.style.cssText += 'color:var(--info);font-weight:600'; // slot 7 BV
+
     tr.appendChild(tdLabel);
 
     ZILE.forEach((_, zi) => {
@@ -1659,6 +1699,35 @@ function updateAutoTables() {
   buildMonitDaySelector();
 }
 
+function applyFormat2Visibility(body) {
+  for (let p = 0; p < 8; p++) {
+    for (let zi = 0; zi <= 4; zi++) {
+      const procZi = zi === 0 ? 0 : zi - 1;
+      const sel0 = state.ambalareSelectii[p][procZi][0];
+      const cant = parseFloat(sel0.cantitate) || 0;
+      const refAmbF1 = AMBALARE_REF[sel0.format] || {};
+      let prod = zi === 0 ? null : state.procesare[p][procZi];
+      const refMaterie = PROCESARE_REF[prod || ''] || {};
+      const lotMaterie = refAmbF1.um === 'BUC'
+        ? (refMaterie.buc || refMaterie.lot || 0)
+        : (refMaterie.lot || 0);
+      if (!lotMaterie || cant < lotMaterie) continue;
+      const allRows = body.querySelectorAll('tr');
+      allRows.forEach(tr => {
+        const label = tr.querySelector('.row-label');
+        if (label && label.textContent === `P${p+1} Format 2`) {
+          const cells = tr.querySelectorAll('td');
+          if (cells[zi + 1]) { // +1 pentru label col
+            cells[zi + 1].innerHTML = '<span style="color:var(--accent);font-size:11px">✓</span>';
+            cells[zi + 1].style.background = 'var(--accent-pale)';
+            cells[zi + 1].style.pointerEvents = 'none';
+          }
+        }
+      });
+    }
+  }
+}
+
 function buildAmbalareTable() {
   const head = document.getElementById('tblAmbHead');
   const body = document.getElementById('tblAmbBody');
@@ -1678,6 +1747,7 @@ function buildAmbalareTable() {
     ZILE.forEach((_, zi) => {
       const td = document.createElement('td');
       td.className = 'auto-cell';
+      if (zi >= 5) { td.textContent = ''; tr.appendChild(td); return; }
       td.textContent = amb[zi][r] || '';
       tr.appendChild(td);
     });
@@ -1685,16 +1755,17 @@ function buildAmbalareTable() {
   }
 
   // ── Rânduri editabile pentru formate multiple ──
-  // Afișăm 2 rânduri per slot de procesare care are format multiplu
-  // Coloana zi = ambalarea din ziua zi → produsul e procesat în zi-1
-  for (let p = 0; p < 8; p++) {
-    // Verificăm dacă în vreo zi procesare zi-1 are produs cu formate multiple
-    const hasMultInAnyDay = ZILE.some((_, zi) => {
-      if (zi === 0) return false;
+  for (let p = 0; p < 12; p++) {
+    const hasLuniSel = (state.ambSA && state.ambSA[p] && state.ambSA[p].some(s => s.format !== '—')) ||
+      isSameDayAmbalare(state.procesare[p][0]);
+    const hasMultMartiVineri = [1,2,3,4].some(zi => {
       const prod = state.procesare[p][zi - 1];
-      return prod && prod !== '—' && getMateriePrivaKey(prod);
+      return prod && prod !== '—' && getMateriePrivaKey(prod) && !isSameDayAmbalare(prod);
+    }) || [0,1,2,3,4].some(zi => {
+      const prod = state.procesare[p][zi];
+      return isSameDayAmbalare(prod);
     });
-    if (!hasMultInAnyDay) continue;
+    if (!hasLuniSel && !hasMultMartiVineri) continue;
 
     for (let row = 0; row < 2; row++) {
       const tr = document.createElement('tr');
@@ -1708,85 +1779,43 @@ function buildAmbalareTable() {
         const td = document.createElement('td');
         td.style.padding = '3px 4px';
 
-        if (zi === 0) {
-          // Luni nu are ambalare editabilă (nu există zi-1)
-          td.innerHTML = '';
+        // Sâmbătă/Duminică — gol
+        if (zi >= 5) { tr.appendChild(td); return; }
+
+        // SMÂNTÂNĂ: ambalare aceeași zi — verificăm slotul p în ziua zi
+        const prodSameDayCheck = state.procesare[p][zi];
+        if (isSameDayAmbalare(prodSameDayCheck)) {
+          const matKeySameDay = getMateriePrivaKey(prodSameDayCheck);
+          if (matKeySameDay) {
+            buildAmbCell(td, p, zi, row, FORMATE_AMBALARE[matKeySameDay], state.ambalareSelectii[p][zi][row], body, zi);
+          }
           tr.appendChild(td);
           return;
         }
 
-        const prod = state.procesare[p][zi - 1]; // produsul procesat ieri
+        // Luni (zi=0): selecție preluată din S.A. — stocată în state.ambSA
+        if (zi === 0) {
+          const sel = state.ambSA && state.ambSA[p] ? state.ambSA[p][row] : { format: '—', cantitate: '' };
+          let matKeyLuni = null;
+          if (sel && sel.format !== '—') {
+            for (const [key, vals] of Object.entries(FORMATE_AMBALARE)) {
+              if (vals.includes(sel.format)) { matKeyLuni = key; break; }
+            }
+          }
+          if (matKeyLuni) {
+            buildAmbCellSA(td, p, row, FORMATE_AMBALARE[matKeyLuni], sel, body);
+          } else if (row === 0) {
+            td.innerHTML = '<span style="font-size:9px;color:var(--ink-muted);padding:2px">↩ S.A.</span>';
+          }
+          tr.appendChild(td);
+          return;
+        }
+
+        // Marți-Vineri (zi=1..4) — produse normale din procesarea zi-1
+        const prod = state.procesare[p][zi - 1];
         const matKey = prod && prod !== '—' ? getMateriePrivaKey(prod) : null;
-
-        if (matKey) {
-          const formate = FORMATE_AMBALARE[matKey];
-          const sel = state.ambalareSelectii[p][zi - 1][row];
-          const refFormat = AMBALARE_REF[sel.format] || {};
-          const umDisplay = refFormat.um || 'BUC';
-
-          const wrapper = document.createElement('div');
-          wrapper.style.cssText = 'display:flex;gap:3px;align-items:center;flex-wrap:wrap';
-
-          const selectEl = document.createElement('select');
-          selectEl.className = 'cell-select';
-          selectEl.style.cssText = 'font-size:11px;flex:1;min-width:90px';
-          formate.forEach(f => {
-            const opt = document.createElement('option');
-            opt.value = f; opt.textContent = f;
-            if (f === sel.format) opt.selected = true;
-            selectEl.appendChild(opt);
-          });
-
-          const umLabel = document.createElement('span');
-          umLabel.style.cssText = 'font-size:10px;color:var(--ink-muted);min-width:20px';
-          umLabel.textContent = umDisplay;
-
-          const cantInput = document.createElement('input');
-          cantInput.type = 'text';
-          cantInput.inputMode = 'numeric';
-          cantInput.placeholder = umDisplay;
-          cantInput.value = sel.cantitate || '';
-          cantInput.style.cssText = 'width:52px;font-size:11px;border:1px solid var(--border);border-radius:3px;padding:2px 4px;font-family:"JetBrains Mono",monospace;text-align:right';
-
-          selectEl.onchange = (e) => {
-            state.ambalareSelectii[p][zi - 1][row].format = e.target.value;
-            const newRef = AMBALARE_REF[e.target.value] || {};
-            umLabel.textContent = newRef.um || 'BUC';
-            cantInput.placeholder = newRef.um || 'BUC';
-            buildEtichetareTable();
-            updateCentralizare();
-            const timpZi = calcTimpAmbalareZi(zi);
-            const timpCells = body.querySelectorAll('.timp-total');
-            if (timpCells[zi]) timpCells[zi].textContent = timpZi > 0 ? timpZi.toFixed(2) : '—';
-          };
-
-          cantInput.oninput = (e) => {
-            state.ambalareSelectii[p][zi - 1][row].cantitate = e.target.value;
-            const timpZi = calcTimpAmbalareZi(zi);
-            const timpCells = body.querySelectorAll('.timp-total');
-            if (timpCells[zi]) timpCells[zi].textContent = timpZi > 0 ? timpZi.toFixed(2) : '—';
-          };
-
-          wrapper.appendChild(selectEl);
-          wrapper.appendChild(cantInput);
-          wrapper.appendChild(umLabel);
-          // Lot optim hint
-          const lotHint = document.createElement('div');
-          lotHint.style.cssText = 'font-size:9px;color:var(--ink-muted);line-height:1.2;margin-top:1px;width:100%';
-          const lotVal = refFormat.lotOptim ? `Optim: ${refFormat.lotOptim} ${refFormat.um||'BUC'}` : '';
-          lotHint.textContent = lotVal;
-          lotHint.id = `lotHint_${p}_${zi}_${row}`;
-          // Update hint when format changes
-          const origOnchange = selectEl.onchange;
-          selectEl.onchange = (e) => {
-            origOnchange(e);
-            const newRef = AMBALARE_REF[e.target.value] || {};
-            lotHint.textContent = newRef.lotOptim ? `Optim: ${newRef.lotOptim} ${newRef.um||'BUC'}` : '';
-          };
-          wrapper.appendChild(lotHint);
-          td.appendChild(wrapper);
-        } else {
-          td.innerHTML = '';
+        if (matKey && !isSameDayAmbalare(prod)) {
+          buildAmbCell(td, p, zi - 1, row, FORMATE_AMBALARE[matKey], state.ambalareSelectii[p][zi - 1][row], body, zi);
         }
         tr.appendChild(td);
       });
@@ -1804,11 +1833,116 @@ function buildAmbalareTable() {
   ZILE.forEach((_, zi) => {
     const td = document.createElement('td');
     td.className = 'timp-cell timp-total';
+    if (zi >= 5) { trTimp.appendChild(td); return; }
     const timp = calcTimpAmbalareZi(zi);
     td.textContent = timp > 0 ? timp.toFixed(2) : '—';
     trTimp.appendChild(td);
   });
   body.appendChild(trTimp);
+  applyFormat2Visibility(body);
+}
+
+// Celulă ambalare specială pentru Luni S.A. — salvează în state.ambSA
+function buildAmbCellSA(td, p, row, formate, sel, body) {
+  const refFormat = AMBALARE_REF[sel.format] || {};
+  const umDisplay = refFormat.um || 'BUC';
+  const wrapper = document.createElement('div');
+  wrapper.style.cssText = 'display:flex;gap:3px;align-items:center;flex-wrap:wrap';
+  const selectEl = document.createElement('select');
+  selectEl.className = 'cell-select';
+  selectEl.style.cssText = 'font-size:11px;flex:1;min-width:90px';
+  formate.forEach(f => {
+    const opt = document.createElement('option');
+    opt.value = f; opt.textContent = f;
+    if (f === sel.format) opt.selected = true;
+    selectEl.appendChild(opt);
+  });
+  const umLabel = document.createElement('span');
+  umLabel.style.cssText = 'font-size:10px;color:var(--ink-muted);min-width:20px';
+  umLabel.textContent = umDisplay;
+  const cantInput = document.createElement('input');
+  cantInput.type = 'text'; cantInput.inputMode = 'numeric';
+  cantInput.placeholder = umDisplay; cantInput.value = sel.cantitate || '';
+  cantInput.style.cssText = 'width:52px;font-size:11px;border:1px solid var(--border);border-radius:3px;padding:2px 4px;font-family:"JetBrains Mono",monospace;text-align:right';
+  const lotHint = document.createElement('div');
+  lotHint.style.cssText = 'font-size:9px;color:var(--ink-muted);line-height:1.2;margin-top:1px;width:100%';
+  lotHint.textContent = refFormat.lotOptim ? `Optim: ${refFormat.lotOptim} ${refFormat.um||'BUC'}` : '';
+  selectEl.onchange = (e) => {
+    state.ambSA[p][row].format = e.target.value;
+    const newRef = AMBALARE_REF[e.target.value] || {};
+    umLabel.textContent = newRef.um || 'BUC';
+    cantInput.placeholder = newRef.um || 'BUC';
+    lotHint.textContent = newRef.lotOptim ? `Optim: ${newRef.lotOptim} ${newRef.um||'BUC'}` : '';
+    buildEtichetareTable(); updateCentralizare(); buildAmbalareTable();
+  };
+  // oninput: salvează fără rebuild (păstrează focusul)
+  cantInput.oninput = (e) => { state.ambSA[p][row].cantitate = e.target.value; };
+  // onblur: rebuild după ce termini de scris
+  cantInput.onblur = () => { buildEtichetareTable(); updateCentralizare(); };
+  wrapper.appendChild(selectEl); wrapper.appendChild(cantInput);
+  wrapper.appendChild(umLabel); wrapper.appendChild(lotHint);
+  td.appendChild(wrapper);
+}
+
+function buildAmbCell(td, p, procZi, row, formate, sel, body, ziAfisare) {
+  const refFormat = AMBALARE_REF[sel.format] || {};
+  const umDisplay = refFormat.um || 'BUC';
+  const wrapper = document.createElement('div');
+  wrapper.style.cssText = 'display:flex;gap:3px;align-items:center;flex-wrap:wrap';
+  const selectEl = document.createElement('select');
+  selectEl.className = 'cell-select';
+  selectEl.style.cssText = 'font-size:11px;flex:1;min-width:90px';
+  formate.forEach(f => {
+    const opt = document.createElement('option');
+    opt.value = f; opt.textContent = f;
+    if (f === sel.format) opt.selected = true;
+    selectEl.appendChild(opt);
+  });
+  const umLabel = document.createElement('span');
+  umLabel.style.cssText = 'font-size:10px;color:var(--ink-muted);min-width:20px';
+  umLabel.textContent = umDisplay;
+  const cantInput = document.createElement('input');
+  cantInput.type = 'text'; cantInput.inputMode = 'numeric';
+  cantInput.placeholder = umDisplay; cantInput.value = sel.cantitate || '';
+  cantInput.style.cssText = 'width:52px;font-size:11px;border:1px solid var(--border);border-radius:3px;padding:2px 4px;font-family:"JetBrains Mono",monospace;text-align:right';
+  const lotHint = document.createElement('div');
+  lotHint.style.cssText = 'font-size:9px;color:var(--ink-muted);line-height:1.2;margin-top:1px;width:100%';
+  lotHint.textContent = refFormat.lotOptim ? `Optim: ${refFormat.lotOptim} ${refFormat.um||'BUC'}` : '';
+  selectEl.onchange = (e) => {
+    state.ambalareSelectii[p][procZi][row].format = e.target.value;
+    const newRef = AMBALARE_REF[e.target.value] || {};
+    umLabel.textContent = newRef.um || 'BUC';
+    cantInput.placeholder = newRef.um || 'BUC';
+    lotHint.textContent = newRef.lotOptim ? `Optim: ${newRef.lotOptim} ${newRef.um||'BUC'}` : '';
+    buildEtichetareTable(); updateCentralizare();
+    const timpZi = calcTimpAmbalareZi(ziAfisare);
+    const timpCells = body.querySelectorAll('.timp-total');
+    if (timpCells[ziAfisare]) timpCells[ziAfisare].textContent = timpZi > 0 ? timpZi.toFixed(2) : '—';
+    applyFormat2Visibility(body);
+  };
+  // oninput: salvează valoarea fără rebuild (păstrează focusul)
+  cantInput.oninput = (e) => {
+    state.ambalareSelectii[p][procZi][row].cantitate = e.target.value;
+    const timpZi = calcTimpAmbalareZi(ziAfisare);
+    const timpCells = body.querySelectorAll('.timp-total');
+    if (timpCells[ziAfisare]) timpCells[ziAfisare].textContent = timpZi > 0 ? timpZi.toFixed(2) : '—';
+  };
+  // onblur: rebuild după ce utilizatorul termină de scris
+  cantInput.onblur = (e) => {
+    if (row === 0) {
+      const cant = parseFloat(e.target.value) || 0;
+      const refAmbF1 = AMBALARE_REF[state.ambalareSelectii[p][procZi][0].format] || {};
+      const refMat = PROCESARE_REF[state.procesare[p] ? state.procesare[p][procZi] || '' : ''] || {};
+      const lotMat = refAmbF1.um === 'BUC' ? (refMat.buc || refMat.lot || 0) : (refMat.lot || 0);
+      if (lotMat > 0 && cant >= lotMat) {
+        state.ambalareSelectii[p][procZi][1] = { format: '—', cantitate: '' };
+      }
+    }
+    buildEtichetareTable(); updateCentralizare(); buildAmbalareTable();
+  };
+  wrapper.appendChild(selectEl); wrapper.appendChild(cantInput);
+  wrapper.appendChild(umLabel); wrapper.appendChild(lotHint);
+  td.appendChild(wrapper);
 }
 
 function buildEtichetareTable() {
@@ -1905,23 +2039,35 @@ function buildPersonalSection() {
 }
 
 function updateCentralizare() {
-  // Lapte table
   const tbodyL = document.getElementById('tbodyLapte');
   tbodyL.innerHTML = '';
   let totLv=0, totLc=0, totLo=0, totLd=0;
 
   ZILE.forEach((z, zi) => {
     let lv=0, lc=0, lo=0, ld=0;
-    for (let p = 0; p < 8; p++) {
+    let ldProduced=0; // lapte degresat produs prin degresare smântână
+    for (let p = 0; p < 12; p++) {
       const prod = state.procesare[p][zi];
-      if (prod && prod !== '—' && PROCESARE_REF[prod]) {
-        const ref = PROCESARE_REF[prod];
-        lv += ref.lv; lc += ref.lc; lo += ref.lo; ld += ref.ld;
+      if (!prod || prod === '—') continue;
+      const ref = PROCESARE_REF[prod];
+      if (!ref) continue;
+      lv += Number(ref.lv) || 0;
+      lc += Number(ref.lc) || 0;
+      lo += Number(ref.lo) || 0;
+      ld += Number(ref.ld) || 0;
+      // Degresare smântână → produce lapte degresat
+      if (ref.degresare && ref.ldResult) {
+        ldProduced += Number(ref.ldResult);
       }
     }
-    totLv+=lv; totLc+=lc; totLo+=lo; totLd+=ld;
+    // Scădem laptele degresat produs din degresare
+    const ldNet = Math.max(0, ld - ldProduced);
+    totLv+=lv; totLc+=lc; totLo+=lo; totLd+=ldNet;
     const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${z}</td><td>${lv||'—'}</td><td>${lc||'—'}</td><td>${lo||'—'}</td><td>${ld||'—'}</td><td><strong>${lv+lc+lo+ld||'—'}</strong></td>`;
+    const ldDisplay = ldNet !== ld && ldProduced > 0
+      ? `${ldNet} <span style="font-size:10px;color:var(--accent)">(-${ldProduced} din deg.)</span>`
+      : (ldNet||'—');
+    tr.innerHTML = `<td>${z}</td><td>${lv||'—'}</td><td>${lc||'—'}</td><td>${lo||'—'}</td><td>${ldDisplay}</td><td><strong>${(lv+lc+lo+ldNet)||'—'}</strong></td>`;
     tbodyL.appendChild(tr);
   });
   const trTot = document.createElement('tr');
@@ -1933,7 +2079,7 @@ function updateCentralizare() {
   const tbodyR = document.getElementById('tbodyRezultat');
   tbodyR.innerHTML = '';
   const counter = {};
-  for (let p = 0; p < 8; p++) {
+  for (let p = 0; p < 12; p++) {
     for (let z = 0; z < 7; z++) {
       const prod = state.procesare[p][z];
       if (prod && prod !== '—') {
@@ -1943,9 +2089,10 @@ function updateCentralizare() {
   }
   Object.entries(counter).forEach(([prod, cnt]) => {
     const ref = PROCESARE_REF[prod];
-    const cantitate = ref ? (ref.buc > 0 ? ref.buc * cnt : ref.lot * cnt) : '—';
+    const cantitate = ref && ref.lot > 0 ? ref.lot * cnt : '—';
+    const extra = ref?.degresare ? ` <span style="font-size:10px;color:var(--ink-muted)">(+lapte deg.)</span>` : '';
     const tr = document.createElement('tr');
-    tr.innerHTML = `<td style="text-align:left">${prod}</td><td>${ref?.um||'KG'}</td><td>${cantitate}</td><td>${cnt}</td>`;
+    tr.innerHTML = `<td style="text-align:left">${prod}${extra}</td><td>KG</td><td>${cantitate}</td><td>${cnt}</td>`;
     tbodyR.appendChild(tr);
   });
   const totalProc = Object.values(counter).reduce((a,b)=>a+b, 0);
@@ -2113,8 +2260,8 @@ function buildMonitProc(zi, dayLabel) {
   const tbody = document.getElementById('tbodyMonitProc');
   tbody.innerHTML = '';
   const rows = [];
-  for (let p = 0; p < 8; p++) {
-    const prod = state.procesare[p][zi];
+  for (let p = 0; p < 12; p++) {
+      const prod = state.procesare[p][zi];
     if (prod && prod !== '—') rows.push({ slot: `Procesare ${p+1}`, planificat: prod, key: `proc_${p}_${zi}` });
   }
   if (rows.length === 0) {
@@ -2192,10 +2339,11 @@ function buildMonitAmb(zi, dayLabel) {
   const rows = [];
 
   if (zi > 0) {
-    for (let p = 0; p < 8; p++) {
+    for (let p = 0; p < 12; p++) {
       const prod = state.procesare[p][zi - 1];
       if (!prod || prod === '—') continue;
       if (CAS_DOAR_TOCARE.includes(prod)) continue;
+      if (isSameDayAmbalare(prod)) continue;
 
       const matKey = getMateriePrivaKey(prod);
 
@@ -2290,7 +2438,7 @@ function buildMonitEtic(zi, dayLabel) {
 
   // Din ambalare (procesare -2 zile) → afișăm formatele selectate, nu materia primă
   if (zi > 1) {
-    for (let p = 0; p < 8; p++) {
+    for (let p = 0; p < 12; p++) {
       const prod = state.procesare[p][zi - 2];
       if (!prod || prod === '—') continue;
       const matKey = getMateriePrivaKey(prod);
@@ -2412,7 +2560,7 @@ function buildMonitToc(zi, dayLabel) {
   // Tocare zi = CAS procesate zi-1
   const rows = [];
   if (zi > 0) {
-    for (let p = 0; p < 8; p++) {
+    for (let p = 0; p < 12; p++) {
       const prod = state.procesare[p][zi - 1];
       if (isCas(prod)) {
         rows.push({ slot: `Proc. ${p+1}`, prod, key: `toc_${p}_${zi}` });
@@ -2534,11 +2682,51 @@ function generatePrint() {
         ${ZILE.map((z,i)=>`<th>${z}<br><span style="font-weight:400;font-size:8px">${formatDate(dates[i])}</span></th>`).join('')}
       </tr></thead>
       <tbody>
-        ${Array(Math.max(...amb.map(a=>a.length),1)).fill(0).map((_,r)=>`
-          <tr>
-            <td class="label-col">${r===0?'Ambalare':''}</td>
-            ${ZILE.map((_,zi)=>`<td class="amb-col">${amb[zi][r]||''}</td>`).join('')}
-          </tr>`).join('')}
+        ${(() => {
+          // Rânduri pentru produse simple (auto)
+          const ambRows = [];
+          const maxAuto = Math.max(...amb.map(a=>a.length), 0);
+          for (let r = 0; r < maxAuto; r++) {
+            ambRows.push(`<tr>
+              <td class="label-col">${r===0?'Ambalare':''}</td>
+              ${ZILE.map((_,zi)=>`<td class="amb-col">${amb[zi][r]||''}</td>`).join('')}
+            </tr>`);
+          }
+          // Rânduri pentru formate multiple cu cantitate
+          for (let p = 0; p < 8; p++) {
+            const hasMultInAnyDay = ZILE.some((_, zi) => {
+              if (zi === 0) return false;
+              const prod = state.procesare[p][zi-1];
+              return prod && prod !== '—' && getMateriePrivaKey(prod);
+            });
+            if (!hasMultInAnyDay) continue;
+            for (let row = 0; row < 2; row++) {
+              const hasContent = ZILE.some((_, zi) => {
+                if (zi === 0) return false;
+                const prod = state.procesare[p][zi-1];
+                if (!prod || prod === '—' || !getMateriePrivaKey(prod)) return false;
+                const sel = state.ambalareSelectii[p][zi-1][row];
+                return sel && sel.format !== '—';
+              });
+              if (!hasContent) continue;
+              ambRows.push(`<tr>
+                <td class="label-col" style="color:#1A4A7A;font-size:9px">P${p+1} F${row+1}</td>
+                ${ZILE.map((_, zi) => {
+                  if (zi === 0) return '<td></td>';
+                  const prod = state.procesare[p][zi-1];
+                  const matKey = prod && prod !== '—' ? getMateriePrivaKey(prod) : null;
+                  if (!matKey) return '<td></td>';
+                  const sel = state.ambalareSelectii[p][zi-1][row];
+                  if (!sel || sel.format === '—') return '<td class="amb-col"></td>';
+                  const refAmb = AMBALARE_REF[sel.format] || {};
+                  const cantStr = sel.cantitate ? ` · ${sel.cantitate} ${refAmb.um||''}` : '';
+                  return `<td class="amb-col" style="font-size:9px"><strong>${sel.format}</strong>${cantStr}</td>`;
+                }).join('')}
+              </tr>`);
+            }
+          }
+          return ambRows.join('');
+        })()}
         <tr class="timp-row">
           <td class="label-col" style="font-weight:700;background:var(--info-pale);color:var(--info)">Timp (h)</td>
           ${ZILE.map((_,zi)=>`<td style="background:var(--info-pale);color:var(--info);font-weight:700">${calcTimpAmbalareZi(zi)>0?calcTimpAmbalareZi(zi).toFixed(2):''}</td>`).join('')}
@@ -2553,11 +2741,70 @@ function generatePrint() {
         ${ZILE.map((z,i)=>`<th>${z}<br><span style="font-weight:400;font-size:8px">${formatDate(dates[i])}</span></th>`).join('')}
       </tr></thead>
       <tbody>
-        ${Array(Math.max(...combined.map(a=>a.length),1)).fill(0).map((_,r)=>`
-          <tr>
-            <td class="label-col">${r===0?'Etichetare':''}</td>
-            ${ZILE.map((_,zi)=>`<td class="etic-col" style="${combined[zi][r]?.includes('★')?'color:var(--warn)':''}">${(combined[zi][r]||'').replace(' ★','')}</td>`).join('')}
-          </tr>`).join('')}
+        ${(() => {
+          const eticRows = [];
+
+          // Produse simple din ambalare (auto) — +1 zi față de ambalare = +2 față de procesare
+          const eticAuto = Array(7).fill(null).map(() => []);
+          for (let zi = 2; zi < 7; zi++) {
+            for (let p = 0; p < 12; p++) {
+      const prod = state.procesare[p][zi - 2];
+              if (!prod || prod === '—' || CAS_DOAR_TOCARE.includes(prod) || getMateriePrivaKey(prod)) continue;
+              eticAuto[zi].push(prod);
+            }
+          }
+          // Burduf (+1 zi)
+          const eticBurduf = getBurdufEtichetareFromBurduf();
+          const maxAuto = Math.max(...eticAuto.map(a => a.length), ...eticBurduf.map(a => a.length), 0);
+          for (let r = 0; r < maxAuto; r++) {
+            eticRows.push(`<tr>
+              <td class="label-col">${r===0?'Etichetare':''}</td>
+              ${ZILE.map((_,zi) => {
+                const autoVal = eticAuto[zi][r] || '';
+                const burdufVal = (eticBurduf[zi][r] || '').replace(' ★','');
+                const val = autoVal || burdufVal;
+                const isBurduf = !autoVal && !!burdufVal;
+                return `<td class="etic-col" style="${isBurduf?'color:var(--warn)':''}">${val}</td>`;
+              }).join('')}
+            </tr>`);
+          }
+
+          // Formate multiple — +2 zile față de procesare (ambalare +1, etichetare +1)
+          for (let p = 0; p < 8; p++) {
+            const hasMultInAnyDay = ZILE.some((_, zi) => {
+              if (zi < 2) return false;
+              const prod = state.procesare[p][zi-2];
+              return prod && prod !== '—' && getMateriePrivaKey(prod);
+            });
+            if (!hasMultInAnyDay) continue;
+            for (let row = 0; row < 2; row++) {
+              const hasContent = ZILE.some((_, zi) => {
+                if (zi < 2) return false;
+                const prod = state.procesare[p][zi-2];
+                if (!prod || prod === '—' || !getMateriePrivaKey(prod)) return false;
+                const sel = state.ambalareSelectii[p][zi-2][row];
+                return sel && sel.format !== '—';
+              });
+              if (!hasContent) continue;
+              eticRows.push(`<tr>
+                <td class="label-col" style="color:#8A6A1A;font-size:9px">P${p+1} F${row+1}</td>
+                ${ZILE.map((_, zi) => {
+                  if (zi < 2) return '<td></td>';
+                  const prod = state.procesare[p][zi-2];
+                  const matKey = prod && prod !== '—' ? getMateriePrivaKey(prod) : null;
+                  if (!matKey) return '<td></td>';
+                  const sel = state.ambalareSelectii[p][zi-2][row];
+                  if (!sel || sel.format === '—') return '<td class="etic-col"></td>';
+                  const refAmb = AMBALARE_REF[sel.format] || {};
+                  const cantStr = sel.cantitate ? ` · ${sel.cantitate} ${refAmb.um||''}` : '';
+                  return `<td class="etic-col" style="font-size:9px"><strong>${sel.format}</strong>${cantStr}</td>`;
+                }).join('')}
+              </tr>`);
+            }
+          }
+
+          return eticRows.join('');
+        })()}
       </tbody>
     </table>
 
@@ -2615,55 +2862,8 @@ function indexSheetKey()  { return 'Istoric'; }
 // ── ÎNCĂRCARE DATE REFERINȚĂ DIN SHEETS ─────────────────────────
 
 async function loadRefData() {
-  try {
-    setSyncStatus('loading', 'Se încarcă date referință...');
-
-    // Încarcă Procesare_Ref
-    const procData = await sheetsRead('Procesare_Ref');
-    if (procData.data && procData.data.length > 1) {
-      const newRef = {};
-      // Header: DENUMIRE, Lot OPTIM, BUC OPTIM, LAPTE VACA, LAPTE CAPRA, LAPTE OAIE, LAPTE DEG
-      procData.data.slice(1).forEach(row => {
-        const denumire = String(row[0] || '').trim();
-        if (!denumire) return;
-        const lot  = parseFloat(row[1]) || 0;
-        const buc  = parseFloat(row[2]) || 0;
-        const lv   = parseFloat(row[3]) || 0;
-        const lc   = parseFloat(row[4]) || 0;
-        const lo   = parseFloat(row[5]) || 0;
-        const ld   = parseFloat(row[6]) || 0;
-        const um   = buc > 0 ? 'BUC' : 'KG';
-        newRef[denumire] = { lot, buc, lv, lc, lo, ld, um };
-      });
-      if (Object.keys(newRef).length > 0) {
-        PROCESARE_REF = newRef;
-        console.log('Procesare_Ref încărcat:', Object.keys(newRef).length, 'produse');
-      }
-    }
-
-    // Încarcă Ambalare_Ref
-    const ambData = await sheetsRead('Ambalare_Ref');
-    if (ambData.data && ambData.data.length > 1) {
-      const newAmb = {};
-      // Header: DENUMIRE, Lot OPTIM UM, Timp necesar (h)
-      ambData.data.slice(1).forEach(row => {
-        const denumire = String(row[0] || '').trim();
-        if (!denumire) return;
-        const timp = parseFloat(row[2]) || 0;
-        if (timp > 0) newAmb[denumire] = timp;
-      });
-      if (Object.keys(newAmb).length > 0) {
-        AMBALARE_REF = newAmb;
-        console.log('Ambalare_Ref încărcat:', Object.keys(newAmb).length, 'produse');
-      }
-    }
-
-    setSyncStatus('ok', 'Date referință actualizate');
-  } catch(e) {
-    // Dacă pică, folosim datele hardcodate — nu blocăm aplicația
-    setSyncStatus('ok', 'Configurat (date locale)');
-    console.warn('Nu s-au putut încărca datele din Sheets, se folosesc valorile implicite:', e);
-  }
+  // Folosim datele hardcodate din cod — mai complete și corecte
+  setSyncStatus('ok', 'Configurat');
 }
 
 async function loadWeekList() {
@@ -2743,24 +2943,26 @@ function parseSheetRows(rows) {
   state.firstLot = String(rows[1][2] || state.firstLot);
   document.getElementById('firstLot').value = state.firstLot;
 
-  for (let pi = 0; pi < 8; pi++) {
+  // Rows 2-9: Procesare
+  for (let pi = 0; pi < 12; pi++) {
     const row = rows[2 + pi];
     if (row) state.procesare[pi] = ZILE.map((_, zi) => row[3 + zi] || '—');
   }
+  // Rows 14-18: Burduf (5 rânduri)
   for (let ri = 0; ri < 5; ri++) {
-    const row = rows[10 + ri];
+    const row = rows[14 + ri];
     if (row) state.burduf[ri] = ZILE.map((_, zi) => row[3 + zi] || '—');
   }
+  // Rows 19-27: Personal (3 schimburi × 3 persoane = 9 rânduri)
   ['schimb1','schimb2','schimb3'].forEach((s, si) => {
     [0,1,2].forEach(p => {
-      const row = rows[13 + si*3 + p];
+      const row = rows[19 + si*3 + p];
       if (row) ZILE.forEach((_, zi) => { state.personal[s][zi][p] = row[3 + zi] || '—'; });
     });
   });
-  // Ambalare selectii editabile (rânduri 22+)
-  // Row 22 = AmbSel_P1_R1, 23 = AmbSel_P1_R2, 24 = AmbSel_P2_R1 ...
-  const ambStart = 22;
-  for (let pi = 0; pi < 8; pi++) {
+  // Rows 28-51: Ambalare selectii (12 procesări × 2 rânduri = 24)
+  const ambStart = 28;
+  for (let pi = 0; pi < 12; pi++) {
     for (let row = 0; row < 2; row++) {
       const sheetRow = rows[ambStart + pi * 2 + row];
       if (sheetRow) {
@@ -3041,7 +3243,7 @@ function buildFormattedMonit() {
 
   ZILE.forEach((zi, ziIdx) => {
     const dateStr = formatDate(dates[ziIdx]);
-    for (let p = 0; p < 8; p++) {
+    for (let p = 0; p < 12; p++) {
       const prod = state.procesare[p][ziIdx];
       if (!prod || prod === '—') continue;
       const key = `proc_${p}_${ziIdx}`;
@@ -3117,7 +3319,7 @@ function buildFormattedMonit() {
   ZILE.forEach((zi, ziIdx) => {
     if (ziIdx === 0) return;
     const dateStr = formatDate(dates[ziIdx]);
-    for (let p = 0; p < 8; p++) {
+    for (let p = 0; p < 12; p++) {
       const prod = state.procesare[p][ziIdx - 1];
       if (!prod || prod === '—') continue;
       const key = `amb_${p}_${ziIdx}`;
@@ -3159,8 +3361,8 @@ function buildFormattedMonit() {
   ZILE.forEach((zi, ziIdx) => {
     const dateStr = formatDate(dates[ziIdx]);
     if (ziIdx > 1) {
-      for (let p = 0; p < 8; p++) {
-        const prod = state.procesare[p][ziIdx - 2];
+      for (let p = 0; p < 12; p++) {
+      const prod = state.procesare[p][ziIdx - 2];
         if (!prod || prod === '—') continue;
         const key = `etic_proc_${p}_${ziIdx}`;
         const saved = state.monitorizare[key] || {};
@@ -3279,24 +3481,35 @@ function closeNewWeekModal() {
   document.getElementById('newWeekModal').classList.remove('open');
 }
 
-function createNewWeek() {
+async function createNewWeek() {
   const w = parseInt(document.getElementById('newWeekNr').value);
   const y = parseInt(document.getElementById('newWeekYear').value);
   const lot = document.getElementById('newWeekLot').value.trim();
   if (!w || !y) { alert('Completează săptămâna și anul'); return; }
 
-  // Reset state to blank week
+  // Calculăm săptămâna anterioară
+  const prevW = w === 1 ? 52 : w - 1;
+  const prevY = w === 1 ? y - 1 : y;
+  const prevSheetKey = `S${prevW}_${prevY}`;
+
+  // Reset state
   state.week = w;
   state.year = y;
   state.firstLot = lot || String(w * 100 + 1);
-  state.procesare = Array(8).fill(null).map(() => Array(7).fill('—'));
+  state.procesare = Array(12).fill(null).map(() => Array(7).fill('—'));
   state.burduf = Array(5).fill(null).map(() => Array(7).fill('—'));
-  state.ambalareSelectii = Array(8).fill(null).map(() =>
+  state.ambalareSelectii = Array(12).fill(null).map(() =>
     Array(7).fill(null).map(() => [
       { format: '—', cantitate: '' },
       { format: '—', cantitate: '' }
     ])
   );
+  state.ambSA = Array(12).fill(null).map(() => [
+    { format: '—', cantitate: '' },
+    { format: '—', cantitate: '' }
+  ]);
+  state.burdufSA = Array(5).fill('—');
+  state.eticSA = { auto: [], formate: [] };
   state.personal = {
     schimb1: Array(7).fill(null).map(() => ['—','—','—']),
     schimb2: Array(7).fill(null).map(() => ['—','—','—']),
@@ -3304,10 +3517,112 @@ function createNewWeek() {
   };
   state.monitorizare = {};
 
+  // Încercăm să preluăm datele din săptămâna anterioară
+  if (config.sheetsUrl) {
+    try {
+      setSyncStatus('loading', `Se preia din ${prevSheetKey}...`);
+      const prevData = await sheetsRead(prevSheetKey);
+
+      if (prevData.data && prevData.data.length > 1) {
+        const rows = prevData.data;
+        const JOI = 3;    // index Joi în S_prev
+        const VINERI = 4; // index Vineri în S_prev
+        const LUNI_NOU = 0;
+        const MARTI_NOU = 1;
+
+        // Citim procesarea din S_prev
+        const prevProcesare = Array(12).fill(null).map(() => Array(7).fill('—'));
+        for (let pi = 0; pi < 12; pi++) {
+          const row = rows[2 + pi];
+          if (row) prevProcesare[pi] = ZILE.map((_, zi) => row[3 + zi] || '—');
+        }
+
+        // Citim burduf din S_prev
+        const prevBurduf = Array(5).fill(null).map(() => Array(7).fill('—'));
+        for (let ri = 0; ri < 5; ri++) {
+          const row = rows[10 + ri];
+          if (row) prevBurduf[ri] = ZILE.map((_, zi) => row[3 + zi] || '—');
+        }
+
+        // Citim ambalareSelectii din S_prev (rânduri 24+)
+        const prevAmbSel = Array(12).fill(null).map(() =>
+          Array(7).fill(null).map(() => [
+            { format: '—', cantitate: '' },
+            { format: '—', cantitate: '' }
+          ])
+        );
+        for (let pi = 0; pi < 12; pi++) {
+          for (let row = 0; row < 2; row++) {
+            const sheetRow = rows[28 + pi * 2 + row];
+            if (sheetRow) {
+              ZILE.forEach((_, zi) => {
+                const val = String(sheetRow[3 + zi] || '');
+                const parts = val.split('||');
+                prevAmbSel[pi][zi][row] = {
+                  format: parts[0] || '—',
+                  cantitate: parts[1] || ''
+                };
+              });
+            }
+          }
+        }
+
+        // ── 1. Ambalare Luni S_nou = Procesare Vineri S_prev ──
+        for (let pi = 0; pi < 12; pi++) {
+          const prodVineri = prevProcesare[pi][VINERI];
+          if (!prodVineri || prodVineri === '—' || CAS_DOAR_TOCARE.includes(prodVineri)) continue;
+          if (getMateriePrivaKey(prodVineri)) {
+            state.ambSA[pi][0] = { ...prevAmbSel[pi][VINERI][0] };
+            state.ambSA[pi][1] = { ...prevAmbSel[pi][VINERI][1] };
+          } else {
+            state.ambSA[pi][0] = { format: prodVineri, cantitate: '' };
+          }
+        }
+
+        // ── 2. Etichetare Luni S_nou = Ambalare Vineri S_prev = Procesare Joi S_prev ──
+        state.eticSA = { auto: [], formate: [] };
+        for (let pi = 0; pi < 12; pi++) {
+          const prodJoi = prevProcesare[pi][JOI];
+          if (!prodJoi || prodJoi === '—' || CAS_DOAR_TOCARE.includes(prodJoi)) continue;
+          if (getMateriePrivaKey(prodJoi)) {
+            // Produse cu formate multiple: selecțiile de ambalare Vineri = procZi=JOI
+            let hasFormat = false;
+            [0,1].forEach(row => {
+              const sel = prevAmbSel[pi][JOI][row];
+              if (sel && sel.format !== '—') {
+                state.eticSA.formate.push({ ...sel });
+                hasFormat = true;
+              }
+            });
+            // Dacă nu există selecții salvate, adăugăm materia primă ca fallback
+            if (!hasFormat) state.eticSA.auto.push(prodJoi);
+          } else {
+            // Produse simple: ambalate Vineri → etichetare Luni S_nou
+            state.eticSA.auto.push(prodJoi);
+          }
+        }
+
+        // ── 3. Burduf Vineri S_prev → Etichetare Luni S_nou ──
+        state.burdufSA = Array(5).fill('—');
+        for (let ri = 0; ri < 5; ri++) {
+          const prod = prevBurduf[ri][VINERI];
+          if (prod && prod !== '—') state.burdufSA[ri] = prod;
+        }
+
+        setSyncStatus('ok', `Săptămână nouă S${w}_${y} — preluare din ${prevSheetKey} ✓`);
+      } else {
+        setSyncStatus('ok', `Săptămână nouă S${w}_${y} — ${prevSheetKey} nu există, start gol`);
+      }
+    } catch(e) {
+      console.warn('Nu s-a putut prelua din săptămâna anterioară:', e);
+      setSyncStatus('ok', `Săptămână nouă S${w}_${y} — nesalvată`);
+    }
+  }
+
   document.getElementById('firstLot').value = state.firstLot;
   closeNewWeekModal();
   recalcDates();
-  setSyncStatus('ok', `Săptămână nouă S${w}_${y} — nesalvată`);
+  rebuildAll();
 }
 
 async function testConnection() {
@@ -3345,86 +3660,13 @@ function saveConfig() {
 // TAB NAVIGATION
 // ═══════════════════════════════════════════════════════════════
 
-
-// ── NECESAR AMBALAJE ────────────────────────────────────────────
-const RETETE_AMB={"TVPS 4KG":[{"mat":"GALEATA 4KG IMPRIMATA-TELEMEA PUTIN SARATA","qty":0.25,"uom":"BUC"},{"mat":"CAPAC GALEATA 4 KG/8 KG","qty":0.25,"uom":"BUC"},{"mat":"ETICHETA ALBA 34*15MM-PLASTICATA","qty":0.25,"uom":"BUC"}],"TVPS 800G":[{"mat":"CASEROLA IMPRIMATA TVPS 800G","qty":1.0,"uom":"BUC"},{"mat":"CAPAC IMPRIMAT TVPS 800G","qty":1.0,"uom":"BUC"}],"TVPS 375 G":[{"mat":"CAPAC IMPRIMAT TVPS 375G","qty":1.0,"uom":"BUC"},{"mat":"CASEROLA IMPRIMATA TVPS 375G","qty":1.0,"uom":"BUC"}],"TV MOLD 4KG":[{"mat":"GALEATA IMPRIMATA 4KG  TELEMEA PROASPATA","qty":0.25,"uom":"BUC"},{"mat":"CAPAC GALEATA 4 KG/8 KG","qty":0.25,"uom":"BUC"},{"mat":"ETICHETA ALBA 34*15MM-PLASTICATA","qty":0.00163,"uom":"BUC"}],"TV MOLD 800G":[{"mat":"CASEROLA IMPRIMATA TELEMEA PROASPATA 800G DLF","qty":1.0,"uom":"BUC"},{"mat":"CAPAC IMPRIMAT TELEMEA PROASPATA 800G DLF","qty":1.0,"uom":"BUC"}],"TV+O 4KG":[{"mat":"CAPAC GALEATA 4 KG/8 KG","qty":0.25,"uom":"BUC"},{"mat":"GALEATA IMPRIMATA 4KG  TELEMEA DE VACA SI OAIE","qty":0.25,"uom":"BUC"},{"mat":"ETICHETA ALBA 30*10MM-PLASTICATA","qty":0.25,"uom":"BUC"},{"mat":"ETICHETA TELEMEA DE VACA SI OAIE CAPAC","qty":0.25,"uom":"BUC"}],"TV+C 4KG":[{"mat":"GALEATA 4 KG","qty":0.25,"uom":"BUC"},{"mat":"CAPAC GALEATA 4 KG/8 KG","qty":0.25,"uom":"BUC"},{"mat":"ETICHETA Telemea de vaca si capra 4 kg - spate","qty":0.25,"uom":"BUC"}],"BV 5KG":[{"mat":"ETICHETA BRANZA DE VACI 5 KG FATA","qty":0.2,"uom":"BUC"},{"mat":"CAPAC GALEATA 4 KG/8 KG","qty":0.2,"uom":"BUC"},{"mat":"GALEATA 4 KG","qty":0.2,"uom":"BUC"},{"mat":"ETICHETA BRANZA DE VACI 5 KG SPATE","qty":0.2,"uom":"BUC"}],"BV 400G":[{"mat":"CAPAC GALEATA JETS 0.6","qty":1.0,"uom":"BUC"},{"mat":"GALEATA PATRATA JETS 0,6L","qty":1.0,"uom":"BUC"},{"mat":"CUTII CARTON UNL100 PENTRU BRANZA DE VACI","qty":0.12856,"uom":"BUC"},{"mat":"ETICHETA BB PDA 350G VERSO (CLIPSAT)","qty":0.14932,"uom":"BUC"}],"TOPS 800G":[{"mat":"CASEROLA 800 G","qty":1.0,"uom":"BUC"},{"mat":"CAPAC CASEROLA 800 G","qty":1.0,"uom":"BUC"},{"mat":"ETICHETA ALBA 65*99","qty":0.5,"uom":"BUC"},{"mat":"CUTII CARTON UNL100 PENTRU BRANZA DE VACI","qty":0.5,"uom":"BUC"},{"mat":"ETICHETA Telemea de oaie putin sarata 800g","qty":1.0,"uom":"BUC"}],"TOPS":[{"mat":"GALEATA 4 KG","qty":0.25,"uom":"BUC"},{"mat":"CAPAC GALEATA 4 KG/8 KG","qty":0.25,"uom":"BUC"},{"mat":"Eticheta produs in Romaina","qty":0.25,"uom":"BUC"}],"TCPS 800G":[{"mat":"CASEROLA 800 G","qty":1.0,"uom":"BUC"},{"mat":"CAPAC CASEROLA 800 G","qty":1.0,"uom":"BUC"},{"mat":"ETICHETA TELEMEA DE CAPRA PUTIN SARATA 800g","qty":1.0,"uom":"BUC"}],"TCPS":[{"mat":"GALEATA 4 KG","qty":0.25,"uom":"BUC"},{"mat":"CAPAC GALEATA 4 KG/8 KG","qty":0.25,"uom":"BUC"}],"CAS V 300G":[{"mat":"ETICHETA ALBA 65*99","qty":0.18082,"uom":"BUC"},{"mat":"CUTII CARTON UNLCD 03","qty":0.17,"uom":"BUC"},{"mat":"CAPAC CUTII CARTON UNLCD 03","qty":0.17,"uom":"BUC"},{"mat":"ETICHETA CAS PROASPAT DE VACA 300G FATA DLF","qty":1.0,"uom":"BUC"}],"CAS V 800G":[{"mat":"DVS BS-20 (10buc/cutie)","qty":0.00032,"uom":"BUC"},{"mat":"CUTIE BRANZA BURDUF 2 KG","qty":0.1667,"uom":"BUC"},{"mat":"ETICHETA ALBA 65*99","qty":0.1667,"uom":"BUC"},{"mat":"ETICHETA CAS PROASPAT DE VACA 300G Fata PDA","qty":1.0,"uom":"BUC"},{"mat":"ETICHETA ALBA BIZERBA 77X58MM","qty":1.0,"uom":"BUC"}],"CAS V+O 300G":[{"mat":"ETICHETA ALBA 65*99","qty":0.26,"uom":"BUC"},{"mat":"ETICHETA ALBA BIZERBA 77X58MM","qty":0.06201,"uom":"BUC"},{"mat":"ETICHETA CAS DE VACA SI OAIE PDA 300G FATA","qty":1.0,"uom":"BUC"},{"mat":"ETICHETA CAS DE VACA SI OAIE PDA 300G SPATE","qty":1.0,"uom":"BUC"},{"mat":"CUTII CARTON UNLCD 03","qty":0.16667,"uom":"BUC"},{"mat":"CAPAC CUTII CARTON UNLCD 03","qty":0.16667,"uom":"BUC"}],"CAS V+O 800G":[{"mat":"DVS BS-20 (10buc/cutie)","qty":0.00032,"uom":"BUC"},{"mat":"CUTIE BRANZA BURDUF 2 KG","qty":0.1667,"uom":"BUC"},{"mat":"ETICHETA ALBA 65*99","qty":0.1667,"uom":"BUC"},{"mat":"ETICHETA CAS DE VACA SI OAIE PDA 300G FATA","qty":1.0,"uom":"BUC"},{"mat":"ETICHETA ALBA BIZERBA 77X58MM","qty":1.0,"uom":"BUC"}],"TV DEG 4KG":[{"mat":"GALEATA 4 KG","qty":0.258,"uom":"BUC"},{"mat":"CAPAC GALEATA 4 KG/8 KG","qty":0.25,"uom":"BUC"},{"mat":"ETICHETA TELEMEA USOARA DLF 4 KG 70x190mm fata","qty":0.25,"uom":"BUC"},{"mat":"ETICHETA TELEMEA USOARA DLF 4 KG 70x190mm spate","qty":0.25,"uom":"BUC"}],"TV":[{"mat":"PUNGA TERMO SB 230 X 400","qty":0.72953,"uom":"BUC"},{"mat":"ETICHETA ALBA BIZERBA 77X58MM","qty":0.7619,"uom":"BUC"},{"mat":"CUTIE BRANZA BURDUF 2 KG","qty":0.14436,"uom":"BUC"},{"mat":"ETICHETA ALBA 65*99","qty":0.72953,"uom":"BUC"}],"DLF 350G - 1500":[{"mat":"ETICHETA ALBA 65*99","qty":0.018182,"uom":"BUC"},{"mat":"ETICHETA ALBA BIZERBA 77X58MM","qty":0.004504,"uom":"BUC"},{"mat":"ETICHETA ALBA 65*99","qty":0.004504,"uom":"BUC"},{"mat":"ETICHETA CARTON BB 350G DLF RO","qty":1.0,"uom":"BUC"},{"mat":"ETICHETA ALBA 65*99","qty":0.13,"uom":"BUC"},{"mat":"CAPAC CUTIE DLF BB 350G","qty":0.13,"uom":"BUC"},{"mat":"CUTIE BRANZA BURDUF OU","qty":0.126,"uom":"BUC"}],"PDA 300G - 2000":[{"mat":"ETICHETA ALBA BIZERBA 77X58MM","qty":0.006957,"uom":"BUC"},{"mat":"ETICHETA ALBA BIZERBA 77X58MM","qty":0.000985,"uom":"BUC"},{"mat":"ETICHETA ALBA 65*99","qty":0.000985,"uom":"BUC"},{"mat":"ETICHETA BRANZA BURDUF SPATE PDA 300G","qty":1.06706,"uom":"BUC"},{"mat":"ETICHETA BRANZA BURDUF FATA PDA 350G (CLIPSAT)","qty":1.0,"uom":"BUC"},{"mat":"ETICHETA ALBA 65*99","qty":0.006957,"uom":"BUC"},{"mat":"ETICHETA ALBA 65*99","qty":0.09154,"uom":"BUC"},{"mat":"CUTII CARTON UNLCD 03","qty":0.12853,"uom":"BUC"},{"mat":"CAPAC CUTII CARTON UNLCD 03","qty":0.12853,"uom":"BUC"}],"BB FRA - 600":[{"mat":"ETICHETA ALBA BIZERBA 77X58MM","qty":0.067623,"uom":"BUC"},{"mat":"ETICHETA ALBA 65*99","qty":0.067623,"uom":"BUC"},{"mat":"ETICHETA ALBA BIZERBA 77X58MM","qty":1.14286,"uom":"BUC"},{"mat":"CUTIE BRANZA BURDUF 2 KG","qty":1.0,"uom":"BUC"},{"mat":"ETICHETE BURDUF DE OAIE MEMBRANA NATURALA","qty":1.6942,"uom":"BUC"}],"BB 4X60DLF - 2000":[{"mat":"ETICHETA ALBA 65*99","qty":0.012801,"uom":"BUC"},{"mat":"ETICHETA ALBA BIZERBA 77X58MM","qty":0.003036,"uom":"BUC"},{"mat":"ETICHETA ALBA 65*99","qty":0.003036,"uom":"BUC"},{"mat":"Membrana burduf 4x60gr","qty":0.42527,"uom":"M"},{"mat":"ETICHETA ALBA 65*99","qty":0.13,"uom":"BUC"},{"mat":"ETICHETA MINI BURDUF 4x60","qty":1.05805,"uom":"BUC"},{"mat":"ETICHETA ALBA CODURI DE BARE 30X60","qty":0.0045,"uom":"BUC"},{"mat":"CUTIE MINIBURDUF","qty":0.11,"uom":"BUC"},{"mat":"CAPAC MINIBURDUF","qty":0.11,"uom":"BUC"}],"BB PDA 2KG - 300":[{"mat":"ETICHETA ALBA BIZERBA 77X58MM","qty":0.020069,"uom":"BUC"},{"mat":"ETICHETA ALBA 65*99","qty":0.020069,"uom":"BUC"},{"mat":"CUTIE BRANZA BURDUF 2 KG","qty":0.125,"uom":"BUC"},{"mat":"ETICHETA BB PDA SPATE 2KG 95x155mm","qty":0.5,"uom":"BUC"},{"mat":"ETICHETA ALBA 65*99","qty":0.125,"uom":"BUC"},{"mat":"ETICHETA ALBA 65*99","qty":0.029698,"uom":"BUC"}],"DLF 250G - 2000":[{"mat":"ETICHETA ALBA 65*99","qty":0.012951,"uom":"BUC"},{"mat":"CAPAC CUTIE PRODUSE CU LEMN","qty":0.067,"uom":"BUC"},{"mat":"CUTIE DLF PRODUSE CU LEMN","qty":0.067,"uom":"BUC"},{"mat":"ETICHETA ALBA 65*99","qty":0.07,"uom":"BUC"},{"mat":"ETICHETA ALBA BIZERBA 77X58MM","qty":0.003014,"uom":"BUC"},{"mat":"ETICHETA ALBA 65*99","qty":0.003014,"uom":"BUC"},{"mat":"ETICHETA ALBA BIZERBA 77X58MM","qty":0.000171,"uom":"BUC"},{"mat":"ETICHETA BB 250g DLF 80x140mm","qty":1.0,"uom":"BUC"}],"BB DLF 2KG - 300":[{"mat":"ETICHETA ALBA 65*99","qty":0.051075,"uom":"BUC"},{"mat":"ETICHETA ALBA BIZERBA 77X58MM","qty":0.013925,"uom":"BUC"},{"mat":"ETICHETA ALBA 65*99","qty":0.013925,"uom":"BUC"},{"mat":"ETICHETA DLF UNIVERSALA NOUA VERSO","qty":0.625,"uom":"BUC"},{"mat":"CUTIE BRANZA BURDUF 2 KG","qty":0.12821,"uom":"BUC"}],"BB PDA 1KG - 240":[{"mat":"ETICHETA ALBA BIZERBA 77X58MM","qty":0.020069,"uom":"BUC"},{"mat":"ETICHETA ALBA 65*99","qty":0.020069,"uom":"BUC"},{"mat":"CUTIE BRANZA BURDUF 2 KG","qty":0.16667,"uom":"BUC"},{"mat":"ETICHETA ALBA 65*99","qty":0.029698,"uom":"BUC"},{"mat":"ETICHETA BB PDA SPATE 1KG 125x95mm","qty":1.0,"uom":"BUC"},{"mat":"ETICHETA BB PDA FATA 1KG+2KG 125x95mm","qty":1.0,"uom":"BUC"},{"mat":"ETICHETA ALBA 65*99","qty":0.16667,"uom":"BUC"}],"BB DLF 1KG - 240":[{"mat":"ETICHETA ALBA 65*99","qty":0.051075,"uom":"BUC"},{"mat":"ETICHETA ALBA BIZERBA 77X58MM","qty":0.013925,"uom":"BUC"},{"mat":"ETICHETA ALBA 65*99","qty":0.013925,"uom":"BUC"},{"mat":"ETICHETA DLF UNIVERSALA NOUA VERSO","qty":1.16,"uom":"BUC"},{"mat":"CUTIE BRANZA BURDUF 2 KG","qty":0.16667,"uom":"BUC"},{"mat":"ETICHETA BB DLF FATA 1KG+2KG 95x80mm transparent","qty":1.0,"uom":"BUC"}],"Smântână 32% 5kg":[{"mat":"GALEATA 4 KG","qty":0.2,"uom":"BUC"},{"mat":"CAPAC GALEATA 4 KG/8 KG","qty":0.2,"uom":"BUC"},{"mat":"ETICHETA SMANTANA CREMOASA 30% DLF 70X190mm FATA","qty":0.2,"uom":"BUC"},{"mat":"ETICHETA SMANTANA CREMOASA 30% DLF 70X190mm SPATE","qty":0.2,"uom":"BUC"}],"Smântână 50% 15kg":[{"mat":"GALEATA+CAPAC  18L","qty":0.069,"uom":"BUC"}]};
-const LOT_OPT={"TVPS 4KG":162,"TVPS 800G":300,"TVPS 375 G":650,"TV MOLD 4KG":150,"TV MOLD 800G":300,"TV+O 4KG":162,"TV+C 4KG":162,"BV 5KG":500,"BV 400G":1375,"TOPS 800G":300,"TOPS":800,"TCPS 800G":300,"TCPS":600,"CAS V 300G":650,"CAS V 800G":160,"CAS V+O 300G":650,"CAS V+O 800G":160,"TV DEG 4KG":500,"TV":550,"DLF 350G - 1500":1500,"PDA 300G - 2000":2000,"BB FRA - 600":600,"BB 4X60DLF - 2000":2000,"BB PDA 2KG - 300":300,"DLF 250G - 2000":2000,"BB DLF 2KG - 300":300,"BB PDA 1KG - 240":240,"BB DLF 1KG - 240":240,"Sm\u00e2nt\u00e2n\u0103 32% 5kg":300,"Sm\u00e2nt\u00e2n\u0103 50% 15kg":200};
-
-function buildAmbalajePage(){
-  const tbody=document.getElementById('tbodyAmbalaje');
-  if(!tbody)return;
-  const totals={};
-  function add(prod,cant,zi){
-    if(zi<0||zi>4)return;
-    const r=RETETE_AMB[prod];if(!r)return;
-    const c=parseFloat(cant)||LOT_OPT[prod]||0;if(c<=0)return;
-    r.forEach(item=>{
-      const k=item.mat+'||'+item.uom;
-      if(!totals[k])totals[k]={mat:item.mat,uom:item.uom,q:[0,0,0,0,0]};
-      totals[k].q[zi]+=c*item.qty;
-    });
-  }
-  // Formate multiple (ambalareSelectii[p][procZi] -> ambalare procZi+1)
-  for(let p=0;p<12;p++){
-    for(let pz=0;pz<=4;pz++){
-      const az=pz+1;
-      (state.ambalareSelectii?.[p]?.[pz]||[]).forEach(s=>{if(s?.format&&s.format!=='—')add(s.format,s.cantitate,az);});
-    }
-    // SMÂNTÂNĂ aceeași zi
-    for(let zi=0;zi<=4;zi++){
-      const prod=state.procesare?.[p]?.[zi];
-      if(prod==='SMÂNTÂNĂ')(state.ambalareSelectii?.[p]?.[zi]||[]).forEach(s=>{if(s?.format&&s.format!=='—')add(s.format,s.cantitate,zi);});
-    }
-    // S.A. Luni
-    (state.ambSA?.[p]||[]).forEach(s=>{if(s?.format&&s.format!=='—')add(s.format,s.cantitate,0);});
-  }
-  // Produse simple (fără format multiplu) → lot optim
-  const FORMATE_KEYS=Object.keys(typeof FORMATE_AMBALARE!=='undefined'?FORMATE_AMBALARE:{});
-  for(let p=0;p<12;p++){
-    for(let pz=0;pz<=3;pz++){
-      const prod=state.procesare?.[p]?.[pz];
-      if(!prod||prod==='—'||FORMATE_KEYS.includes(prod))continue;
-      if(!RETETE_AMB[prod])continue;
-      add(prod,LOT_OPT[prod]||0,pz+1);
-    }
-  }
-  // Burduf → etichetare zi+1
-  for(let r=0;r<5;r++)for(let zi=0;zi<=3;zi++){
-    const prod=state.burduf?.[r]?.[zi];
-    if(prod&&prod!=='—')add(prod,LOT_OPT[prod]||0,zi+1);
-  }
-  const keys=Object.keys(totals);
-  if(!keys.length){tbody.innerHTML='<tr><td colspan="8" style="text-align:center;padding:20px;color:#888">Nu s-au găsit cantități planificate la ambalare.</td></tr>';return;}
-  function grp(m){m=m.toUpperCase();if(['GALEATA','CASEROLA','CUTIE','PUNGA','MEMBRANA'].some(x=>m.includes(x)))return'Recipiente';if(m.includes('CAPAC'))return'Capace';if(m.includes('ETICHETA'))return'Etichete';if(m.includes('CARTON'))return'Cartoane';return'Altele';}
-  const GC={'Recipiente':'#1A4A7A','Capace':'#2D5016','Etichete':'#8A6A1A','Cartoane':'#6B21A8','Altele':'#4A4A45'};
-  const GB={'Recipiente':'#EAF0F8','Capace':'#EEF5E8','Etichete':'#FBF5E8','Cartoane':'#F3E8FF','Altele':'#F5F5F0'};
-  const groups={};
-  keys.forEach(k=>{const it=totals[k],g=grp(it.mat);if(!groups[g])groups[g]=[];groups[g].push(it);});
-  tbody.innerHTML='';
-  ['Recipiente','Capace','Etichete','Cartoane','Altele'].forEach(g=>{
-    if(!groups[g]?.length)return;
-    const th=document.createElement('tr');
-    th.innerHTML=`<td colspan="8" style="background:${GC[g]};color:#fff;font-weight:700;font-size:11px;padding:5px 12px;text-transform:uppercase">${g}</td>`;
-    tbody.appendChild(th);
-    groups[g].sort((a,b)=>a.mat.localeCompare(b.mat)).forEach(it=>{
-      const tot=it.q.reduce((s,v)=>s+v,0);if(tot<0.001)return;
-      const f=v=>v>0.001?Math.ceil(v).toLocaleString('ro-RO'):'—';
-      const tr=document.createElement('tr');tr.style.background=GB[g]||'#fff';
-      tr.innerHTML=`<td style="padding:4px 10px;font-size:12px">${it.mat}</td><td style="text-align:center;font-size:11px;color:#666">${it.uom}</td>${[0,1,2,3,4].map(z=>`<td style="text-align:right;font-family:monospace;padding:4px 8px">${f(it.q[z])}</td>`).join('')}<td style="text-align:right;font-weight:700;color:#2D5016;background:#EEF5E8;padding:4px 8px">${Math.ceil(tot).toLocaleString('ro-RO')}</td>`;
-      tbody.appendChild(tr);
-    });
-  });
-}
-// ────────────────────────────────────────────────────────────────
 function showTab(tab) {
   document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-  const tabAmb=document.getElementById('tab-ambalaje');if(tabAmb)tabAmb.style.display=tab==='ambalaje'?'block':'none';
   document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
   document.getElementById(`tab-${tab}`).classList.add('active');
   document.getElementById(`tabBtn-${tab}`).classList.add('active');
   if (tab === 'print') generatePrint();
   if (tab === 'monit') buildMonitDaySelector();
-  if (tab === 'ambalaje') { document.getElementById('tab-ambalaje').style.display='block'; try{buildAmbalajePage();}catch(e){console.error(e);} }
 }
 
 // ═══════════════════════════════════════════════════════════════
