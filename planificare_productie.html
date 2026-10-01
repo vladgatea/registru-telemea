@@ -1410,7 +1410,7 @@ function isSameDayAmbalare(prod) {
 function getAmbalareFromProcesare() {
   const amb = Array(7).fill(null).map(() => []);
   // Ambalare Marți-Vineri (z=1..4): din procesarea zilei z-1 (exclusiv SMÂNTÂNĂ)
-  for (let z = 1; z <= 4; z++) {
+  for (let z = 1; z <= 6; z++) {
     for (let p = 0; p < 12; p++) {
       const prod = state.procesare[p][z - 1];
       if (!prod || prod === '—') continue;
@@ -1425,8 +1425,8 @@ function getAmbalareFromProcesare() {
       }
     }
   }
-  // SMÂNTÂNĂ — ambalare în aceeași zi (z=0..4, Luni-Vineri)
-  for (let z = 0; z <= 4; z++) {
+  // SMÂNTÂNĂ — ambalare în aceeași zi (z=0..6, Luni-Duminică)
+  for (let z = 0; z <= 6; z++) {
     for (let p = 0; p < 12; p++) {
       const prod = state.procesare[p][z];
       if (!isSameDayAmbalare(prod)) continue;
@@ -1451,7 +1451,7 @@ function getAmbalareFromProcesare() {
 function getBurdufEtichetareFromBurduf() {
   // Burduf zi X → Etichetare zi X+1, Luni..Joi (z=0..3) → Marți..Vineri
   const etic = Array(7).fill(null).map(() => []);
-  for (let z = 0; z <= 3; z++) {
+  for (let z = 0; z <= 5; z++) {
     for (let r = 0; r < 5; r++) {
       const prod = state.burduf[r][z];
       if (prod && prod !== '—') etic[z + 1].push(prod + ' ★');
@@ -1471,7 +1471,7 @@ function getEtichetareFromAmbalare() {
   // Etichetare zi X = Ambalare zi X-1
   // Marți(1)=Ambalare Luni(0 SA), Miercuri(2)=Ambalare Marți(1), ..., Vineri(4)=Ambalare Joi(3)
   const etic = Array(7).fill(null).map(() => []);
-  for (let z = 1; z <= 4; z++) {
+  for (let z = 1; z <= 6; z++) {
     etic[z].push(...amb[z - 1]);
   }
   // eticSA: Etichetare Luni S_nou = Ambalare Vineri S_prev (Procesare Joi S_prev)
@@ -1512,8 +1512,8 @@ function calcTimpAmbalareProportional(format, cantitate) {
 function calcTimpAmbalareZi(zi) {
   let total = 0;
   // Produse simple (auto)
-  for (let p = 0; p < 8; p++) {
-    if (zi === 0) continue;
+  for (let p = 0; p < 12; p++) {
+    if (zi === 0 || zi > 6) continue;
     const prod = state.procesare[p][zi - 1];
     if (!prod || prod === '—' || CAS_DOAR_TOCARE.includes(prod)) continue;
     if (!getMateriePrivaKey(prod)) {
@@ -1523,8 +1523,8 @@ function calcTimpAmbalareZi(zi) {
     }
   }
   // Rânduri editabile — proporțional
-  for (let p = 0; p < 8; p++) {
-    if (zi === 0) continue;
+  for (let p = 0; p < 12; p++) {
+    if (zi === 0 || zi > 6) continue;
     const prod = state.procesare[p][zi - 1];
     if (!prod || prod === '—' || !getMateriePrivaKey(prod)) continue;
     for (let row = 0; row < 2; row++) {
@@ -1701,7 +1701,7 @@ function updateAutoTables() {
 
 function applyFormat2Visibility(body) {
   for (let p = 0; p < 8; p++) {
-    for (let zi = 0; zi <= 4; zi++) {
+    for (let zi = 0; zi <= 6; zi++) {
       const procZi = zi === 0 ? 0 : zi - 1;
       const sel0 = state.ambalareSelectii[p][procZi][0];
       const cant = parseFloat(sel0.cantitate) || 0;
@@ -1747,7 +1747,7 @@ function buildAmbalareTable() {
     ZILE.forEach((_, zi) => {
       const td = document.createElement('td');
       td.className = 'auto-cell';
-      if (zi >= 5) { td.textContent = ''; tr.appendChild(td); return; }
+      // Toate zilele permit ambalare
       td.textContent = amb[zi][r] || '';
       tr.appendChild(td);
     });
@@ -1758,10 +1758,10 @@ function buildAmbalareTable() {
   for (let p = 0; p < 12; p++) {
     const hasLuniSel = (state.ambSA && state.ambSA[p] && state.ambSA[p].some(s => s.format !== '—')) ||
       isSameDayAmbalare(state.procesare[p][0]);
-    const hasMultMartiVineri = [1,2,3,4].some(zi => {
+    const hasMultMartiVineri = [1,2,3,4,5,6].some(zi => {
       const prod = state.procesare[p][zi - 1];
       return prod && prod !== '—' && getMateriePrivaKey(prod) && !isSameDayAmbalare(prod);
-    }) || [0,1,2,3,4].some(zi => {
+    }) || [0,1,2,3,4,5,6].some(zi => {
       const prod = state.procesare[p][zi];
       return isSameDayAmbalare(prod);
     });
@@ -1779,8 +1779,7 @@ function buildAmbalareTable() {
         const td = document.createElement('td');
         td.style.padding = '3px 4px';
 
-        // Sâmbătă/Duminică — gol
-        if (zi >= 5) { tr.appendChild(td); return; }
+        // Toate zilele permit ambalare
 
         // SMÂNTÂNĂ: ambalare aceeași zi — verificăm slotul p în ziua zi
         const prodSameDayCheck = state.procesare[p][zi];
@@ -1833,7 +1832,7 @@ function buildAmbalareTable() {
   ZILE.forEach((_, zi) => {
     const td = document.createElement('td');
     td.className = 'timp-cell timp-total';
-    if (zi >= 5) { trTimp.appendChild(td); return; }
+
     const timp = calcTimpAmbalareZi(zi);
     td.textContent = timp > 0 ? timp.toFixed(2) : '—';
     trTimp.appendChild(td);
