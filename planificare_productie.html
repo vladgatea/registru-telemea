@@ -1072,6 +1072,36 @@
   </div>
 
 </div>
+  </div>
+  <div class="card" style="margin-bottom:16px">
+    <div style="overflow-x:auto;padding:8px">
+      <table style="width:100%;border-collapse:collapse;font-size:13px">
+        <thead>
+          <tr style="background:#0369A1;color:white">
+            <th style="padding:10px 14px;text-align:left;min-width:160px">Produs procesat</th>
+            <th style="padding:10px 8px;text-align:center;min-width:75px">L zer/van</th>
+            <th style="padding:10px 8px;text-align:right;min-width:80px">Luni</th>
+            <th style="padding:10px 8px;text-align:right;min-width:80px">Marți</th>
+            <th style="padding:10px 8px;text-align:right;min-width:80px">Miercuri</th>
+            <th style="padding:10px 8px;text-align:right;min-width:80px">Joi</th>
+            <th style="padding:10px 8px;text-align:right;min-width:80px">Vineri</th>
+            <th style="padding:10px 8px;text-align:right;min-width:80px">Sâmbătă</th>
+            <th style="padding:10px 8px;text-align:right;min-width:80px">Duminică</th>
+            <th style="padding:10px 8px;text-align:right;min-width:90px;background:#075985">TOTAL</th>
+          </tr>
+        </thead>
+        <tbody id="tbodyZer">
+          <tr><td colspan="10" style="text-align:center;padding:30px;color:#888">—</td></tr>
+        </tbody>
+        <tfoot id="tfootZer"></tfoot>
+      </table>
+    </div>
+    <div style="padding:6px 16px 12px;font-size:11px;color:#888">
+      Bază calcul: 3000 L lapte → X L zer · SMÂNTÂNĂ = 0 L zer (degresare)
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="setupModal">
   <div class="modal">
     <h2>⚙ Configurare Google Sheets</h2>
@@ -1410,7 +1440,7 @@ function isSameDayAmbalare(prod) {
 function getAmbalareFromProcesare() {
   const amb = Array(7).fill(null).map(() => []);
   // Ambalare Marți-Vineri (z=1..4): din procesarea zilei z-1 (exclusiv SMÂNTÂNĂ)
-  for (let z = 1; z <= 6; z++) {
+  for (let z = 1; z <= 4; z++) {
     for (let p = 0; p < 12; p++) {
       const prod = state.procesare[p][z - 1];
       if (!prod || prod === '—') continue;
@@ -1425,8 +1455,8 @@ function getAmbalareFromProcesare() {
       }
     }
   }
-  // SMÂNTÂNĂ — ambalare în aceeași zi (z=0..6, Luni-Duminică)
-  for (let z = 0; z <= 6; z++) {
+  // SMÂNTÂNĂ — ambalare în aceeași zi (z=0..4, Luni-Vineri)
+  for (let z = 0; z <= 4; z++) {
     for (let p = 0; p < 12; p++) {
       const prod = state.procesare[p][z];
       if (!isSameDayAmbalare(prod)) continue;
@@ -1451,7 +1481,7 @@ function getAmbalareFromProcesare() {
 function getBurdufEtichetareFromBurduf() {
   // Burduf zi X → Etichetare zi X+1, Luni..Joi (z=0..3) → Marți..Vineri
   const etic = Array(7).fill(null).map(() => []);
-  for (let z = 0; z <= 5; z++) {
+  for (let z = 0; z <= 3; z++) {
     for (let r = 0; r < 5; r++) {
       const prod = state.burduf[r][z];
       if (prod && prod !== '—') etic[z + 1].push(prod + ' ★');
@@ -1471,7 +1501,7 @@ function getEtichetareFromAmbalare() {
   // Etichetare zi X = Ambalare zi X-1
   // Marți(1)=Ambalare Luni(0 SA), Miercuri(2)=Ambalare Marți(1), ..., Vineri(4)=Ambalare Joi(3)
   const etic = Array(7).fill(null).map(() => []);
-  for (let z = 1; z <= 6; z++) {
+  for (let z = 1; z <= 4; z++) {
     etic[z].push(...amb[z - 1]);
   }
   // eticSA: Etichetare Luni S_nou = Ambalare Vineri S_prev (Procesare Joi S_prev)
@@ -1512,8 +1542,8 @@ function calcTimpAmbalareProportional(format, cantitate) {
 function calcTimpAmbalareZi(zi) {
   let total = 0;
   // Produse simple (auto)
-  for (let p = 0; p < 12; p++) {
-    if (zi === 0 || zi > 6) continue;
+  for (let p = 0; p < 8; p++) {
+    if (zi === 0) continue;
     const prod = state.procesare[p][zi - 1];
     if (!prod || prod === '—' || CAS_DOAR_TOCARE.includes(prod)) continue;
     if (!getMateriePrivaKey(prod)) {
@@ -1523,8 +1553,8 @@ function calcTimpAmbalareZi(zi) {
     }
   }
   // Rânduri editabile — proporțional
-  for (let p = 0; p < 12; p++) {
-    if (zi === 0 || zi > 6) continue;
+  for (let p = 0; p < 8; p++) {
+    if (zi === 0) continue;
     const prod = state.procesare[p][zi - 1];
     if (!prod || prod === '—' || !getMateriePrivaKey(prod)) continue;
     for (let row = 0; row < 2; row++) {
@@ -1701,7 +1731,7 @@ function updateAutoTables() {
 
 function applyFormat2Visibility(body) {
   for (let p = 0; p < 8; p++) {
-    for (let zi = 0; zi <= 6; zi++) {
+    for (let zi = 0; zi <= 4; zi++) {
       const procZi = zi === 0 ? 0 : zi - 1;
       const sel0 = state.ambalareSelectii[p][procZi][0];
       const cant = parseFloat(sel0.cantitate) || 0;
@@ -1747,7 +1777,7 @@ function buildAmbalareTable() {
     ZILE.forEach((_, zi) => {
       const td = document.createElement('td');
       td.className = 'auto-cell';
-      // Toate zilele permit ambalare
+      if (zi >= 5) { td.textContent = ''; tr.appendChild(td); return; }
       td.textContent = amb[zi][r] || '';
       tr.appendChild(td);
     });
@@ -1758,10 +1788,10 @@ function buildAmbalareTable() {
   for (let p = 0; p < 12; p++) {
     const hasLuniSel = (state.ambSA && state.ambSA[p] && state.ambSA[p].some(s => s.format !== '—')) ||
       isSameDayAmbalare(state.procesare[p][0]);
-    const hasMultMartiVineri = [1,2,3,4,5,6].some(zi => {
+    const hasMultMartiVineri = [1,2,3,4].some(zi => {
       const prod = state.procesare[p][zi - 1];
       return prod && prod !== '—' && getMateriePrivaKey(prod) && !isSameDayAmbalare(prod);
-    }) || [0,1,2,3,4,5,6].some(zi => {
+    }) || [0,1,2,3,4].some(zi => {
       const prod = state.procesare[p][zi];
       return isSameDayAmbalare(prod);
     });
@@ -1779,7 +1809,8 @@ function buildAmbalareTable() {
         const td = document.createElement('td');
         td.style.padding = '3px 4px';
 
-        // Toate zilele permit ambalare
+        // Sâmbătă/Duminică — gol
+        if (zi >= 5) { tr.appendChild(td); return; }
 
         // SMÂNTÂNĂ: ambalare aceeași zi — verificăm slotul p în ziua zi
         const prodSameDayCheck = state.procesare[p][zi];
@@ -1832,7 +1863,7 @@ function buildAmbalareTable() {
   ZILE.forEach((_, zi) => {
     const td = document.createElement('td');
     td.className = 'timp-cell timp-total';
-
+    if (zi >= 5) { trTimp.appendChild(td); return; }
     const timp = calcTimpAmbalareZi(zi);
     td.textContent = timp > 0 ? timp.toFixed(2) : '—';
     trTimp.appendChild(td);
@@ -2823,6 +2854,37 @@ function generatePrint() {
       </tbody>
     </table>
 
+
+    <div class="print-section-label">💧 Zer Rezultat (L)</div>
+    <table class="print-table">
+      <thead><tr>
+        <th class="label-col" style="text-align:left">Produs</th>
+        ${ZILE.map((z,i)=>`<th>${z}<br><span style="font-weight:400;font-size:8px">${formatDate(dates[i])}</span></th>`).join('')}
+        <th style="background:#075985;color:white">TOTAL</th>
+      </tr></thead>
+      <tbody>
+        ${(() => {
+          const zerData = calcZerData();
+          const rows = Object.keys(zerData.prodZi).sort().map(prod => {
+            const arr = zerData.prodZi[prod];
+            const rowTotal = arr.reduce((s,v)=>s+v,0);
+            if (!rowTotal) return '';
+            return `<tr>
+              <td class="label-col">${prod}</td>
+              ${arr.map(v=>`<td>${v>0?v.toLocaleString('ro-RO'):''}</td>`).join('')}
+              <td style="font-weight:700;color:#075985">${rowTotal.toLocaleString('ro-RO')}</td>
+            </tr>`;
+          }).join('');
+          const totRow = `<tr style="background:#E0F2FE;font-weight:700">
+            <td class="label-col">TOTAL / ZI</td>
+            ${zerData.totalZi.map(v=>`<td style="color:#0369A1">${v>0?v.toLocaleString('ro-RO'):''}</td>`).join('')}
+            <td style="color:#075985;font-size:13px">${zerData.grandTotal.toLocaleString('ro-RO')}</td>
+          </tr>`;
+          return rows + totRow;
+        })()}
+      </tbody>
+    </table>
+
     <div class="print-semnatura">
       <div class="sign-box"><div class="sign-line"></div>Responsabil producție</div>
       <div class="sign-box"><div class="sign-line"></div>Director General</div>
@@ -3658,6 +3720,92 @@ function saveConfig() {
 // ═══════════════════════════════════════════════════════════════
 // TAB NAVIGATION
 // ═══════════════════════════════════════════════════════════════
+
+
+// ── ZER REZULTAT ─────────────────────────────────────────────────
+const ZER_PER_3000 = {
+  'TVPS':1900,'TV MOLD':1900,'TV+O 4KG':1900,'TV+C 4KG':1900,'TV':1900,
+  'BV':2450,
+  'TOPS':1800,
+  'TCPS':1900,
+  'CAS V':2600,'CAS V MP':2600,
+  'CAS V+O':2450,'CAS V+O MP DLF':2550,
+  'CAS O 100%':2200,
+  'TV DEG 4KG':2000,
+  'SMÂNTÂNĂ':0
+};
+
+function getZerPerVan(prod) {
+  const zerRef = ZER_PER_3000[prod];
+  if (zerRef === undefined || zerRef === null) return null;
+  const r = PROCESARE_REF[prod] || {};
+  const litri = (r.lv||0)+(r.lc||0)+(r.lo||0) || 3000;
+  return Math.round(zerRef * litri / 3000);
+}
+
+function calcZerData() {
+  // Returnează { prodZi: {prod: [zi0..6]}, totalZi: [zi0..6], grandTotal }
+  const prodZi = {};
+  for (let p = 0; p < 12; p++) {
+    for (let zi = 0; zi < 7; zi++) {
+      const prod = state.procesare[p][zi];
+      if (!prod || prod === '—') continue;
+      const zerPerVan = getZerPerVan(prod);
+      if (zerPerVan === null || zerPerVan === 0) continue;
+      if (!prodZi[prod]) prodZi[prod] = [0,0,0,0,0,0,0];
+      prodZi[prod][zi] += zerPerVan;
+    }
+  }
+  const totalZi = [0,0,0,0,0,0,0];
+  Object.values(prodZi).forEach(arr => arr.forEach((v,i) => totalZi[i] += v));
+  const grandTotal = totalZi.reduce((s,v) => s+v, 0);
+  return { prodZi, totalZi, grandTotal };
+}
+
+function buildZerPage() {
+  const tbody = document.getElementById('tbodyZer');
+  const tfoot = document.getElementById('tfootZer');
+  if (!tbody || !tfoot) return;
+
+  const { prodZi, totalZi, grandTotal } = calcZerData();
+
+  if (!Object.keys(prodZi).length) {
+    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:30px;color:#888">Nicio procesare planificată.</td></tr>';
+    tfoot.innerHTML = '';
+    return;
+  }
+
+  const f = v => v > 0 ? v.toLocaleString('ro-RO') : '—';
+  const ROW_BG = ['#F0F9FF','#E0F2FE'];
+  let idx = 0;
+  tbody.innerHTML = '';
+
+  Object.keys(prodZi).sort().forEach(prod => {
+    const arr = prodZi[prod];
+    const rowTotal = arr.reduce((s,v) => s+v, 0);
+    if (rowTotal === 0) return;
+    const zerPerVan = getZerPerVan(prod);
+    const bg = ROW_BG[idx++ % 2];
+    const cells = arr.map(v => `<td style="text-align:right;padding:8px;font-family:monospace">${f(v)}</td>`).join('');
+    const tr = document.createElement('tr');
+    tr.style.background = bg;
+    tr.innerHTML = `<td style="padding:8px 14px;font-weight:600">${prod}</td>
+      <td style="text-align:center;padding:8px;color:#0369A1;font-weight:700">${f(zerPerVan)}</td>
+      ${cells}
+      <td style="text-align:right;padding:8px;font-weight:700;color:#075985;background:#E0F2FE">${f(rowTotal)}</td>`;
+    tbody.appendChild(tr);
+  });
+
+  const totalCells = totalZi.map(v =>
+    `<td style="text-align:right;padding:10px 8px;font-size:13px;font-weight:800">${f(v)}</td>`
+  ).join('');
+  tfoot.innerHTML = `<tr style="background:#0C4A6E;color:white">
+    <td style="padding:10px 14px;font-weight:700;text-transform:uppercase;font-size:11px;letter-spacing:.5px">TOTAL / ZI (L)</td>
+    <td></td>${totalCells}
+    <td style="text-align:right;padding:10px 8px;font-weight:800;font-size:15px;background:#075985">${f(grandTotal)}</td>
+  </tr>`;
+}
+// ─────────────────────────────────────────────────────────────────
 
 function showTab(tab) {
   document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
