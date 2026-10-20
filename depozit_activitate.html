@@ -104,8 +104,7 @@ tr.tot td{font-weight:700;background:var(--bg)}
   <div class="card" id="formCard">
     <h2 id="formTitle">Adaugă activitate</h2>
     <div class="grid">
-      <div><label>Data (de la)</label><input type="date" id="fStart"></div>
-      <div><label>Până la (opțional)</label><input type="date" id="fEnd"></div>
+      <div><label>Data</label><input type="date" id="fStart"></div>
       <div><label>Nr. procesări</label><input type="number" id="fProc" min="0" step="1" inputmode="numeric" placeholder="ex. 8"></div>
     </div>
     <div style="margin-top:12px">
@@ -243,14 +242,14 @@ $('fNew').addEventListener('keydown', e => { if (e.key === 'Enter'){ e.preventDe
 
 function resetForm(){
   editingId = null; selected = new Set();
-  $('fStart').value = todayISO(); $('fEnd').value = ''; $('fProc').value = ''; $('fObs').value = '';
+  $('fStart').value = todayISO(); $('fProc').value = ''; $('fObs').value = '';
   $('formTitle').textContent = 'Adaugă activitate'; $('cancel').style.display = 'none';
   renderChips();
 }
 function editRow(id){
   const r = rows.find(x => x.id === id); if (!r) return;
   editingId = id; selected = new Set(r.echipa);
-  $('fStart').value = r.start; $('fEnd').value = r.end !== r.start ? r.end : '';
+  $('fStart').value = r.start;
   $('fProc').value = r.procesari ?? ''; $('fObs').value = r.obs || '';
   $('formTitle').textContent = 'Modifică activitatea din ' + fmt(r.start);
   $('cancel').style.display = ''; renderChips();
@@ -259,9 +258,12 @@ function editRow(id){
 $('cancel').onclick = resetForm;
 
 $('save').onclick = async () => {
-  const start = $('fStart').value; let end = $('fEnd').value || start;
+  const start = $('fStart').value;
   if (!start){ $('msg').textContent = 'Alege data.'; return; }
-  if (end < start){ $('msg').textContent = 'Data de final e înaintea celei de start.'; return; }
+  // o singură dată; la modificarea unei intrări vechi pe interval, păstrăm lungimea intervalului
+  const old = editingId ? rows.find(x => x.id === editingId) : null;
+  let end = start;
+  if (old && old.end !== old.start){ const e = toD(start); e.setUTCDate(e.getUTCDate() + daysIn(old) - 1); end = e.toISOString().slice(0,10); }
   if (!selected.size){ $('msg').textContent = 'Selectează cel puțin un coleg.'; return; }
   const p = $('fProc').value;
   const row = { id: editingId, start, end, procesari: p === '' ? null : Number(p),
