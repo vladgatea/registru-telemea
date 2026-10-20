@@ -1,0 +1,764 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Calculator Mix Lapte — Ferma cu Omenie</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:        #F6F8FA;
+  --surface:   #FFFFFF;
+  --border:    #E2E8F0;
+  --border-strong: #CBD5E1;
+  --text:      #0F172A;
+  --muted:     #64748B;
+  --faint:     #94A3B8;
+
+  --green:     #166534;
+  --green-mid: #16A34A;
+  --green-bg:  #F0FDF4;
+  --green-border: #86EFAC;
+
+  --blue:      #1E40AF;
+  --blue-mid:  #2563EB;
+  --blue-bg:   #EFF6FF;
+  --blue-border: #93C5FD;
+
+  --amber:     #92400E;
+  --amber-bg:  #FFFBEB;
+  --amber-border: #FCD34D;
+
+  --red:       #991B1B;
+  --red-bg:    #FEF2F2;
+  --red-border:#FCA5A5;
+
+  --radius:    12px;
+  --radius-sm: 8px;
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  padding: 0;
+}
+
+/* ── HEADER ── */
+.header {
+  background: var(--green);
+  color: white;
+  padding: 16px 32px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  box-shadow: 0 2px 8px rgba(0,0,0,.15);
+}
+.header-logo {
+  width: 36px; height: 36px;
+  background: rgba(255,255,255,.2);
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px;
+}
+.header-title { font-size: 16px; font-weight: 700; line-height: 1.2; }
+.header-sub   { font-size: 12px; opacity: .75; font-weight: 400; }
+
+/* ── LAYOUT ── */
+.main {
+  max-width: 780px;
+  margin: 0 auto;
+  padding: 28px 20px 60px;
+}
+
+/* ── CARD ── */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 16px;
+  overflow: hidden;
+}
+.card-head {
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.card-head .icon {
+  width: 30px; height: 30px;
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 15px;
+  flex-shrink: 0;
+}
+.card-head h2 {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+  flex: 1;
+}
+.card-head .subtitle {
+  font-size: 11px;
+  color: var(--muted);
+  font-weight: 400;
+  margin-top: 1px;
+}
+.card-body { padding: 20px; }
+
+/* ── FURNIZOR ROW ── */
+.furnizor-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 12px;
+  align-items: end;
+}
+.furnizor-grid.degresat {
+  grid-template-columns: 2fr 1fr;
+}
+
+label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+  margin-bottom: 5px;
+  letter-spacing: .3px;
+}
+
+input[type="text"],
+input[type="number"] {
+  width: 100%;
+  height: 40px;
+  padding: 0 12px;
+  border: 1.5px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  color: var(--text);
+  background: var(--surface);
+  transition: border-color .15s;
+  outline: none;
+}
+input[type="number"] {
+  font-family: 'JetBrains Mono', monospace;
+}
+input:focus {
+  border-color: var(--green-mid);
+  box-shadow: 0 0 0 3px rgba(22,163,74,.1);
+}
+input.readonly {
+  background: var(--bg);
+  color: var(--muted);
+  border-style: dashed;
+}
+.unit {
+  font-size: 11px;
+  color: var(--faint);
+  margin-top: 4px;
+  text-align: right;
+}
+
+/* ── TOGGLE ── */
+.toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+  padding: 10px 14px;
+  background: var(--bg);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+}
+.toggle-label { font-size: 13px; color: var(--muted); flex: 1; }
+.toggle {
+  position: relative; width: 44px; height: 24px; cursor: pointer;
+}
+.toggle input { display: none; }
+.toggle-track {
+  width: 44px; height: 24px;
+  background: var(--border-strong);
+  border-radius: 12px;
+  transition: background .2s;
+  position: relative;
+}
+.toggle input:checked + .toggle-track { background: var(--green-mid); }
+.toggle-track::after {
+  content: '';
+  position: absolute;
+  width: 18px; height: 18px;
+  background: white;
+  border-radius: 50%;
+  top: 3px; left: 3px;
+  transition: transform .2s;
+  box-shadow: 0 1px 3px rgba(0,0,0,.2);
+}
+.toggle input:checked + .toggle-track::after { transform: translateX(20px); }
+
+/* ── BUTON ── */
+.btn-calc {
+  width: 100%;
+  height: 48px;
+  background: var(--green);
+  color: white;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-family: 'Inter', sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background .15s, transform .1s;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+}
+.btn-calc:hover { background: #15803D; }
+.btn-calc:active { transform: scale(.98); }
+
+.btn-reset {
+  margin-top: 8px;
+  width: 100%;
+  height: 36px;
+  background: transparent;
+  color: var(--muted);
+  border: 1.5px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  cursor: pointer;
+  transition: border-color .15s, color .15s;
+}
+.btn-reset:hover { border-color: var(--red-border); color: var(--red); }
+
+/* ── REZULTAT ── */
+#rezultat { display: none; }
+
+.rez-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.rez-kpi {
+  background: var(--bg);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 14px 16px;
+  text-align: center;
+}
+.rez-kpi.primary {
+  background: var(--green-bg);
+  border-color: var(--green-border);
+}
+.rez-kpi.warn {
+  background: var(--amber-bg);
+  border-color: var(--amber-border);
+}
+.rez-kpi.error {
+  background: var(--red-bg);
+  border-color: var(--red-border);
+}
+.rez-kpi-val {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--green);
+  line-height: 1;
+}
+.rez-kpi.warn .rez-kpi-val { color: var(--amber); }
+.rez-kpi.error .rez-kpi-val { color: var(--red); }
+.rez-kpi-unit { font-size: 12px; color: var(--muted); margin-top: 3px; }
+.rez-kpi-label { font-size: 11px; font-weight: 600; color: var(--muted); margin-top: 6px; }
+
+/* ── TABEL DETALII ── */
+.detail-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.detail-table th {
+  background: var(--bg);
+  padding: 8px 12px;
+  text-align: left;
+  font-weight: 600;
+  font-size: 11px;
+  color: var(--muted);
+  border-bottom: 1px solid var(--border);
+}
+.detail-table th:not(:first-child) { text-align: right; }
+.detail-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+}
+.detail-table td:not(:first-child) {
+  text-align: right;
+  font-family: 'JetBrains Mono', monospace;
+}
+.detail-table tr:last-child td { border-bottom: none; }
+.detail-table .total-row td {
+  font-weight: 700;
+  background: var(--green-bg);
+  color: var(--green);
+}
+.detail-table .degresat-row td {
+  background: var(--blue-bg);
+  color: var(--blue);
+  font-weight: 600;
+}
+
+/* ── MESAJ EROARE ── */
+.error-msg {
+  padding: 12px 16px;
+  background: var(--red-bg);
+  border: 1.5px solid var(--red-border);
+  border-radius: var(--radius-sm);
+  color: var(--red);
+  font-size: 13px;
+  font-weight: 500;
+  display: none;
+}
+
+/* ── FORMULA HINT ── */
+.formula-hint {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 12px 16px;
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 16px;
+}
+.formula-hint strong { color: var(--text); }
+
+@media (max-width: 520px) {
+  .furnizor-grid { grid-template-columns: 1fr 1fr; }
+  .furnizor-grid > *:first-child { grid-column: 1 / -1; }
+  .rez-grid { grid-template-columns: 1fr; }
+  .header { padding: 14px 16px; }
+  .main { padding: 16px 12px 40px; }
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-logo">🥛</div>
+  <div>
+    <div class="header-title">Calculator Mix Lapte</div>
+    <div class="header-sub">Ferma cu Omenie SRL — Standardizare grăsime</div>
+  </div>
+</div>
+
+<div class="main">
+
+  <!-- GRĂSIME DORITĂ -->
+  <div class="card">
+    <div class="card-head">
+      <div class="icon" style="background:#F0FDF4">🎯</div>
+      <div>
+        <h2>Parametri procesare</h2>
+        <div class="subtitle">Volumul total și grăsimea pe care vrei s-o obții</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="furnizor-grid" style="grid-template-columns:1fr 1fr 1fr">
+        <div>
+          <label>Volum total dorit</label>
+          <input type="number" id="sarjaDorita" placeholder="ex: 21000" min="0" step="100" oninput="calculeaza()">
+          <div class="unit">litri</div>
+        </div>
+        <div>
+          <label>Grăsime dorită</label>
+          <input type="number" id="grasimeDorita" placeholder="ex: 3.0" min="0.1" max="10" step="0.01" oninput="calculeaza()">
+          <div class="unit">%</div>
+        </div>
+        <div>
+          <label>Grăsime lapte degresat</label>
+          <input type="number" id="grasimeDegresat" value="0.2" min="0" max="1" step="0.01" oninput="calculeaza()">
+          <div class="unit">%</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- LAPTE INTEGRAL -->
+  <div class="card">
+    <div class="card-head">
+      <div class="icon" style="background:#EFF6FF">🐄</div>
+      <div>
+        <h2>Lapte integral furnizori</h2>
+        <div class="subtitle">Introdu cantitățile și grăsimile disponibile</div>
+      </div>
+    </div>
+    <div class="card-body">
+
+      <!-- Furnizor 1 -->
+      <div style="margin-bottom:16px">
+        <div style="font-size:12px;font-weight:700;color:var(--blue);margin-bottom:10px">Furnizor 1</div>
+        <div class="furnizor-grid">
+          <div>
+            <label>Litri disponibili</label>
+            <input type="number" id="f1_litri" placeholder="ex: 5000" min="0" step="100" oninput="calculeaza()">
+          </div>
+          <div>
+            <label>Grăsime</label>
+            <input type="number" id="f1_grasime" placeholder="ex: 3.6" min="0.1" max="10" step="0.01" oninput="calculeaza()">
+            <div class="unit">%</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Toggle furnizor 2 -->
+      <div class="toggle-row">
+        <span class="toggle-label">Al doilea furnizor</span>
+        <label class="toggle">
+          <input type="checkbox" id="toggle2" onchange="toggleF2()">
+          <div class="toggle-track"></div>
+        </label>
+      </div>
+
+      <!-- Furnizor 2 (ascuns implicit) -->
+      <div id="furnizor2" style="display:none; margin-bottom:4px">
+        <div style="font-size:12px;font-weight:700;color:var(--blue);margin-bottom:10px">Furnizor 2</div>
+        <div class="furnizor-grid">
+          <div>
+            <label>Litri disponibili</label>
+            <input type="number" id="f2_litri" placeholder="ex: 3000" min="0" step="100" oninput="calculeaza()">
+          </div>
+          <div>
+            <label>Grăsime</label>
+            <input type="number" id="f2_grasime" placeholder="ex: 3.9" min="0.1" max="10" step="0.01" oninput="calculeaza()">
+            <div class="unit">%</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- MEDIA PONDERATA -->
+  <div id="mediaPonderataCard" style="display:none;margin-bottom:16px">
+    <div style="background:#EFF6FF;border:1.5px solid #93C5FD;border-radius:12px;padding:14px 20px;display:flex;align-items:center;gap:16px">
+      <div style="font-size:22px">⚖️</div>
+      <div style="flex:1">
+        <div style="font-size:11px;font-weight:600;color:#1E40AF;margin-bottom:2px">MEDIE PONDERATĂ GRĂSIME LAPTE INTEGRAL</div>
+        <div style="display:flex;align-items:baseline;gap:6px">
+          <span style="font-family:'JetBrains Mono',monospace;font-size:28px;font-weight:800;color:#1E40AF" id="mediaGrasime">—</span>
+          <span style="font-size:14px;color:#2563EB;font-weight:600">%</span>
+        </div>
+        <div style="font-size:11px;color:#60A5FA;margin-top:2px" id="mediaFormula">—</div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-size:11px;font-weight:600;color:#1E40AF;margin-bottom:2px">TOTAL INTEGRAL</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:20px;font-weight:700;color:#1E40AF" id="totalIntegral">—</div>
+        <div style="font-size:11px;color:#60A5FA">litri</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- LAPTE DEGRESAT stoc -->
+  <div class="card">
+    <div class="card-head">
+      <div class="icon" style="background:#F0F9FF">💧</div>
+      <div>
+        <h2>Stoc lapte degresat</h2>
+        <div class="subtitle">Opțional — lasă gol dacă stocul nu e limitat</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="furnizor-grid" style="grid-template-columns:1fr">
+        <div>
+          <label>Litri degresat disponibili</label>
+          <input type="number" id="litriDegresatDisp" placeholder="nelimitat" min="0" step="100" oninput="calculeaza()">
+          <div class="unit">litri</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- EROARE -->
+  <div class="error-msg" id="errorMsg"></div>
+
+  <!-- REZULTAT -->
+  <div id="rezultat">
+    <div class="card">
+      <div class="card-head">
+        <div class="icon" style="background:#F0FDF4">✅</div>
+        <div>
+          <h2>Rezultat calcul</h2>
+          <div class="subtitle" id="rez-subtitle">—</div>
+        </div>
+      </div>
+      <div class="card-body">
+
+        <div class="rez-grid">
+          <div class="rez-kpi" style="background:#EFF6FF;border-color:#93C5FD">
+            <div class="rez-kpi-val" style="color:#1E40AF" id="rez-integral">—</div>
+            <div class="rez-kpi-unit">litri</div>
+            <div class="rez-kpi-label">Lapte integral necesar</div>
+          </div>
+          <div class="rez-kpi primary">
+            <div class="rez-kpi-val" id="rez-degresat">—</div>
+            <div class="rez-kpi-unit">litri</div>
+            <div class="rez-kpi-label">Lapte degresat necesar</div>
+          </div>
+          <div class="rez-kpi">
+            <div class="rez-kpi-val" id="rez-total">—</div>
+            <div class="rez-kpi-unit">litri total mix</div>
+            <div class="rez-kpi-label">Volum final obținut</div>
+          </div>
+          <div class="rez-kpi">
+            <div class="rez-kpi-val" id="rez-grasime-reala">—</div>
+            <div class="rez-kpi-unit">% grăsime verificare</div>
+            <div class="rez-kpi-label">Grăsime calculată</div>
+          </div>
+          <div class="rez-kpi">
+            <div class="rez-kpi-val" id="rez-pct-degresat">—</div>
+            <div class="rez-kpi-unit">% din total</div>
+            <div class="rez-kpi-label">Proporție degresat</div>
+          </div>
+        </div>
+
+        <!-- TABEL DETALIAT -->
+        <table class="detail-table">
+          <thead>
+            <tr>
+              <th>Sursă</th>
+              <th>Litri</th>
+              <th>Grăsime</th>
+              <th>kg grăsime</th>
+            </tr>
+          </thead>
+          <tbody id="rez-tbody"></tbody>
+        </table>
+
+        <div class="formula-hint" id="formula-hint"></div>
+
+      </div>
+    </div>
+  </div>
+
+  <button class="btn-reset" onclick="reset()">↺ Resetează</button>
+
+</div>
+
+<script>
+function toggleF2() {
+  const on = document.getElementById('toggle2').checked;
+  document.getElementById('furnizor2').style.display = on ? 'block' : 'none';
+  calculeaza();
+}
+
+function n(id) {
+  return parseFloat(document.getElementById(id).value) || 0;
+}
+function s(id) {
+  return (document.getElementById(id).value || '').trim();
+}
+
+function showError(msg) {
+  const el = document.getElementById('errorMsg');
+  el.textContent = msg;
+  el.style.display = 'block';
+  document.getElementById('rezultat').style.display = 'none';
+}
+
+function hideError() {
+  document.getElementById('errorMsg').style.display = 'none';
+}
+
+function calculeaza() {
+  hideError();
+
+  const gd   = n('grasimeDorita');
+  const gD   = n('grasimeDegresat') || 0.2;
+  const sarja = n('sarjaDorita');
+
+  const f2on = document.getElementById('toggle2').checked;
+
+  const L1 = n('f1_litri');
+  const G1 = n('f1_grasime');
+  const L2 = f2on ? n('f2_litri') : 0;
+  const G2 = f2on ? n('f2_grasime') : 0;
+
+  // Grăsime medie lapte integral
+  const L_int = L1 + L2;
+  const G_med = L_int > 0 ? (L1*G1 + L2*G2) / L_int : G1;
+
+  // Media ponderată — afișăm imediat când avem ambii furnizori
+  const cardMedia = document.getElementById('mediaPonderataCard');
+  if (f2on && L1 > 0 && G1 > 0 && L2 > 0 && G2 > 0) {
+    cardMedia.style.display = 'block';
+    document.getElementById('mediaGrasime').textContent = G_med.toFixed(2);
+    document.getElementById('totalIntegral').textContent = Math.round(L_int).toLocaleString('ro-RO');
+    document.getElementById('mediaFormula').textContent =
+      `(${Math.round(L1).toLocaleString('ro-RO')} L × ${G1.toFixed(2)}% + ${Math.round(L2).toLocaleString('ro-RO')} L × ${G2.toFixed(2)}%) ÷ ${Math.round(L_int).toLocaleString('ro-RO')} L`;
+  } else {
+    cardMedia.style.display = 'none';
+  }
+
+  // Grăsimea laptelui integral de folosit în calcul:
+  // Dacă avem furnizori introduși → media lor ponderată
+  // Dacă nu → folosim grăsimea de la Furnizor 1 dacă e completată
+  // Dacă nici aceea → nu putem calcula
+  let G_integral;
+  if (L_int > 0 && G_med > 0) {
+    G_integral = G_med;
+  } else if (G1 > 0) {
+    G_integral = G1;
+  } else {
+    document.getElementById('rezultat').style.display = 'none';
+    return;
+  }
+
+  // Validare minimă: trebuie să avem volumul dorit și grăsimea dorită
+  if (!gd || !sarja) {
+    document.getElementById('rezultat').style.display = 'none';
+    return;
+  }
+
+  // Verificăm dacă e posibil să coborâm la grăsimea dorită
+  if (gd >= G_integral) {
+    showError(`Grăsimea dorită (${gd}%) trebuie să fie mai mică decât grăsimea integrală (${G_integral.toFixed(2)}%). Adaugă lapte degresat pentru a reduce grăsimea.`);
+    return;
+  }
+  if (gd <= gD) {
+    showError(`Grăsimea dorită (${gd}%) trebuie să fie mai mare decât grăsimea laptelui degresat (${gD}%).`);
+    return;
+  }
+
+  // Calculul principal:
+  // Dacă avem o sarjă fixă: găsim X (litri degresat) astfel încât
+  // (L_int × G_med + X × gD) / (L_int + X) = gd
+  // → L_int × G_med + X × gD = gd × L_int + gd × X
+  // → X × (gD - gd) = gd × L_int - L_int × G_med
+  // → X = L_int × (gd - G_med) / (gD - gd)
+  // Note: gd < G_med și gD < gd → (gD - gd) < 0, (gd - G_med) < 0 → X > 0 ✓
+
+  let X, L_total, L_integral_final;
+
+  // Calculăm câți litri de integral și câți de degresat
+  // Formula: L_int_f * G_integral + L_deg * gD = sarja * gd
+  //          L_int_f + L_deg = sarja
+  // → L_deg = sarja * (G_integral - gd) / (G_integral - gD)
+  // → L_int_f = sarja - L_deg
+
+  if (sarja > 0) {
+    // Sarjă fixă: calculăm proporțiile
+    X = sarja * (G_integral - gd) / (G_integral - gD);
+    L_integral_final = sarja - X;
+    L_total = sarja;
+    // Dacă avem furnizori specificați, verificăm că nu depășim disponibilul
+    if (L_int > 0 && L_integral_final > L_int * 1.01) {
+      showError(`Ai nevoie de ${Math.round(L_integral_final).toLocaleString('ro-RO')} L lapte integral, dar ai disponibil ${Math.round(L_int).toLocaleString('ro-RO')} L.`);
+      document.getElementById('rezultat').style.display = 'block';
+    }
+  } else {
+    // Fără sarjă fixă: calculăm din integralul disponibil
+    if (L_int <= 0) { document.getElementById('rezultat').style.display = 'none'; return; }
+    X = L_int * (G_integral - gd) / (gd - gD);
+    L_integral_final = L_int;
+    L_total = L_int + X;
+  }
+
+  // Verificăm limita de degresat disponibil
+  const limitD = n('litriDegresatDisp');
+  let warnLimit = false;
+  if (limitD > 0 && X > limitD) {
+    warnLimit = true;
+  }
+
+  // Verificare finală
+  const grasimeReala = (L_integral_final * G_integral + X * gD) / L_total;
+
+  // Afișăm rezultatele
+  document.getElementById('rezultat').style.display = 'block';
+
+  const fmt = v => Math.round(v).toLocaleString('ro-RO');
+  const fmtD = v => v.toFixed(2);
+  const fmtP = v => v.toFixed(1);
+
+  document.getElementById('rez-degresat').textContent = fmt(X);
+  document.getElementById('rez-integral').textContent = fmt(L_integral_final);
+  document.getElementById('rez-total').textContent    = fmt(L_total);
+  document.getElementById('rez-grasime-reala').textContent = fmtD(grasimeReala) + '%';
+  document.getElementById('rez-pct-degresat').textContent  = fmtP(X / L_total * 100) + '%';
+
+  // Culoare KPI degresat dacă depășim limita
+  const kpiDeg = document.getElementById('rez-degresat').parentElement;
+  kpiDeg.className = 'rez-kpi ' + (warnLimit ? 'warn' : 'primary');
+
+  document.getElementById('rez-subtitle').textContent =
+    `Mix de ${fmt(L_total)} L lapte la ${fmtD(grasimeReala)}% grăsime`;
+
+  // Tabel detaliat
+  const tbody = document.getElementById('rez-tbody');
+  const rows = [];
+
+  const f1_name = 'Furnizor 1';
+  if (L_int > 0) {
+    rows.push(`<tr>
+      <td>Lapte integral (total)</td>
+      <td>${fmt(L_integral_final)}</td>
+      <td>${G_integral.toFixed(2)}%</td>
+      <td>${fmtD(L_integral_final * G_integral / 100)} kg</td>
+    </tr>`);
+  } else {
+    rows.push(`<tr>
+      <td>Lapte integral</td>
+      <td>${fmt(L_integral_final)}</td>
+      <td>${G_integral.toFixed(2)}%</td>
+      <td>${fmtD(L_integral_final * G_integral / 100)} kg</td>
+    </tr>`);
+  }
+
+
+
+  rows.push(`<tr class="degresat-row">
+    <td>Lapte degresat ${warnLimit ? '⚠ depășește stocul' : ''}</td>
+    <td>${fmt(X)}</td>
+    <td>${gD.toFixed(2)}%</td>
+    <td>${fmtD(X * gD / 100)} kg</td>
+  </tr>`);
+
+  rows.push(`<tr class="total-row">
+    <td>TOTAL MIX</td>
+    <td>${fmt(L_total)}</td>
+    <td>${fmtD(grasimeReala)}%</td>
+    <td>${fmtD(L_total * grasimeReala / 100)} kg</td>
+  </tr>`);
+
+  tbody.innerHTML = rows.join('');
+
+  // Formula hint
+  document.getElementById('formula-hint').innerHTML =
+    `<strong>Formula:</strong> (${fmt(L_integral_final)} L integral × ${G_integral.toFixed(2)}% + ${fmt(X)} L degresat × ${gD}%) ÷ ${fmt(L_total)} L = <strong>${fmtD(grasimeReala)}% grăsime</strong>`;
+
+  // Warn dacă depășim stocul
+  if (warnLimit) {
+    showError(`⚠ Ai nevoie de ${fmt(X)} L degresat, dar ai disponibil doar ${fmt(limitD)} L. Diferența este ${fmt(X - limitD)} L.`);
+    document.getElementById('rezultat').style.display = 'block';
+  }
+}
+
+function reset() {
+  ['sarjaDorita','grasimeDorita','f1_litri','f1_grasime','f1_nume',
+   'f2_litri','f2_grasime','f2_nume','litriDegresatDisp'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+  document.getElementById('grasimeDegresat').value = '0.2';
+  document.getElementById('toggle2').checked = false;
+  document.getElementById('furnizor2').style.display = 'none';
+  document.getElementById('rezultat').style.display = 'none';
+  document.getElementById('mediaPonderataCard').style.display = 'none';
+  hideError();
+}
+
+// Calcul live la load dacă există valori
+document.addEventListener('DOMContentLoaded', () => {});
+</script>
+</body>
+</html>
