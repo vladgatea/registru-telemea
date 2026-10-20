@@ -48,6 +48,7 @@ td{padding:10px 16px;border-top:1px solid var(--line);vertical-align:top;font-si
 td.d{white-space:nowrap;font-weight:600;width:1%}
 td.n{text-align:right;white-space:nowrap;width:1%;font-weight:700}
 td.a{white-space:nowrap;width:1%;text-align:right}
+.bad{display:inline-block;background:var(--danger);color:#fff;font-size:12px;font-weight:600;padding:2px 8px;border-radius:6px;margin-left:6px}
 .obs{display:inline-block;margin-top:4px;background:var(--warn-soft);color:var(--warn);font-size:12px;padding:2px 8px;border-radius:6px}
 .lnk{background:none;border:0;color:var(--muted);cursor:pointer;font:inherit;font-size:13px;padding:2px 4px}
 .lnk:hover{color:var(--ink)} .lnk.del:hover{color:var(--danger)}
@@ -105,7 +106,8 @@ tr.tot td{font-weight:700;background:var(--bg)}
     <h2 id="formTitle">Adaugă activitate</h2>
     <div class="grid">
       <div><label>Data</label><input type="date" id="fStart"></div>
-      <div><label>Nr. procesări</label><input type="number" id="fProc" min="0" step="1" inputmode="numeric" placeholder="ex. 8"></div>
+      <div><label>Nr. procesări</label><input type="number" id="fProc" min="0" max="9" step="1" inputmode="numeric" placeholder="0–9"></div>
+      <div><label>Șarje ratate</label><input type="number" id="fRat" min="0" max="9" step="1" inputmode="numeric" placeholder="0"></div>
     </div>
     <div style="margin-top:12px">
       <label>Echipa</label>
@@ -123,6 +125,22 @@ tr.tot td{font-weight:700;background:var(--bg)}
       <button class="btn" id="save">Salvează</button>
       <button class="btn ghost" id="cancel" style="display:none">Renunță</button>
       <span class="muted" id="msg"></span>
+    </div>
+  </div>
+
+  <div class="card" id="ratCard">
+    <h2>Șarjă ratată (și retroactiv)</h2>
+    <div class="grid">
+      <div><label>Ziua</label><input type="date" id="rDate"></div>
+      <div><label>Nr. șarje ratate</label><input type="number" id="rNr" min="0" max="9" step="1" inputmode="numeric" placeholder="ex. 1"></div>
+    </div>
+    <div style="margin-top:12px">
+      <label>Echipa din ziua respectivă</label>
+      <div class="chips" id="rTeams"></div>
+    </div>
+    <div class="row" style="margin-top:12px">
+      <button class="btn" id="rSave">Salvează șarja ratată</button>
+      <span class="muted" id="rMsg"></span>
     </div>
   </div>
 
@@ -242,7 +260,7 @@ $('fNew').addEventListener('keydown', e => { if (e.key === 'Enter'){ e.preventDe
 
 function resetForm(){
   editingId = null; selected = new Set();
-  $('fStart').value = todayISO(); $('fProc').value = ''; $('fObs').value = '';
+  $('fStart').value = todayISO(); $('fProc').value = ''; $('fRat').value = ''; $('fObs').value = '';
   $('formTitle').textContent = 'Adaugă activitate'; $('cancel').style.display = 'none';
   renderChips();
 }
@@ -250,7 +268,7 @@ function editRow(id){
   const r = rows.find(x => x.id === id); if (!r) return;
   editingId = id; selected = new Set(r.echipa);
   $('fStart').value = r.start;
-  $('fProc').value = r.procesari ?? ''; $('fObs').value = r.obs || '';
+  $('fProc').value = r.procesari ?? ''; $('fRat').value = r.ratate || ''; $('fObs').value = r.obs || '';
   $('formTitle').textContent = 'Modifică activitatea din ' + fmt(r.start);
   $('cancel').style.display = ''; renderChips();
   $('formCard').scrollIntoView({ behavior:'smooth' });
@@ -266,8 +284,10 @@ $('save').onclick = async () => {
   if (old && old.end !== old.start){ const e = toD(start); e.setUTCDate(e.getUTCDate() + daysIn(old) - 1); end = e.toISOString().slice(0,10); }
   if (!selected.size){ $('msg').textContent = 'Selectează cel puțin un coleg.'; return; }
   const p = $('fProc').value;
+  if (p !== '' && (Number(p) < 0 || Number(p) > 9 || !Number.isInteger(Number(p)))){ $('msg').textContent = 'Nr. procesări trebuie să fie între 0 și 9.'; return; }
   const row = { id: editingId, start, end, procesari: p === '' ? null : Number(p),
-    echipa: [...selected], obs: $('fObs').value.trim() };
+    echipa: [...selected], obs: $('fObs').value.trim(), ratate: Number($('fRat').value) || 0 };
+  if (row.ratate < 0 || row.ratate > 9){ $('msg').textContent = 'Șarje ratate: între 0 și 9.'; return; }
   $('save').disabled = true; $('msg').textContent = 'Se salvează…';
   try{
     await post({ action:'save', row });
@@ -290,10 +310,12 @@ function weekStats(list){
   const zile = list.reduce((s,r) => s + daysIn(r), 0);
   const oameni = new Set(list.flatMap(r => r.echipa));
   const fara = list.filter(r => r.procesari === null).length;
-  return { proc, zile, oameni: oameni.size, fara, intrari: list.length };
+  const ratate = list.reduce((s,r) => s + (r.ratate || 0), 0);
+  return { ratate, proc, zile, oameni: oameni.size, fara, intrari: list.length };
 }
 function render(){
   renderChips();
+  renderRetro();
   renderReport();
   const groups = {};
   rows.forEach(r => { const w = isoWeek(r.start); (groups[w.key] ||= { w, list: [] }).list.push(r); });
@@ -329,13 +351,14 @@ function render(){
           <span><b>${s.proc}</b> procesări</span>
           <span><b>${s.zile}</b> zile</span>
           <span><b>${s.oameni}</b> colegi</span>
+          ${s.ratate ? `<span style="color:var(--danger)"><b>${s.ratate}</b> ratate</span>` : ''}
           ${s.fara ? `<span style="color:var(--warn)"><b>${s.fara}</b> fără procesări</span>` : ''}
         </div>
       </div>
       <table>${list.map(r => `<tr>
         <td class="d">${dayName(r.start)} ${fmt(r.start)}${r.end !== r.start ? ` – ${dayName(r.end)} ${fmt(r.end)}` : ''}</td>
         <td>${r.echipa.map(esc).join(', ')}${r.obs ? `<br><span class="obs">${esc(r.obs)}</span>` : ''}</td>
-        <td class="n">${r.procesari === null ? '<span class="muted">—</span>' : r.procesari}</td>
+        <td class="n">${r.procesari === null ? '<span class="muted">—</span>' : r.procesari}${r.ratate ? `<br><span class="bad">${r.ratate} ratat${r.ratate>1?'e':'ă'}</span>` : ''}</td>
         <td class="a"><button class="lnk" onclick="editRow('${r.id}')">Modifică</button><button class="lnk del" onclick="delRow('${r.id}')">Șterge</button></td>
       </tr>`).join('')}</table>
     </div>`;
@@ -369,7 +392,8 @@ function renderReport(){
     else { const v = r.procesari / d; k = Number.isInteger(v) ? String(v) : NED; }
     lun[k] = (lun[k] || 0) + d;
     r.echipa.forEach(p => {
-      const o = per[p] ||= { nume:p, zile:0, part:0, cota:0, z:{} };
+      const o = per[p] ||= { nume:p, zile:0, part:0, cota:0, rat:0, z:{} };
+      o.rat += r.ratate || 0;
       o.zile += d; o.z[k] = (o.z[k] || 0) + d;
       if (r.procesari !== null){ o.part += r.procesari; o.cota += r.procesari / n; }
     });
@@ -388,7 +412,7 @@ function renderReport(){
   if (!people.length){ $('mTable').innerHTML = '<div class="empty">Nicio activitate în această lună.</div>'; return; }
 
   // Coloane: mereu 5, 6, 7, 8 + orice altă valoare apărută în lună
-  const vals = new Set([5,6,7,8]);
+  const vals = new Set([5,6,7,8,9]);
   Object.keys(lun).forEach(k => { if (k !== NED && k !== FARA) vals.add(Number(k)); });
   const cols = [...[...vals].sort((a,b) => a - b).map(v => ({ k:String(v), h:`Zile cu<br>${v} proc.` })),
     ...(lun[NED] ? [{ k:NED, h:'Interval<br>nedetaliat' }] : []),
@@ -399,7 +423,7 @@ function renderReport(){
 
   $('mTable').innerHTML = `<div style="overflow-x:auto"><table>
     <tr><th>Coleg</th>${cols.map(c => `<th class="r">${c.h}</th>`).join('')}
-      <th class="r" style="${sep}">Total<br>zile</th><th class="r">Procesări<br>participate</th><th class="r">Cotă<br>procesări</th><th class="r">%</th></tr>
+      <th class="r" style="${sep}">Total<br>zile</th><th class="r">Procesări<br>participate</th><th class="r">Cotă<br>procesări</th><th class="r">%</th><th class="r">Șarje<br>ratate</th></tr>
     ${people.map(p => `<tr>
       <td><b>${esc(p.nume)}</b><div class="bar"><i style="width:${p.cota/maxC*100}%"></i></div></td>
       ${cols.map(c => `<td class="r">${cell(p.z, c)}</td>`).join('')}
@@ -407,12 +431,46 @@ function renderReport(){
       <td class="r">${p.part}</td>
       <td class="r"><b>${r1(p.cota)}</b></td>
       <td class="r">${total ? r1(p.cota/total*100) : 0}%</td>
+      <td class="r">${p.rat ? `<b style="color:var(--danger)">${p.rat}</b>` : '<span class="muted">0</span>'}</td>
     </tr>`).join('')}
     <tr class="tot"><td>Total producție</td>${cols.map(c => `<td class="r">${lun[c.k] || 0}</td>`).join('')}
-      <td class="r" style="${sep}">${zile}</td><td class="r muted">—</td><td class="r">${total}</td><td class="r">100%</td></tr>
+      <td class="r" style="${sep}">${zile}</td><td class="r muted">—</td><td class="r">${total}</td><td class="r">100%</td><td class="r">${list.reduce((s,r) => s + (r.ratate || 0), 0)}</td></tr>
   </table></div>
-  ${lun[NED] ? `<div style="padding:10px 16px;font-size:12px" class="muted">„Interval nedetaliat” = intrări pe mai multe zile unde procesările nu se împart exact pe zile (ex. 15 procesări în 2 zile). Trece-le zi cu zi ca să intre în coloanele 5/6/7/8.</div>` : ''}`;
+  ${lun[NED] ? `<div style="padding:10px 16px;font-size:12px" class="muted">„Interval nedetaliat” = intrări pe mai multe zile unde procesările nu se împart exact pe zile (ex. 15 procesări în 2 zile). Trece-le zi cu zi ca să intre în coloanele 5–9.</div>` : ''}`;
 }
+// ===== ȘARJĂ RATATĂ (RETROACTIV) =====
+let rSel = null;
+function renderRetro(){
+  const d = $('rDate').value;
+  const opts = d ? rows.filter(r => r.start <= d && d <= r.end) : [];
+  if (!opts.find(r => r.id === rSel)) rSel = opts.length === 1 ? opts[0].id : null;
+  $('rTeams').innerHTML = !d ? '<span class="muted">Alege ziua.</span>'
+    : !opts.length ? '<span class="muted">Nu e nicio activitate înregistrată în această zi. Adaug-o mai întâi din formularul de sus.</span>'
+    : opts.map(r => `<button type="button" class="chip ${r.id === rSel ? 'on' : ''}" data-id="${r.id}">
+        ${esc(r.echipa.join(', '))}${r.end !== r.start ? ` (${fmt(r.start)}–${fmt(r.end)})` : ''} · ${r.procesari ?? '—'} proc.${r.ratate ? ` · acum ${r.ratate} ratat${r.ratate>1?'e':'ă'}` : ''}</button>`).join('');
+  const cur = rows.find(r => r.id === rSel);
+  if (cur && document.activeElement !== $('rNr')) $('rNr').value = cur.ratate || '';
+}
+$('rDate').addEventListener('change', () => { rSel = null; $('rNr').value = ''; $('rMsg').textContent = ''; renderRetro(); });
+$('rTeams').addEventListener('click', e => {
+  const b = e.target.closest('.chip'); if (!b) return;
+  rSel = b.dataset.id; $('rNr').value = ''; renderRetro();
+});
+$('rSave').onclick = async () => {
+  const cur = rows.find(r => r.id === rSel);
+  if (!cur){ $('rMsg').textContent = 'Alege ziua și echipa.'; return; }
+  const n = Number($('rNr').value);
+  if (!Number.isInteger(n) || n < 0 || n > 9){ $('rMsg').textContent = 'Nr. șarje ratate: între 0 și 9.'; return; }
+  if (cur.procesari !== null && n > cur.procesari){ $('rMsg').textContent = `Echipa a avut doar ${cur.procesari} procesări.`; return; }
+  $('rSave').disabled = true; $('rMsg').textContent = 'Se salvează…';
+  try{
+    await post({ action:'save', row: { ...cur, ratate: n } });
+    await load();
+    $('rMsg').textContent = `Salvat ✓ ${n} șarj${n === 1 ? 'ă ratată' : 'e ratate'} la ${cur.echipa.join(', ')} (${fmt($('rDate').value)})`;
+  }catch(e){ $('rMsg').textContent = 'Eroare: ' + e.message; }
+  $('rSave').disabled = false;
+};
+
 document.querySelectorAll('.tab').forEach(t => t.onclick = () => {
   document.querySelectorAll('.tab').forEach(x => x.classList.toggle('on', x === t));
   $('tabAct').style.display = t.dataset.t === 'tabAct' ? '' : 'none';
@@ -420,6 +478,7 @@ document.querySelectorAll('.tab').forEach(t => t.onclick = () => {
 });
 
 $('reload').onclick = load;
+$('rDate').max = todayISO();
 resetForm();
 load();
 </script>
