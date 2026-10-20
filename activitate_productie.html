@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Activitate Producție</title>
+<style>
+:root{
+  --bg:#f5f4f0; --card:#ffffff; --ink:#1d1d1b; --muted:#6b6a65; --line:#e3e1da;
+  --accent:#2f6b4f; --accent-soft:#e3efe8; --warn:#a15c00; --warn-soft:#fbefdc; --danger:#b3261e;
+}
+@media (prefers-color-scheme: dark){
+  :root{ --bg:#151513; --card:#1f1f1c; --ink:#ecebe6; --muted:#9c9a93; --line:#33322e;
+    --accent:#6fbf94; --accent-soft:#1f3329; --warn:#e8a64a; --warn-soft:#3a2c15; --danger:#ef7a72; }
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.wrap{max-width:980px;margin:0 auto;padding:20px 16px 60px}
+h1{font-size:22px;margin:0}
+.sub{color:var(--muted);font-size:13px;margin-top:2px}
+header{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+.banner{background:var(--warn-soft);color:var(--warn);padding:10px 12px;border-radius:8px;font-size:13px;margin-bottom:14px;display:none}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:14px}
+.card h2{font-size:15px;margin:0 0 12px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+label{display:block;font-size:12px;color:var(--muted);margin-bottom:4px}
+input,textarea{width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font:inherit}
+textarea{min-height:44px;resize:vertical}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{border:1px solid var(--line);background:var(--bg);color:var(--ink);padding:7px 12px;border-radius:999px;cursor:pointer;font:inherit;font-size:14px}
+.chip.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.btn{border:0;background:var(--accent);color:#fff;padding:10px 16px;border-radius:8px;font:inherit;font-weight:600;cursor:pointer}
+.btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+.btn:disabled{opacity:.5}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:14px}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.kpi .v{font-size:24px;font-weight:700}
+.kpi .l{font-size:12px;color:var(--muted)}
+.week{padding:0;overflow:hidden}
+.week-h{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 16px;background:var(--accent-soft)}
+.week-h b{font-size:16px}
+.week-h .dates{color:var(--muted);font-size:13px;margin-left:6px}
+.stats{display:flex;gap:16px;flex-wrap:wrap;font-size:13px}
+.stats span b{font-size:16px}
+table{width:100%;border-collapse:collapse}
+td{padding:10px 16px;border-top:1px solid var(--line);vertical-align:top;font-size:14px}
+td.d{white-space:nowrap;font-weight:600;width:1%}
+td.n{text-align:right;white-space:nowrap;width:1%;font-weight:700}
+td.a{white-space:nowrap;width:1%;text-align:right}
+.obs{display:inline-block;margin-top:4px;background:var(--warn-soft);color:var(--warn);font-size:12px;padding:2px 8px;border-radius:6px}
+.lnk{background:none;border:0;color:var(--muted);cursor:pointer;font:inherit;font-size:13px;padding:2px 4px}
+.lnk:hover{color:var(--ink)} .lnk.del:hover{color:var(--danger)}
+.muted{color:var(--muted)}
+.empty{color:var(--muted);text-align:center;padding:30px}
+.tabs{display:flex;gap:4px;margin-bottom:14px;border-bottom:1px solid var(--line)}
+.tab{background:none;border:0;border-bottom:2px solid transparent;padding:10px 14px;font:inherit;font-weight:600;color:var(--muted);cursor:pointer;margin-bottom:-1px}
+.tab.on{color:var(--accent);border-bottom-color:var(--accent)}
+th{text-align:left;font-size:12px;color:var(--muted);font-weight:600;padding:10px 16px;background:var(--accent-soft)}
+th.r,td.r{text-align:right}
+.bar{height:6px;background:var(--accent-soft);border-radius:3px;margin-top:5px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--accent)}
+tr.tot td{font-weight:700;background:var(--bg)}
+@media (max-width:560px){ td{padding:9px 10px} .week-h{padding:10px} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Activitate Producție</h1>
+      <div class="sub">Ferma cu Omenie · procesări și echipă pe zile</div>
+    </div>
+    <button class="btn ghost" id="reload">↻ Reîncarcă</button>
+  </header>
+
+  <div class="banner" id="banner"></div>
+
+  <div class="tabs">
+    <button class="tab on" data-t="tabAct">Activitate</button>
+    <button class="tab" data-t="tabRap">Raport lunar</button>
+  </div>
+
+  <div id="tabRap" style="display:none">
+    <div class="card">
+      <div class="row" style="justify-content:space-between">
+        <div class="row">
+          <button class="btn ghost" id="mPrev">‹</button>
+          <b id="mLabel" style="min-width:140px;text-align:center;font-size:16px"></b>
+          <button class="btn ghost" id="mNext">›</button>
+        </div>
+        <span class="muted" style="font-size:12px">Intrările pe interval (ex. 30.10–31.10) intră în luna datei de început.</span>
+      </div>
+    </div>
+    <div class="kpis" id="mKpis"></div>
+    <div class="card week" id="mTable"></div>
+    <p class="muted" style="font-size:12px;margin-top:-4px">
+      <b>Procesări participate</b> = toate procesările echipelor din care omul a făcut parte.
+      <b>Cotă</b> = procesările împărțite egal la numărul de oameni din echipă (suma cotelor = totalul lunii).
+    </p>
+  </div>
+
+  <div id="tabAct">
+  <div class="card" id="formCard">
+    <h2 id="formTitle">Adaugă activitate</h2>
+    <div class="grid">
+      <div><label>Data</label><input type="date" id="fStart"></div>
+      <div><label>Nr. procesări</label><input type="number" id="fProc" min="0" step="1" inputmode="numeric" placeholder="ex. 8"></div>
+    </div>
+    <div style="margin-top:12px">
+      <label>Echipa</label>
+      <div class="chips" id="chips"></div>
+      <div class="row" style="margin-top:8px">
+        <input id="fNew" placeholder="Coleg nou…" style="max-width:200px">
+        <button class="btn ghost" id="addName" type="button">+ Adaugă</button>
+      </div>
+    </div>
+    <div style="margin-top:12px">
+      <label>Observații</label>
+      <textarea id="fObs" placeholder="ex. pontaj neclar, zi neplanificată…"></textarea>
+    </div>
+    <div class="row" style="margin-top:12px">
+      <button class="btn" id="save">Salvează</button>
+      <button class="btn ghost" id="cancel" style="display:none">Renunță</button>
+      <span class="muted" id="msg"></span>
+    </div>
+  </div>
+
+  <div class="kpis" id="kpis"></div>
+  <div id="weeks"></div>
+  </div>
+</div>
+
+<script>
+// ===== CONFIG =====
+// Lipește aici URL-ul aplicației web Apps Script (se termină în /exec).
+// Gol = mod demonstrativ (datele nu se salvează).
+const API_URL = 'https://script.google.com/macros/s/AKfycbwykalQYdHHy4lUYvujesYluaUvmlgkBMF1Rw7_abGhT8zqyybJLtkBqoonQ9eUolaO/exec';
+
+const DEFAULT_NAMES = ['Alexa','Costea','Crisan','Muresan','Raul','Stefan','Toader'];
+const DEMO = [
+  {id:'d1',start:'2026-10-01',end:'2026-10-02',procesari:15,echipa:['Costea','Stefan','Raul'],obs:''},
+  {id:'d2',start:'2026-10-03',end:'2026-10-04',procesari:14,echipa:['Alexa','Muresan','Stefan','Crisan'],obs:''},
+  {id:'d3',start:'2026-10-05',end:'2026-10-06',procesari:14,echipa:['Costea','Raul','Stefan'],obs:''},
+  {id:'d4',start:'2026-10-07',end:'2026-10-08',procesari:13,echipa:['Alexa','Crisan','Muresan'],obs:''},
+  {id:'d5',start:'2026-10-11',end:'2026-10-11',procesari:null,echipa:['Alexa','Crisan','Muresan'],obs:'Nu este nimic trecut în planificare în această zi'},
+  {id:'d6',start:'2026-10-12',end:'2026-10-12',procesari:8,echipa:['Crisan','Muresan','Toader'],obs:''},
+  {id:'d7',start:'2026-10-13',end:'2026-10-13',procesari:7,echipa:['Crisan','Stefan','Raul'],obs:''},
+  {id:'d8',start:'2026-10-14',end:'2026-10-14',procesari:7,echipa:['Crisan','Raul','Muresan','Stefan'],obs:''},
+  {id:'d9',start:'2026-10-15',end:'2026-10-15',procesari:8,echipa:['Stefan','Costea','Raul'],obs:''},
+  {id:'d10',start:'2026-10-16',end:'2026-10-16',procesari:null,echipa:['Stefan','Toader'],obs:'Pontaj neclar: Stefan și Toader pontați de la 23:00 la 02:30 noaptea'},
+  {id:'d11',start:'2026-10-17',end:'2026-10-17',procesari:6,echipa:['Muresan','Stefan'],obs:''},
+  {id:'d12',start:'2026-10-18',end:'2026-10-18',procesari:7,echipa:['Crisan','Raul','Stefan'],obs:''}
+];
+
+// ===== STATE =====
+let rows = [];
+let names = [...DEFAULT_NAMES];
+let selected = new Set();
+let editingId = null;
+const $ = id => document.getElementById(id);
+
+// ===== DATE HELPERS =====
+const toD = s => new Date(s + 'T00:00:00Z');
+const fmt = s => { const d = toD(s); return String(d.getUTCDate()).padStart(2,'0') + '.' + String(d.getUTCMonth()+1).padStart(2,'0'); };
+const DAYS = ['Dum','Lun','Mar','Mie','Joi','Vin','Sâm'];
+const dayName = s => DAYS[toD(s).getUTCDay()];
+const daysIn = r => Math.round((toD(r.end) - toD(r.start)) / 864e5) + 1;
+function isoWeek(s){
+  const d = toD(s); const wd = (d.getUTCDay() + 6) % 7;
+  d.setUTCDate(d.getUTCDate() - wd + 3);
+  const y = d.getUTCFullYear(); const j4 = new Date(Date.UTC(y,0,4));
+  const w = 1 + Math.round(((d - j4) / 864e5 - 3 + (j4.getUTCDay() + 6) % 7) / 7);
+  return { y, w, key: y + '-' + String(w).padStart(2,'0') };
+}
+function weekBounds(s){
+  const d = toD(s); const wd = (d.getUTCDay() + 6) % 7;
+  const mon = new Date(d); mon.setUTCDate(d.getUTCDate() - wd);
+  const sun = new Date(mon); sun.setUTCDate(mon.getUTCDate() + 6);
+  const iso = x => x.toISOString().slice(0,10);
+  return [iso(mon), iso(sun)];
+}
+const todayISO = () => { const n = new Date(); return new Date(n - n.getTimezoneOffset()*6e4).toISOString().slice(0,10); };
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+// ===== API =====
+async function load(){
+  $('msg').textContent = '';
+  if (!API_URL){
+    $('banner').style.display = 'block';
+    $('banner').textContent = 'Mod demonstrativ: completează API_URL în fișier ca datele să se salveze în Google Sheets.';
+    if (!rows.length) rows = DEMO.map(r => ({...r}));
+    render(); return;
+  }
+  $('weeks').innerHTML = '<div class="empty">Se încarcă…</div>';
+  try{
+    const res = await fetch(API_URL + '?t=' + Date.now());
+    const j = await res.json();
+    if (!j.ok) throw new Error(j.error);
+    rows = j.rows;
+    $('banner').style.display = 'none';
+  }catch(e){
+    $('banner').style.display = 'block';
+    $('banner').textContent = 'Nu am putut încărca datele: ' + e.message;
+  }
+  render();
+}
+async function post(body){
+  if (!API_URL){
+    if (body.action === 'save'){
+      const r = body.row;
+      if (r.id){ rows = rows.map(x => x.id === r.id ? r : x); }
+      else { r.id = 'd' + Date.now(); rows.push(r); }
+    } else if (body.action === 'delete'){ rows = rows.filter(x => x.id !== body.id); }
+    return { ok: true };
+  }
+  const res = await fetch(API_URL, { method:'POST', body: JSON.stringify(body) });
+  const j = await res.json();
+  if (!j.ok) throw new Error(j.error);
+  return j;
+}
+
+// ===== FORM =====
+function renderChips(){
+  rows.forEach(r => r.echipa.forEach(n => { if (!names.includes(n)) names.push(n); }));
+  names.sort((a,b) => a.localeCompare(b,'ro'));
+  $('chips').innerHTML = names.map(n =>
+    `<button type="button" class="chip ${selected.has(n)?'on':''}" data-n="${esc(n)}">${esc(n)}</button>`).join('');
+}
+$('chips').addEventListener('click', e => {
+  const b = e.target.closest('.chip'); if (!b) return;
+  const n = b.dataset.n; selected.has(n) ? selected.delete(n) : selected.add(n);
+  b.classList.toggle('on');
+});
+$('addName').onclick = () => {
+  const n = $('fNew').value.trim(); if (!n) return;
+  const name = n.charAt(0).toUpperCase() + n.slice(1);
+  if (!names.includes(name)) names.push(name);
+  selected.add(name); $('fNew').value = ''; renderChips();
+};
+$('fNew').addEventListener('keydown', e => { if (e.key === 'Enter'){ e.preventDefault(); $('addName').click(); } });
+
+function resetForm(){
+  editingId = null; selected = new Set();
+  $('fStart').value = todayISO(); $('fProc').value = ''; $('fObs').value = '';
+  $('formTitle').textContent = 'Adaugă activitate'; $('cancel').style.display = 'none';
+  renderChips();
+}
+function editRow(id){
+  const r = rows.find(x => x.id === id); if (!r) return;
+  editingId = id; selected = new Set(r.echipa);
+  $('fStart').value = r.start;
+  $('fProc').value = r.procesari ?? ''; $('fObs').value = r.obs || '';
+  $('formTitle').textContent = 'Modifică activitatea din ' + fmt(r.start);
+  $('cancel').style.display = ''; renderChips();
+  $('formCard').scrollIntoView({ behavior:'smooth' });
+}
+$('cancel').onclick = resetForm;
+
+$('save').onclick = async () => {
+  const start = $('fStart').value;
+  if (!start){ $('msg').textContent = 'Alege data.'; return; }
+  // o singură dată; la modificarea unei intrări vechi pe interval, păstrăm lungimea intervalului
+  const old = editingId ? rows.find(x => x.id === editingId) : null;
+  let end = start;
+  if (old && old.end !== old.start){ const e = toD(start); e.setUTCDate(e.getUTCDate() + daysIn(old) - 1); end = e.toISOString().slice(0,10); }
+  if (!selected.size){ $('msg').textContent = 'Selectează cel puțin un coleg.'; return; }
+  const p = $('fProc').value;
+  const row = { id: editingId, start, end, procesari: p === '' ? null : Number(p),
+    echipa: [...selected], obs: $('fObs').value.trim() };
+  $('save').disabled = true; $('msg').textContent = 'Se salvează…';
+  try{
+    await post({ action:'save', row });
+    $('msg').textContent = 'Salvat ✓';
+    resetForm(); await load(); $('msg').textContent = 'Salvat ✓';
+  }catch(e){ $('msg').textContent = 'Eroare: ' + e.message; }
+  $('save').disabled = false;
+};
+
+async function delRow(id){
+  const r = rows.find(x => x.id === id);
+  if (!confirm('Ștergi activitatea din ' + fmt(r.start) + '?')) return;
+  try{ await post({ action:'delete', id }); await load(); }
+  catch(e){ alert('Eroare: ' + e.message); }
+}
+
+// ===== RENDER =====
+function weekStats(list){
+  const proc = list.reduce((s,r) => s + (r.procesari || 0), 0);
+  const zile = list.reduce((s,r) => s + daysIn(r), 0);
+  const oameni = new Set(list.flatMap(r => r.echipa));
+  const fara = list.filter(r => r.procesari === null).length;
+  return { proc, zile, oameni: oameni.size, fara, intrari: list.length };
+}
+function render(){
+  renderChips();
+  renderReport();
+  const groups = {};
+  rows.forEach(r => { const w = isoWeek(r.start); (groups[w.key] ||= { w, list: [] }).list.push(r); });
+  const keys = Object.keys(groups).sort().reverse();
+
+  // KPI: săptămâna curentă vs precedentă
+  const curK = isoWeek(todayISO()).key;
+  const lastK = keys[0];
+  const ref = groups[curK] ? curK : lastK;
+  const prevK = keys[keys.indexOf(ref) + 1];
+  const total = rows.reduce((s,r) => s + (r.procesari || 0), 0);
+  if (ref){
+    const a = weekStats(groups[ref].list), b = prevK ? weekStats(groups[prevK].list) : null;
+    const diff = b ? a.proc - b.proc : null;
+    $('kpis').innerHTML = `
+      <div class="kpi"><div class="l">Procesări S${groups[ref].w.w}</div><div class="v">${a.proc}</div>
+        ${diff !== null ? `<div class="l">${diff>=0?'+':''}${diff} față de S${groups[prevK].w.w}</div>` : ''}</div>
+      <div class="kpi"><div class="l">Zile lucrate S${groups[ref].w.w}</div><div class="v">${a.zile}</div></div>
+      <div class="kpi"><div class="l">Colegi implicați S${groups[ref].w.w}</div><div class="v">${a.oameni}</div></div>
+      <div class="kpi"><div class="l">Total procesări (${keys.length} săpt.)</div><div class="v">${total}</div></div>`;
+  } else $('kpis').innerHTML = '';
+
+  if (!keys.length){ $('weeks').innerHTML = '<div class="empty">Nicio activitate înregistrată încă.</div>'; return; }
+
+  $('weeks').innerHTML = keys.map(k => {
+    const g = groups[k]; const s = weekStats(g.list);
+    const [mon, sun] = weekBounds(g.list[0].start);
+    const list = g.list.slice().sort((a,b) => a.start.localeCompare(b.start));
+    return `<div class="card week">
+      <div class="week-h">
+        <div><b>Săptămâna ${g.w.w}</b><span class="dates">${fmt(mon)} – ${fmt(sun)}</span></div>
+        <div class="stats">
+          <span><b>${s.proc}</b> procesări</span>
+          <span><b>${s.zile}</b> zile</span>
+          <span><b>${s.oameni}</b> colegi</span>
+          ${s.fara ? `<span style="color:var(--warn)"><b>${s.fara}</b> fără procesări</span>` : ''}
+        </div>
+      </div>
+      <table>${list.map(r => `<tr>
+        <td class="d">${dayName(r.start)} ${fmt(r.start)}${r.end !== r.start ? ` – ${dayName(r.end)} ${fmt(r.end)}` : ''}</td>
+        <td>${r.echipa.map(esc).join(', ')}${r.obs ? `<br><span class="obs">${esc(r.obs)}</span>` : ''}</td>
+        <td class="n">${r.procesari === null ? '<span class="muted">—</span>' : r.procesari}</td>
+        <td class="a"><button class="lnk" onclick="editRow('${r.id}')">Modifică</button><button class="lnk del" onclick="delRow('${r.id}')">Șterge</button></td>
+      </tr>`).join('')}</table>
+    </div>`;
+  }).join('');
+}
+
+// ===== RAPORT LUNAR =====
+const LUNI = ['Ianuarie','Februarie','Martie','Aprilie','Mai','Iunie','Iulie','August','Septembrie','Octombrie','Noiembrie','Decembrie'];
+let month = todayISO().slice(0,7); // "YYYY-MM"
+const r1 = x => Math.round(x * 10) / 10;
+function shiftMonth(d){
+  let [y,m] = month.split('-').map(Number); m += d;
+  if (m < 1){ m = 12; y--; } if (m > 12){ m = 1; y++; }
+  month = y + '-' + String(m).padStart(2,'0'); renderReport();
+}
+$('mPrev').onclick = () => shiftMonth(-1);
+$('mNext').onclick = () => shiftMonth(1);
+
+function renderReport(){
+  const [y,m] = month.split('-').map(Number);
+  $('mLabel').textContent = LUNI[m-1] + ' ' + y;
+  const list = rows.filter(r => r.start.slice(0,7) === month);
+
+  // Pe zi: procesări/zi = total intrare / nr. zile; dacă nu iese întreg → "nedetaliat".
+  const NED = 'ned', FARA = 'fara';
+  const per = {}, lun = {};
+  list.forEach(r => {
+    const n = r.echipa.length || 1, d = daysIn(r);
+    let k;
+    if (r.procesari === null) k = FARA;
+    else { const v = r.procesari / d; k = Number.isInteger(v) ? String(v) : NED; }
+    lun[k] = (lun[k] || 0) + d;
+    r.echipa.forEach(p => {
+      const o = per[p] ||= { nume:p, zile:0, part:0, cota:0, z:{} };
+      o.zile += d; o.z[k] = (o.z[k] || 0) + d;
+      if (r.procesari !== null){ o.part += r.procesari; o.cota += r.procesari / n; }
+    });
+  });
+  const people = Object.values(per).sort((a,b) => b.cota - a.cota || a.nume.localeCompare(b.nume,'ro'));
+  const total = list.reduce((s,r) => s + (r.procesari || 0), 0);
+  const zile = list.reduce((s,r) => s + daysIn(r), 0);
+  const fara = list.filter(r => r.procesari === null).length;
+
+  $('mKpis').innerHTML = `
+    <div class="kpi"><div class="l">Procesări în lună</div><div class="v">${total}</div></div>
+    <div class="kpi"><div class="l">Zile lucrate</div><div class="v">${zile}</div></div>
+    <div class="kpi"><div class="l">Colegi</div><div class="v">${people.length}</div></div>
+    <div class="kpi"><div class="l">Intrări fără nr. procesări</div><div class="v" style="${fara?'color:var(--warn)':''}">${fara}</div></div>`;
+
+  if (!people.length){ $('mTable').innerHTML = '<div class="empty">Nicio activitate în această lună.</div>'; return; }
+
+  // Coloane: mereu 5, 6, 7, 8 + orice altă valoare apărută în lună
+  const vals = new Set([5,6,7,8]);
+  Object.keys(lun).forEach(k => { if (k !== NED && k !== FARA) vals.add(Number(k)); });
+  const cols = [...[...vals].sort((a,b) => a - b).map(v => ({ k:String(v), h:`Zile cu<br>${v} proc.` })),
+    ...(lun[NED] ? [{ k:NED, h:'Interval<br>nedetaliat' }] : []),
+    ...(lun[FARA] ? [{ k:FARA, h:'Fără<br>nr. proc.' }] : [])];
+  const cell = (z, c) => z[c.k] ? `<b>${z[c.k]}</b>` : '<span class="muted">0</span>';
+  const sep = 'border-left:1px solid var(--line)';
+  const maxC = Math.max(...people.map(p => p.cota)) || 1;
+
+  $('mTable').innerHTML = `<div style="overflow-x:auto"><table>
+    <tr><th>Coleg</th>${cols.map(c => `<th class="r">${c.h}</th>`).join('')}
+      <th class="r" style="${sep}">Total<br>zile</th><th class="r">Procesări<br>participate</th><th class="r">Cotă<br>procesări</th><th class="r">%</th></tr>
+    ${people.map(p => `<tr>
+      <td><b>${esc(p.nume)}</b><div class="bar"><i style="width:${p.cota/maxC*100}%"></i></div></td>
+      ${cols.map(c => `<td class="r">${cell(p.z, c)}</td>`).join('')}
+      <td class="r" style="${sep}">${p.zile}</td>
+      <td class="r">${p.part}</td>
+      <td class="r"><b>${r1(p.cota)}</b></td>
+      <td class="r">${total ? r1(p.cota/total*100) : 0}%</td>
+    </tr>`).join('')}
+    <tr class="tot"><td>Total producție</td>${cols.map(c => `<td class="r">${lun[c.k] || 0}</td>`).join('')}
+      <td class="r" style="${sep}">${zile}</td><td class="r muted">—</td><td class="r">${total}</td><td class="r">100%</td></tr>
+  </table></div>
+  ${lun[NED] ? `<div style="padding:10px 16px;font-size:12px" class="muted">„Interval nedetaliat” = intrări pe mai multe zile unde procesările nu se împart exact pe zile (ex. 15 procesări în 2 zile). Trece-le zi cu zi ca să intre în coloanele 5/6/7/8.</div>` : ''}`;
+}
+document.querySelectorAll('.tab').forEach(t => t.onclick = () => {
+  document.querySelectorAll('.tab').forEach(x => x.classList.toggle('on', x === t));
+  $('tabAct').style.display = t.dataset.t === 'tabAct' ? '' : 'none';
+  $('tabRap').style.display = t.dataset.t === 'tabRap' ? '' : 'none';
+});
+
+$('reload').onclick = load;
+resetForm();
+load();
+</script>
+</body>
+</html>
