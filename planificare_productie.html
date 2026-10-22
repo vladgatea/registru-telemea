@@ -1439,8 +1439,8 @@ function isSameDayAmbalare(prod) {
 
 function getAmbalareFromProcesare() {
   const amb = Array(7).fill(null).map(() => []);
-  // Ambalare Marți-Vineri (z=1..4): din procesarea zilei z-1 (exclusiv SMÂNTÂNĂ)
-  for (let z = 1; z <= 4; z++) {
+  // Ambalare Marți-Duminică (z=1..6): din procesarea zilei z-1 (exclusiv SMÂNTÂNĂ)
+  for (let z = 1; z <= 6; z++) {
     for (let p = 0; p < 12; p++) {
       const prod = state.procesare[p][z - 1];
       if (!prod || prod === '—') continue;
@@ -1455,8 +1455,8 @@ function getAmbalareFromProcesare() {
       }
     }
   }
-  // SMÂNTÂNĂ — ambalare în aceeași zi (z=0..4, Luni-Vineri)
-  for (let z = 0; z <= 4; z++) {
+  // SMÂNTÂNĂ — ambalare în aceeași zi (z=0..6, Luni-Duminică)
+  for (let z = 0; z <= 6; z++) {
     for (let p = 0; p < 12; p++) {
       const prod = state.procesare[p][z];
       if (!isSameDayAmbalare(prod)) continue;
@@ -1479,15 +1479,17 @@ function getAmbalareFromProcesare() {
 }
 
 function getBurdufEtichetareFromBurduf() {
-  // Burduf zi X → Etichetare zi X+1, Luni..Joi (z=0..3) → Marți..Vineri
+  // Etichetare Luni-Vineri (z=0..4)
+  // Burduf Luni(0)→Etic Marți(1), Marți(1)→Etic Miercuri(2), Miercuri(2)→Etic Joi(3), Joi(3)→Etic Vineri(4)
+  // Burduf Vineri(4)/Sâmbătă(5)/Duminică(6) → Etichetare Luni S.V. (via burdufSA)
   const etic = Array(7).fill(null).map(() => []);
-  for (let z = 0; z <= 3; z++) {
+  for (let z = 0; z <= 3; z++) { // Luni..Joi → Marți..Vineri
     for (let r = 0; r < 5; r++) {
       const prod = state.burduf[r][z];
       if (prod && prod !== '—') etic[z + 1].push(prod + ' ★');
     }
   }
-  // burdufSA (Burduf Vineri S_prev) → Etichetare Luni S_nou
+  // burdufSA: Burduf Joi/Vineri/Sâmbătă/Duminică S_prev → Etichetare Luni S_nou
   if (state.burdufSA) {
     state.burdufSA.forEach(prod => {
       if (prod && prod !== '—') etic[0].push(prod + ' ★');
@@ -1498,13 +1500,14 @@ function getBurdufEtichetareFromBurduf() {
 
 function getEtichetareFromAmbalare() {
   const amb = getAmbalareFromProcesare();
-  // Etichetare zi X = Ambalare zi X-1
-  // Marți(1)=Ambalare Luni(0 SA), Miercuri(2)=Ambalare Marți(1), ..., Vineri(4)=Ambalare Joi(3)
+  // Etichetare DOAR Luni-Vineri (z=0..4)
+  // Marți(1)=Ambalare Luni(0), Miercuri(2)=Marți(1), Joi(3)=Miercuri(2), Vineri(4)=Joi(3)
+  // Ambalare Vineri(4)/Sâmbătă(5)/Duminică(6) → Etichetare Luni S.V. (via eticSA)
   const etic = Array(7).fill(null).map(() => []);
   for (let z = 1; z <= 4; z++) {
-    etic[z].push(...amb[z - 1]);
+    etic[z].push(...amb[z - 1]); // Marți din Luni-ambalare, ..., Vineri din Joi-ambalare
   }
-  // eticSA: Etichetare Luni S_nou = Ambalare Vineri S_prev (Procesare Joi S_prev)
+  // Luni: eticSA din S_prev (ambalare Vineri/Sâm/Dum S_prev)
   if (state.eticSA) {
     state.eticSA.auto.forEach(prod => { if (prod && prod !== '—') etic[0].push(prod); });
     state.eticSA.formate.forEach(s => { if (s.format && s.format !== '—') etic[0].push(s.format); });
@@ -2705,6 +2708,32 @@ function generatePrint() {
       </tbody>
     </table>
 
+    <div class="print-section-label">Tocare Caș (automat +1 zi față de Procesare)</div>
+    <table class="print-table">
+      <thead><tr>
+        <th class="label-col" style="text-align:left">Tocare</th>
+        ${ZILE.map((z,i)=>`<th>${z}<br><span style="font-weight:400;font-size:8px">${formatDate(dates[i])}</span></th>`).join('')}
+      </tr></thead>
+      <tbody>
+        ${(() => {
+          const toc = getTocareFromProcesare();
+          const maxR = Math.max(...toc.map(a=>a.length), 1);
+          const rows = [];
+          for (let r = 0; r < maxR; r++) {
+            const cells = ZILE.map((_,zi) => {
+              const item = toc[zi][r];
+              const isDT = item && CAS_DOAR_TOCARE.includes(item.prod);
+              return item
+                ? `<td style="color:${isDT?'#6B21A8':'#374151'};font-weight:600">${item.prod}${isDT?' ★':''}</td>`
+                : '<td></td>';
+            }).join('');
+            rows.push(`<tr><td class="label-col">${r===0?'Tocare Caș':''}</td>${cells}</tr>`);
+          }
+          return rows.join('');
+        })()}
+      </tbody>
+    </table>
+
     <div class="print-section-label">Etapa 2 — Ambalare (automat +1 zi)</div>
     <table class="print-table">
       <thead><tr>
@@ -3586,88 +3615,57 @@ async function createNewWeek() {
 
       if (prevData.data && prevData.data.length > 1) {
         const rows = prevData.data;
-        const JOI = 3;    // index Joi în S_prev
-        const VINERI = 4; // index Vineri în S_prev
+        const JOI = 3;      // index Joi în S_prev
+        const VINERI = 4;   // index Vineri în S_prev
+        const SAMBATA = 5;  // index Sâmbătă în S_prev
+        const DUMINICA = 6; // index Duminică în S_prev
         const LUNI_NOU = 0;
-        const MARTI_NOU = 1;
 
-        // Citim procesarea din S_prev
-        const prevProcesare = Array(12).fill(null).map(() => Array(7).fill('—'));
+        // ── 1. Ambalare Luni S_nou = Procesare Duminică S_prev ──
         for (let pi = 0; pi < 12; pi++) {
-          const row = rows[2 + pi];
-          if (row) prevProcesare[pi] = ZILE.map((_, zi) => row[3 + zi] || '—');
+          const prodDum = prevProcesare[pi][DUMINICA];
+          if (!prodDum || prodDum === '—' || CAS_DOAR_TOCARE.includes(prodDum)) continue;
+          if (getMateriePrivaKey(prodDum)) {
+            state.ambSA[pi][0] = { ...prevAmbSel[pi][DUMINICA][0] };
+            state.ambSA[pi][1] = { ...prevAmbSel[pi][DUMINICA][1] };
+          } else {
+            state.ambSA[pi][0] = { format: prodDum, cantitate: '' };
+          }
         }
 
-        // Citim burduf din S_prev
-        const prevBurduf = Array(5).fill(null).map(() => Array(7).fill('—'));
-        for (let ri = 0; ri < 5; ri++) {
-          const row = rows[10 + ri];
-          if (row) prevBurduf[ri] = ZILE.map((_, zi) => row[3 + zi] || '—');
-        }
-
-        // Citim ambalareSelectii din S_prev (rânduri 24+)
-        const prevAmbSel = Array(12).fill(null).map(() =>
-          Array(7).fill(null).map(() => [
-            { format: '—', cantitate: '' },
-            { format: '—', cantitate: '' }
-          ])
-        );
-        for (let pi = 0; pi < 12; pi++) {
-          for (let row = 0; row < 2; row++) {
-            const sheetRow = rows[28 + pi * 2 + row];
-            if (sheetRow) {
-              ZILE.forEach((_, zi) => {
-                const val = String(sheetRow[3 + zi] || '');
-                const parts = val.split('||');
-                prevAmbSel[pi][zi][row] = {
-                  format: parts[0] || '—',
-                  cantitate: parts[1] || ''
-                };
+        // ── 2. Etichetare Luni S_nou = Ambalare Vineri+Sâmbătă+Duminică S_prev ──
+        // Procesare Joi→Ambalare Vineri→Etic Luni S.V.
+        // Procesare Vineri→Ambalare Sâmbătă→Etic Luni S.V.
+        // Procesare Sâmbătă→Ambalare Duminică→Etic Luni S.V.
+        state.eticSA = { auto: [], formate: [] };
+        const ziEticSA = [JOI, VINERI, SAMBATA];
+        for (const procZi of ziEticSA) {
+          for (let pi = 0; pi < 12; pi++) {
+            const prod = prevProcesare[pi][procZi];
+            if (!prod || prod === '—' || CAS_DOAR_TOCARE.includes(prod)) continue;
+            if (getMateriePrivaKey(prod)) {
+              let hasFormat = false;
+              [0,1].forEach(row => {
+                const sel = prevAmbSel[pi][procZi][row];
+                if (sel && sel.format !== '—') {
+                  state.eticSA.formate.push({ ...sel });
+                  hasFormat = true;
+                }
               });
+              if (!hasFormat) state.eticSA.auto.push(prod);
+            } else {
+              state.eticSA.auto.push(prod);
             }
           }
         }
 
-        // ── 1. Ambalare Luni S_nou = Procesare Vineri S_prev ──
-        for (let pi = 0; pi < 12; pi++) {
-          const prodVineri = prevProcesare[pi][VINERI];
-          if (!prodVineri || prodVineri === '—' || CAS_DOAR_TOCARE.includes(prodVineri)) continue;
-          if (getMateriePrivaKey(prodVineri)) {
-            state.ambSA[pi][0] = { ...prevAmbSel[pi][VINERI][0] };
-            state.ambSA[pi][1] = { ...prevAmbSel[pi][VINERI][1] };
-          } else {
-            state.ambSA[pi][0] = { format: prodVineri, cantitate: '' };
-          }
-        }
-
-        // ── 2. Etichetare Luni S_nou = Ambalare Vineri S_prev = Procesare Joi S_prev ──
-        state.eticSA = { auto: [], formate: [] };
-        for (let pi = 0; pi < 12; pi++) {
-          const prodJoi = prevProcesare[pi][JOI];
-          if (!prodJoi || prodJoi === '—' || CAS_DOAR_TOCARE.includes(prodJoi)) continue;
-          if (getMateriePrivaKey(prodJoi)) {
-            // Produse cu formate multiple: selecțiile de ambalare Vineri = procZi=JOI
-            let hasFormat = false;
-            [0,1].forEach(row => {
-              const sel = prevAmbSel[pi][JOI][row];
-              if (sel && sel.format !== '—') {
-                state.eticSA.formate.push({ ...sel });
-                hasFormat = true;
-              }
-            });
-            // Dacă nu există selecții salvate, adăugăm materia primă ca fallback
-            if (!hasFormat) state.eticSA.auto.push(prodJoi);
-          } else {
-            // Produse simple: ambalate Vineri → etichetare Luni S_nou
-            state.eticSA.auto.push(prodJoi);
-          }
-        }
-
-        // ── 3. Burduf Vineri S_prev → Etichetare Luni S_nou ──
+        // ── 3. Burduf Vineri/Sâmbătă/Duminică S_prev → Etichetare Luni S_nou ──
         state.burdufSA = Array(5).fill('—');
         for (let ri = 0; ri < 5; ri++) {
-          const prod = prevBurduf[ri][VINERI];
-          if (prod && prod !== '—') state.burdufSA[ri] = prod;
+          for (const bzi of [VINERI, SAMBATA, DUMINICA]) {
+            const prod = prevBurduf[ri][bzi];
+            if (prod && prod !== '—') state.burdufSA[ri] = prod;
+          }
         }
 
         setSyncStatus('ok', `Săptămână nouă S${w}_${y} — preluare din ${prevSheetKey} ✓`);
