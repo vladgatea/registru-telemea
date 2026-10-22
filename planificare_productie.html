@@ -1544,27 +1544,35 @@ function calcTimpAmbalareProportional(format, cantitate) {
 // Timp total ambalare pentru o zi — include și rândurile editabile proporționale
 function calcTimpAmbalareZi(zi) {
   let total = 0;
-  // Produse simple (auto)
-  for (let p = 0; p < 8; p++) {
-    if (zi === 0) continue;
-    const prod = state.procesare[p][zi - 1];
-    if (!prod || prod === '—' || CAS_DOAR_TOCARE.includes(prod)) continue;
-    if (!getMateriePrivaKey(prod)) {
-      // Produs simplu — timp standard
-      const ref = AMBALARE_REF[prod];
-      if (ref) total += ref.timp;
+  for (let p = 0; p < 12; p++) {
+    // Ziua de procesare care se ambalează în ziua zi
+    const sameDayProd = state.procesare[p][zi];
+    const prevProd = zi > 0 ? state.procesare[p][zi - 1] : null;
+    const cazuri = [];
+    if (prevProd && prevProd !== '—' && !CAS_DOAR_TOCARE.includes(prevProd) && !isSameDayAmbalare(prevProd)) {
+      cazuri.push({ prod: prevProd, procZi: zi - 1 });
     }
-  }
-  // Rânduri editabile — proporțional
-  for (let p = 0; p < 8; p++) {
-    if (zi === 0) continue;
-    const prod = state.procesare[p][zi - 1];
-    if (!prod || prod === '—' || !getMateriePrivaKey(prod)) continue;
-    for (let row = 0; row < 2; row++) {
-      const sel = state.ambalareSelectii[p][zi - 1][row];
-      if (sel.format && sel.format !== '—') {
-        total += calcTimpAmbalareProportional(sel.format, sel.cantitate);
+    if (sameDayProd && isSameDayAmbalare(sameDayProd)) {
+      cazuri.push({ prod: sameDayProd, procZi: zi });
+    }
+    cazuri.forEach(({ prod, procZi }) => {
+      if (!getMateriePrivaKey(prod)) {
+        const ref = AMBALARE_REF[prod];
+        if (ref) total += ref.timp;
+      } else {
+        for (let row = 0; row < 2; row++) {
+          const sel = state.ambalareSelectii[p][procZi][row];
+          if (sel.format && sel.format !== '—') total += calcTimpAmbalareProportional(sel.format, sel.cantitate);
+        }
       }
+    });
+  }
+  // Luni: preluare din săptămâna anterioară
+  if (zi === 0 && state.ambSA) {
+    for (let p = 0; p < 12; p++) {
+      state.ambSA[p].forEach(sel => {
+        if (sel.format && sel.format !== '—') total += calcTimpAmbalareProportional(sel.format, sel.cantitate);
+      });
     }
   }
   return total;
@@ -1733,8 +1741,8 @@ function updateAutoTables() {
 }
 
 function applyFormat2Visibility(body) {
-  for (let p = 0; p < 8; p++) {
-    for (let zi = 0; zi <= 4; zi++) {
+  for (let p = 0; p < 12; p++) {
+    for (let zi = 0; zi <= 6; zi++) {
       const procZi = zi === 0 ? 0 : zi - 1;
       const sel0 = state.ambalareSelectii[p][procZi][0];
       const cant = parseFloat(sel0.cantitate) || 0;
@@ -1780,7 +1788,6 @@ function buildAmbalareTable() {
     ZILE.forEach((_, zi) => {
       const td = document.createElement('td');
       td.className = 'auto-cell';
-      if (zi >= 5) { td.textContent = ''; tr.appendChild(td); return; }
       td.textContent = amb[zi][r] || '';
       tr.appendChild(td);
     });
@@ -1791,10 +1798,10 @@ function buildAmbalareTable() {
   for (let p = 0; p < 12; p++) {
     const hasLuniSel = (state.ambSA && state.ambSA[p] && state.ambSA[p].some(s => s.format !== '—')) ||
       isSameDayAmbalare(state.procesare[p][0]);
-    const hasMultMartiVineri = [1,2,3,4].some(zi => {
+    const hasMultMartiVineri = [1,2,3,4,5,6].some(zi => {
       const prod = state.procesare[p][zi - 1];
       return prod && prod !== '—' && getMateriePrivaKey(prod) && !isSameDayAmbalare(prod);
-    }) || [0,1,2,3,4].some(zi => {
+    }) || [0,1,2,3,4,5,6].some(zi => {
       const prod = state.procesare[p][zi];
       return isSameDayAmbalare(prod);
     });
@@ -1811,9 +1818,6 @@ function buildAmbalareTable() {
       ZILE.forEach((_, zi) => {
         const td = document.createElement('td');
         td.style.padding = '3px 4px';
-
-        // Sâmbătă/Duminică — gol
-        if (zi >= 5) { tr.appendChild(td); return; }
 
         // SMÂNTÂNĂ: ambalare aceeași zi — verificăm slotul p în ziua zi
         const prodSameDayCheck = state.procesare[p][zi];
@@ -1866,7 +1870,6 @@ function buildAmbalareTable() {
   ZILE.forEach((_, zi) => {
     const td = document.createElement('td');
     td.className = 'timp-cell timp-total';
-    if (zi >= 5) { trTimp.appendChild(td); return; }
     const timp = calcTimpAmbalareZi(zi);
     td.textContent = timp > 0 ? timp.toFixed(2) : '—';
     trTimp.appendChild(td);
@@ -2752,7 +2755,7 @@ function generatePrint() {
             </tr>`);
           }
           // Rânduri pentru formate multiple cu cantitate
-          for (let p = 0; p < 8; p++) {
+          for (let p = 0; p < 12; p++) {
             const hasMultInAnyDay = ZILE.some((_, zi) => {
               if (zi === 0) return false;
               const prod = state.procesare[p][zi-1];
@@ -2805,7 +2808,7 @@ function generatePrint() {
 
           // Produse simple din ambalare (auto) — +1 zi față de ambalare = +2 față de procesare
           const eticAuto = Array(7).fill(null).map(() => []);
-          for (let zi = 2; zi < 7; zi++) {
+          for (let zi = 2; zi <= 4; zi++) { // etichetare doar Luni-Vineri
             for (let p = 0; p < 12; p++) {
       const prod = state.procesare[p][zi - 2];
               if (!prod || prod === '—' || CAS_DOAR_TOCARE.includes(prod) || getMateriePrivaKey(prod)) continue;
@@ -2829,16 +2832,16 @@ function generatePrint() {
           }
 
           // Formate multiple — +2 zile față de procesare (ambalare +1, etichetare +1)
-          for (let p = 0; p < 8; p++) {
+          for (let p = 0; p < 12; p++) {
             const hasMultInAnyDay = ZILE.some((_, zi) => {
-              if (zi < 2) return false;
+              if (zi < 2 || zi > 4) return false;
               const prod = state.procesare[p][zi-2];
               return prod && prod !== '—' && getMateriePrivaKey(prod);
             });
             if (!hasMultInAnyDay) continue;
             for (let row = 0; row < 2; row++) {
               const hasContent = ZILE.some((_, zi) => {
-                if (zi < 2) return false;
+                if (zi < 2 || zi > 4) return false;
                 const prod = state.procesare[p][zi-2];
                 if (!prod || prod === '—' || !getMateriePrivaKey(prod)) return false;
                 const sel = state.ambalareSelectii[p][zi-2][row];
@@ -2848,7 +2851,7 @@ function generatePrint() {
               eticRows.push(`<tr>
                 <td class="label-col" style="color:#8A6A1A;font-size:9px">P${p+1} F${row+1}</td>
                 ${ZILE.map((_, zi) => {
-                  if (zi < 2) return '<td></td>';
+                  if (zi < 2 || zi > 4) return '<td></td>';
                   const prod = state.procesare[p][zi-2];
                   const matKey = prod && prod !== '—' ? getMateriePrivaKey(prod) : null;
                   if (!matKey) return '<td></td>';
