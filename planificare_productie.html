@@ -1253,6 +1253,7 @@ let PROCESARE_REF = {
   'TVPS 375 G':       {lot:650, buc:650, lv:3000, lc:0,    lo:0,   ld:0,    um:'BUC'},
   'TV MOLD 4KG':      {lot:600, buc:150, lv:3000, lc:0,    lo:0,   ld:0,    um:'KG'},
   'TV MOLD 800G':     {lot:600, buc:300, lv:3000, lc:0,    lo:0,   ld:0,    um:'BUC'},
+  'TV MOLD 350G':     {lot:600, buc:1700, lv:3000, lc:0,   lo:0,   ld:0,    um:'BUC'},
   'TV+O 4KG':         {lot:650, buc:162, lv:2950, lc:0,    lo:0,   ld:0,    um:'KG'},
   'TV+C 4KG':         {lot:650, buc:162, lv:2400, lc:600,  lo:0,   ld:0,    um:'KG'},
   'BV 5KG':           {lot:550, buc:110, lv:3000, lc:0,    lo:0,   ld:0,    um:'KG'},
@@ -1300,6 +1301,7 @@ let AMBALARE_REF = {
   'CAS V+O 800G':       { timp: 1.0,  lotOptim: 160,  um: 'BUC' },
   'BULGARAS':           { timp: 2.0,  lotOptim: 60,   um: 'KG'  },
   'TV MOLD 800G':       { timp: 1.75, lotOptim: 300,  um: 'BUC' },
+  'TV MOLD 350G':       { timp: 4.3,  lotOptim: 1700, um: 'BUC' },
   'TOPS 800G':          { timp: 1.75, lotOptim: 300,  um: 'BUC' },
   'TCPS 800G':          { timp: 1.75, lotOptim: 300,  um: 'BUC' },
   'BV 5KG':             { timp: 1.0,  lotOptim: 500,  um: 'KG'  },
@@ -1327,7 +1329,7 @@ let AMBALARE_REF = {
 // Materii prime cu formate multiple de ambalare
 const FORMATE_AMBALARE = {
   'TVPS':    ['—', 'TVPS 375 G', 'TVPS 800G', 'TVPS 4KG'],
-  'TV MOLD': ['—', 'TV MOLD 800G', 'TV MOLD 4KG'],
+  'TV MOLD': ['—', 'TV MOLD 350G', 'TV MOLD 800G', 'TV MOLD 4KG'],
   'TOPS':    ['—', 'TOPS 800G', 'TOPS'],
   'TCPS':    ['—', 'TCPS 800G', 'TCPS'],
   'BV':      ['—', 'BV 400G', 'BV 5KG'],
