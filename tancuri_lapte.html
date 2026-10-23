@@ -279,8 +279,9 @@ details summary{cursor:pointer;font-weight:600}
 
 <script>
 /* ═══════════════════════════ CONFIGURARE ═══════════════════════════ */
-// Același Web App Apps Script ca planificare_productie.html
-const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbxJx5f7g0oHLLiFtzfzxVB2HF48mMhU3MwIuskr1y-o6L5yDzwDbv4LXTXncQqISuPn/exec';
+// Același Web App Apps Script ca planificare_productie.html (codul e în Code.gs).
+// Dacă faci o implementare nouă, lipește aici URL-ul care se termină în /exec — și în planificare_productie.html.
+const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbwxDj763V6mK1ou0QjdwJKWK631gbVtzug50oxYtyjIeZohc1ScPj_Qvmp-yBP9gEUK/exec';
 const SHEET_FURNIZORI = 'Tancuri_Furnizori';
 const sheetLuna = (ym) => 'Tancuri_' + ym.replace('-', '_');   // ex. Tancuri_2026_10
 
@@ -305,7 +306,7 @@ const PROCESARE_REF = {
   'TOPS':{lv:0,lc:0,lo:3000,ld:0}, 'TCPS':{lv:0,lc:3000,lo:0,ld:0},
   'CAS V':{lv:3000,lc:0,lo:0,ld:0}, 'CAS V+O':{lv:2950,lc:0,lo:0,ld:0},
   'TVPS 4KG':{lv:3000,lc:0,lo:0,ld:0}, 'TVPS 800G':{lv:3000,lc:0,lo:0,ld:0}, 'TVPS 375 G':{lv:3000,lc:0,lo:0,ld:0},
-  'TV MOLD 4KG':{lv:3000,lc:0,lo:0,ld:0}, 'TV MOLD 800G':{lv:3000,lc:0,lo:0,ld:0},
+  'TV MOLD 4KG':{lv:3000,lc:0,lo:0,ld:0}, 'TV MOLD 800G':{lv:3000,lc:0,lo:0,ld:0}, 'TV MOLD 350G':{lv:3000,lc:0,lo:0,ld:0},
   'TV+O 4KG':{lv:2950,lc:0,lo:0,ld:0}, 'TV+C 4KG':{lv:2400,lc:600,lo:0,ld:0},
   'BV 5KG':{lv:3000,lc:0,lo:0,ld:0}, 'BV 400G':{lv:3000,lc:0,lo:0,ld:0},
   'TOPS 800G':{lv:0,lc:0,lo:3000,ld:0}, 'TCPS 800G':{lv:0,lc:3000,lo:0,ld:0},
@@ -387,7 +388,16 @@ function parseRecs(data){
   return map;
 }
 // Citește → îmbină după updatedAt → scrie → verifică. Protejează salvările simultane ale colegilor.
+async function sPost(payload){
+  const r=await fetch(SHEETS_URL,{method:'POST',redirect:'follow',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(payload)});
+  try{return JSON.parse(cleanJson(await r.text()))}catch(e){return null}
+}
 async function saveRecs(sheet,recs){
+  // Varianta rapidă: îmbinarea se face în Apps Script, sub blocare (Code.gs → upsertRecs)
+  const res=await sPost({action:'upsertRecs',sheet,recs});
+  if(res&&res.status==='ok'&&Array.isArray(res.data))return parseRecs(res.data);
+  if(res&&res.status==='error'&&!/necunoscut|unknown/i.test(res.error||''))throw new Error(res.error);
+  // Varianta compatibilă cu un script mai vechi: citește → îmbină → scrie → verifică
   for(let attempt=0;attempt<3;attempt++){
     const cur=parseRecs((await sRead(sheet)).data);
     for(const r of recs){const ex=cur.get(r.id);if(!ex||(ex.updatedAt||0)<=r.updatedAt)cur.set(r.id,r)}
