@@ -1,0 +1,1301 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Tancuri Lapte</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&display=swap">
+<style>
+/* Panou de comandă: 4 tancuri sus, probleme, mișcările zilei (inclusiv din planul de producție), următoarele 7 zile */
+:root{
+  --bg:#eef2f5; --surface:#ffffff; --sunk:#f6f8fa; --ink:#14212b; --muted:#5a6b78; --line:#d6dee5;
+  --accent:#0d5b78; --accent-ink:#ffffff; --steel:#b9c6d0; --planc:#6a4fa3; --plan-bg:#efeaf8;
+  --ok:#23804f; --warn:#a96b0c; --bad:#bf3326; --ok-bg:#e3f3ea; --warn-bg:#fbf0dc; --bad-bg:#fbe4e1;
+  --f-display:"Barlow Semi Condensed","Arial Narrow",Arial,sans-serif;
+  --f-body:"Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root{
+  --bg:#0d151b; --surface:#152029; --sunk:#111b22; --ink:#e4ecf1; --muted:#93a5b2; --line:#253541;
+  --accent:#5db3d8; --accent-ink:#06202c; --steel:#3a4c59; --planc:#b9a2ea; --plan-bg:#251d38;
+  --ok:#5cc28a; --warn:#e0a446; --bad:#f07a6c; --ok-bg:#16301f; --warn-bg:#33270f; --bad-bg:#3a1a17; color-scheme:dark}}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.45}
+[hidden]{display:none!important}
+.wrap{max-width:1180px;margin:0 auto;padding-block:20px 60px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:20px}
+h1,h2,h3{font-family:var(--f-display);margin:0;text-wrap:balance;letter-spacing:.01em}
+h1{font-size:28px;font-weight:700}
+h2{font-size:19px;font-weight:600}
+.num{font-variant-numeric:tabular-nums}
+.muted{color:var(--muted)}
+.label{font-size:12px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:600}
+button,select,input{font:inherit;color:inherit}
+button{cursor:pointer}
+a{color:var(--accent)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.top{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px}
+.top .sub{color:var(--muted);font-size:14px}
+.top-right{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.tabs{display:flex;gap:4px;background:var(--sunk);border:1px solid var(--line);border-radius:10px;padding:3px}
+.tabs button{border:0;background:transparent;padding:7px 14px;border-radius:7px;font-weight:600;color:var(--muted)}
+.tabs button[aria-selected="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.sync{font-size:13px;color:var(--muted);display:flex;align-items:center;gap:6px}
+.sync .led{width:8px;height:8px;border-radius:50%;background:var(--muted)}
+.sync.ok .led{background:var(--ok)} .sync.busy .led{background:var(--warn)} .sync.err .led{background:var(--bad)} .sync.err{color:var(--bad)}
+
+.daybar{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+.daybar .day{font-family:var(--f-display);font-size:21px;font-weight:600;min-width:0}
+.btn{border:1px solid var(--line);background:var(--surface);padding:8px 13px;border-radius:8px;font-weight:600;display:inline-flex;align-items:center;gap:6px;line-height:1.2;text-decoration:none;color:var(--ink)}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.small{padding:5px 9px;font-size:13px}
+.btn.danger{color:var(--bad)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.icon{width:34px;justify-content:center;padding:8px 0}
+input[type=date],input[type=time]{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:7px 9px}
+.spacer{flex:1}
+.actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+
+.tanks{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+@media (max-width:900px){.tanks{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:460px){.tanks{grid-template-columns:minmax(0,1fr)}}
+.tank{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.tank-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.tank-head h3{font-size:20px;font-weight:700}
+.cap{font-size:13px;color:var(--muted)}
+.tank-body{display:grid;grid-template-columns:62px minmax(0,1fr);gap:14px;align-items:start}
+.vessel{position:relative;height:150px;border:2px solid var(--steel);border-radius:22px 22px 10px 10px;background:var(--sunk);overflow:hidden}
+.vessel.v-small{height:96px;margin-top:54px}
+.vessel.v-mid{height:124px;margin-top:26px}
+.fill{position:absolute;left:0;right:0;bottom:0;transition:height .5s ease}
+.proj{position:absolute;left:0;right:0;border-top:2px dashed var(--ink);opacity:.55}
+.vessel .pct{position:absolute;inset:auto 0 6px 0;text-align:center;font-family:var(--f-display);font-weight:700;font-size:15px}
+.tank-info{display:flex;flex-direction:column;gap:6px;min-width:0}
+.big{font-family:var(--f-display);font-size:28px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums}
+.chip{display:inline-flex;align-items:center;gap:6px;font-weight:600;max-width:100%;min-width:0}
+.chip .dot{width:11px;height:11px;border-radius:50%;flex:none}
+.chip .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pill{display:inline-block;font-size:12px;font-weight:600;padding:2px 8px;border-radius:999px;letter-spacing:.02em;white-space:nowrap}
+.p-free{background:var(--ok-bg);color:var(--ok)}
+.p-dirty{background:var(--warn-bg);color:var(--warn)}
+.p-busy{background:var(--sunk);color:var(--ink);border:1px solid var(--line)}
+.p-full{background:var(--bad-bg);color:var(--bad)}
+.p-plan{background:var(--warn-bg);color:var(--warn)}
+.p-real{background:var(--ok-bg);color:var(--ok)}
+.p-prod{background:var(--plan-bg);color:var(--planc)}
+.p-type{background:var(--sunk);color:var(--muted);border:1px solid var(--line)}
+.qual{font-size:13px;color:var(--muted);display:grid;grid-template-columns:auto auto;gap:1px 10px;justify-content:start}
+.qual b{color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums}
+.small{font-size:13px}
+.legend{display:flex;flex-wrap:wrap;gap:14px;font-size:13px;color:var(--muted);align-items:center}
+.legend i{display:inline-block;width:22px;border-top:2px dashed var(--ink);opacity:.55;vertical-align:middle;margin-right:5px}
+
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.panel-head{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:10px}
+.issues{border-color:var(--bad);background:var(--bad-bg)}
+.issues ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:4px}
+.issues li.warn{color:var(--warn)}
+.tbl-wrap{overflow-x:auto;margin:0 -4px}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th{text-align:left;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600;padding:6px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:8px;border-bottom:1px solid var(--line);vertical-align:top}
+td.r,th.r{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+tr.clk{cursor:pointer}
+tr.clk:hover td{background:var(--sunk)}
+tr.sel td{background:var(--sunk);font-weight:600}
+tr.virt td{background:var(--plan-bg)}
+tr.skipped td{opacity:.55}
+.t-in{color:var(--ok);font-weight:600}
+.t-out{color:var(--accent);font-weight:600}
+.t-clean{color:var(--muted);font-weight:600}
+.t-prod{color:var(--planc);font-weight:600}
+.row-iss{color:var(--bad);font-size:13px;margin-top:3px}
+.row-iss.warn{color:var(--warn)}
+.row-actions{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.empty{padding:22px;text-align:center;color:var(--muted);border:1px dashed var(--line);border-radius:10px}
+.sumline{display:flex;flex-wrap:wrap;gap:8px 22px}
+
+.sup-list{display:flex;flex-direction:column;gap:8px}
+.sup-row{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--line);border-radius:10px}
+.sup-row input[type=text]{flex:1;min-width:140px}
+.swatches{display:flex;gap:4px;flex-wrap:wrap}
+.sw{width:20px;height:20px;border-radius:50%;border:2px solid transparent;padding:0}
+.sw[aria-pressed="true"]{border-color:var(--ink)}
+.inactive{opacity:.55}
+
+.field{display:flex;flex-direction:column;gap:4px;min-width:0}
+.field input,.field select{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:8px 10px;width:100%}
+input[type=text],input[type=number],select{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:8px 10px}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.grid4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+@media (max-width:520px){.grid4{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.seg{display:flex;flex-wrap:wrap;gap:4px}
+.seg button{border:1px solid var(--line);background:var(--surface);padding:6px 11px;border-radius:8px;font-weight:600;font-size:14px}
+.seg button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.preview{border-radius:10px;padding:10px 12px;background:var(--sunk);border:1px solid var(--line);font-size:14px;display:flex;flex-direction:column;gap:6px}
+.preview.err{background:var(--bad-bg);border-color:var(--bad);color:var(--bad)}
+.preview .warn{color:var(--warn)}
+.preview .info{color:var(--planc)}
+details summary{cursor:pointer;font-weight:600}
+
+.overlay{position:fixed;inset:0;background:rgba(8,16,22,.5);display:flex;align-items:flex-start;justify-content:center;padding:24px 12px;overflow-y:auto;z-index:50}
+.modal{background:var(--surface);border-radius:14px;border:1px solid var(--line);width:min(560px,100%);padding:18px;display:flex;flex-direction:column;gap:14px;box-shadow:0 20px 50px rgba(0,0,0,.25)}
+.modal-foot{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-weight:600;z-index:60;max-width:calc(100% - 32px)}
+.banner{padding:10px 14px;border-radius:10px;background:var(--warn-bg);color:var(--warn);font-weight:600}
+@media (prefers-reduced-motion:reduce){.fill{transition:none}}
+.mday{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 16px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.mday.today{border-color:var(--accent)}
+.mday-head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px}
+.mday-head h3{font-size:19px}
+.mtanks{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+@media (max-width:700px){.mtanks{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.mt{border:1px solid var(--line);border-radius:10px;padding:8px 10px;display:flex;flex-direction:column;gap:4px;min-width:0;background:var(--sunk)}
+.mt .bar{height:8px;border-radius:4px;background:var(--line);overflow:hidden}
+.mt .bar i{display:block;height:100%}
+.mt .lv{font-family:var(--f-display);font-weight:700;font-size:18px;font-variant-numeric:tabular-nums}
+.mlist{display:flex;flex-direction:column;gap:2px;font-size:14px}
+.mrow{display:grid;grid-template-columns:48px 96px minmax(0,1fr) auto;gap:8px;padding:5px 0;border-top:1px solid var(--line);align-items:start}
+.mrow.virt{color:var(--planc)}
+@media (max-width:560px){.mrow{grid-template-columns:44px minmax(0,1fr) auto}.mrow .mtype{display:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <div class="label">Ferma cu Omenie · Recepție lapte</div>
+      <h1>Tancuri lapte</h1>
+      <div class="sub">4 tancuri · 61.000 L · fără amestec între furnizori · normalizare zilnică · consum preluat din planificarea producției</div>
+    </div>
+    <div class="top-right">
+      <div class="sync" id="sync"><span class="led"></span><span id="sync-txt">Se conectează…</span></div>
+      <a class="btn small" href="planificare_productie.html">Planificare producție ↗</a>
+      <nav class="tabs" role="tablist">
+        <button role="tab" aria-selected="true" data-tab="zi">Planificare</button>
+        <button role="tab" aria-selected="false" data-tab="mod">Model pe zile</button>
+        <button role="tab" aria-selected="false" data-tab="ist">Istoric</button>
+        <button role="tab" aria-selected="false" data-tab="fur">Furnizori</button>
+      </nav>
+    </div>
+  </header>
+
+  <div id="banner" class="banner" hidden></div>
+
+  <section id="v-zi" style="display:flex;flex-direction:column;gap:18px">
+    <div class="daybar">
+      <button class="btn icon" id="d-prev" aria-label="Ziua anterioară">‹</button>
+      <input type="date" id="d-pick" aria-label="Alege ziua">
+      <button class="btn icon" id="d-next" aria-label="Ziua următoare">›</button>
+      <button class="btn" id="d-today">Azi</button>
+      <div class="day" id="d-label"></div>
+      <div class="spacer"></div>
+      <div class="actions">
+        <button class="btn primary" id="a-in">+ Recepție lapte</button>
+        <button class="btn" id="a-out">− Consum / golire</button>
+        <button class="btn" id="a-move">⇄ Mută între tancuri</button>
+        <button class="btn" id="a-norm">Normalizare</button>
+        <button class="btn" id="a-clean">Spălare tanc</button>
+      </div>
+    </div>
+
+    <div class="legend">
+      <span>Starea la sfârșitul zilei alese. Umplere plină = realizat.</span>
+      <span><i></i>nivel estimat cu planificări și planul de producție</span>
+      <span id="plan-status"></span>
+    </div>
+    <div class="tanks" id="tanks"></div>
+
+    <div class="panel issues" id="issues" hidden></div>
+
+    <div class="panel">
+      <div class="panel-head">
+        <h2 id="log-title">Mișcări</h2>
+        <div class="sumline small" id="day-sum"></div>
+      </div>
+      <div id="log"></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head">
+        <h2>Următoarele 7 zile</h2>
+        <span class="small muted">Click pe o zi pentru detalii</span>
+      </div>
+      <div class="tbl-wrap"><table id="week"></table></div>
+    </div>
+  </section>
+
+  <section id="v-mod" hidden style="flex-direction:column;gap:14px">
+    <div class="daybar">
+      <button class="btn icon" id="mo-prev" aria-label="Ziua anterioară">‹</button>
+      <input type="date" id="mo-start" aria-label="Prima zi">
+      <button class="btn icon" id="mo-next" aria-label="Ziua următoare">›</button>
+      <button class="btn" id="mo-today">Azi</button>
+      <div class="seg" id="mo-n"><button type="button" data-v="7" aria-pressed="true">7 zile</button><button type="button" data-v="14" aria-pressed="false">14 zile</button></div>
+      <div class="spacer"></div>
+      <span class="small muted">Pentru fiecare zi: ce intră, ce muți, ce normalizezi și cum arată tancurile seara.</span>
+    </div>
+    <div id="model" style="display:flex;flex-direction:column;gap:14px"></div>
+  </section>
+
+  <section id="v-ist" hidden style="flex-direction:column;gap:18px">
+    <div class="panel">
+      <div class="panel-head">
+        <h2>Istoric recepții și consum</h2>
+        <div class="actions">
+          <label class="small muted" for="h-from">De la</label><input type="date" id="h-from">
+          <label class="small muted" for="h-to">Până la</label><input type="date" id="h-to">
+          <button class="btn primary" id="h-go">Afișează</button>
+          <button class="btn" id="h-csv" hidden>Descarcă CSV</button>
+        </div>
+      </div>
+      <div id="h-out"><div class="empty">Alege intervalul și apasă Afișează.</div></div>
+    </div>
+  </section>
+
+  <section id="v-fur" hidden style="flex-direction:column;gap:18px">
+    <div class="panel">
+      <div class="panel-head"><h2>Furnizori de lapte</h2></div>
+      <form id="sup-add" class="actions" autocomplete="off">
+        <input type="text" id="sup-name" placeholder="Nume furnizor (ex. Ferma Popescu)" style="flex:1;min-width:200px" required>
+        <select id="sup-type" aria-label="Tip lapte">
+          <option value="vaca">Lapte de vacă</option>
+          <option value="capra">Lapte de capră</option>
+          <option value="oaie">Lapte de oaie</option>
+          <option value="deg">Lapte degresat</option>
+        </select>
+        <button class="btn primary" type="submit">Adaugă furnizor</button>
+      </form>
+      <div class="sup-list" id="sup-list"></div>
+      <p class="small muted" style="margin:0">Tipul laptelui leagă furnizorul de planul de producție: o procesare care cere lapte de vacă se ia din tancurile cu lapte de vacă. Furnizorii dezactivați nu mai apar la recepție, dar rămân în istoric.</p>
+    </div>
+  </section>
+</div>
+
+<div id="modal-root"></div>
+
+<script>
+/* ═══════════════════════════ CONFIGURARE ═══════════════════════════ */
+// Același Web App Apps Script ca planificare_productie.html
+const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbwxDj763V6mK1ou0QjdwJKWK631gbVtzug50oxYtyjIeZohc1ScPj_Qvmp-yBP9gEUK/exec';
+const SHEET_FURNIZORI = 'Tancuri_Furnizori';
+const sheetLuna = (ym) => 'Tancuri_' + ym.replace('-', '_');   // ex. Tancuri_2026_10
+
+const TANKS = [
+  {id:'T1', name:'Tanc 1', cap:25000},
+  {id:'T2', name:'Tanc 2', cap:15000},
+  {id:'T3', name:'Tanc 3', cap:15000},
+  {id:'T4', name:'Tanc 4', cap:6000}
+];
+const MILK = {
+  vaca:  {name:'Vacă',     ref:'lv'},
+  capra: {name:'Capră',    ref:'lc'},
+  oaie:  {name:'Oaie',     ref:'lo'},
+  deg:   {name:'Degresat', ref:'ld'}
+};
+// Ora estimată la care începe fiecare procesare (Procesare 1 … 12). Modifică după programul real.
+const ORA_PROCESARE = ['06:00','07:00','08:00','09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00'];
+
+// Lapte necesar pe procesare — copiat din PROCESARE_REF din planificare_productie.html
+const PROCESARE_REF = {
+  'TVPS':{lv:3000,lc:0,lo:0,ld:0}, 'TV MOLD':{lv:3000,lc:0,lo:0,ld:0}, 'BV':{lv:3000,lc:0,lo:0,ld:0},
+  'TOPS':{lv:0,lc:0,lo:3000,ld:0}, 'TCPS':{lv:0,lc:3000,lo:0,ld:0},
+  'CAS V':{lv:3000,lc:0,lo:0,ld:0}, 'CAS V+O':{lv:2950,lc:0,lo:0,ld:0},
+  'TVPS 4KG':{lv:3000,lc:0,lo:0,ld:0}, 'TVPS 800G':{lv:3000,lc:0,lo:0,ld:0}, 'TVPS 375 G':{lv:3000,lc:0,lo:0,ld:0},
+  'TV MOLD 4KG':{lv:3000,lc:0,lo:0,ld:0}, 'TV MOLD 800G':{lv:3000,lc:0,lo:0,ld:0},
+  'TV+O 4KG':{lv:2950,lc:0,lo:0,ld:0}, 'TV+C 4KG':{lv:2400,lc:600,lo:0,ld:0},
+  'BV 5KG':{lv:3000,lc:0,lo:0,ld:0}, 'BV 400G':{lv:3000,lc:0,lo:0,ld:0},
+  'TOPS 800G':{lv:0,lc:0,lo:3000,ld:0}, 'TCPS 800G':{lv:0,lc:3000,lo:0,ld:0},
+  'CAS V 300G':{lv:3000,lc:0,lo:0,ld:0}, 'CAS V 800G':{lv:3000,lc:0,lo:0,ld:0}, 'CAS V MP':{lv:3000,lc:0,lo:0,ld:0},
+  'CAS V+O 300G':{lv:2950,lc:0,lo:0,ld:0}, 'CAS V+O 800G':{lv:2950,lc:0,lo:0,ld:0},
+  'CAS V+O MP DLF':{lv:2400,lc:0,lo:600,ld:0}, 'CAS O 100%':{lv:0,lc:0,lo:3000,ld:0},
+  'TV DEG 4KG':{lv:1500,lc:0,lo:0,ld:1500}, 'TV':{lv:3000,lc:0,lo:0,ld:0},
+  'SMÂNTÂNĂ':{lv:3000,lc:0,lo:0,ld:0,degresare:true},
+  'Smântână 32% 5kg':{lv:3000,lc:0,lo:0,ld:0,degresare:true,ldResult:2700},
+  'Smântână 32% 200g':{lv:3000,lc:0,lo:0,ld:0,degresare:true,ldResult:2700},
+  'Smântână 32% 400g':{lv:3000,lc:0,lo:0,ld:0,degresare:true,ldResult:2700},
+  'Smântână 50% 15kg':{lv:3000,lc:0,lo:0,ld:0,degresare:true,ldResult:2800}
+};
+const PALETTE = ['#2f6fb3','#c2571a','#2e8b57','#8a4fb8','#b38a12','#c23b5a','#1f8f9a','#6b7a2a','#8a5a3a','#4a5bd6','#d0457a','#3f7f8f'];
+const QK = [['fat','Grăsime','%',2],['protein','Proteină','%',2],['temp','Temp.','°C',1],['acid','Aciditate','°T',1]];
+const REFRESH_MS = 60000;
+// Grăsime folosită când la recepție nu s-a măsurat (%)
+const GRASIME_IMPLICITA = {vaca:4.0, capra:3.8, oaie:6.5, deg:0.2};
+// Normalizare zilnică: grăsime țintă, volumele uzuale (L) și toleranța acceptată
+const NORMALIZARE = {grasime:3.0, volume:[9000,18000], toleranta:0.2};   // toleranța = cât poate devia grăsimea (± puncte %)
+
+/* ═══════════════════════════ STARE ═══════════════════════════ */
+const store = { months:{}, suppliers:new Map(), plans:{} };   // months[ym] = Map(id→rec); plans['S42_2026'] = {status, proc}
+let selDay = todayStr();
+let lastHist = null;
+let saving = 0;
+
+/* ═══════════════════════════ UTILITARE ═══════════════════════════ */
+function $(s){return document.querySelector(s)}
+function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function pad(n){return String(n).padStart(2,'0')}
+function ds(d){return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())}
+function todayStr(){return ds(new Date())}
+function addDays(s,n){const d=new Date(s+'T12:00:00');d.setDate(d.getDate()+n);return ds(d)}
+function nowTime(){const d=new Date();return pad(d.getHours())+':'+pad(d.getMinutes())}
+const ZILE=['Duminică','Luni','Marți','Miercuri','Joi','Vineri','Sâmbătă'];
+const ZS=['Dum','Lun','Mar','Mie','Joi','Vin','Sâm'];
+function dayLabel(s){const d=new Date(s+'T12:00:00');return ZILE[d.getDay()]+', '+d.toLocaleDateString('ro-RO',{day:'numeric',month:'long',year:'numeric'})}
+function shortDay(s){const d=new Date(s+'T12:00:00');return ZS[d.getDay()]+' '+s.slice(8,10)+'.'+s.slice(5,7)}
+function shortDate(s){return s?s.slice(8,10)+'.'+s.slice(5,7):''}
+function Lf(n){return Math.round(n).toLocaleString('ro-RO')+' L'}
+function uid(p){return p+Date.now().toString(36)+Math.random().toString(36).slice(2,7)}
+const capOf=id=>(TANKS.find(t=>t.id===id)||{cap:0}).cap;
+const tankName=id=>(TANKS.find(t=>t.id===id)||{name:id||'—'}).name;
+function suppliers(){return [...store.suppliers.values()].filter(s=>!s.deleted).sort((a,b)=>(a.createdAt||0)-(b.createdAt||0))}
+function sup(id){const s=store.suppliers.get(id);return s&&!s.deleted?s:null}
+function supName(id){if(id==='__MIX')return 'AMESTEC';const s=sup(id);return s?s.name:'Furnizor necunoscut'}
+function supColor(id){if(id==='__MIX')return 'var(--bad)';const s=sup(id);return s?s.color:'#8899a6'}
+function supType(id){const s=sup(id);return s&&s.type?s.type:'vaca'}
+function chip(id){return `<span class="chip"><span class="dot" style="background:${supColor(id)}"></span><span class="nm">${esc(supName(id))}</span></span>`}
+function key(m){return m.date+' '+(m.time||'00:00')+' '+String(m.createdAt||0).padStart(15,'0')+' '+m.id}
+function toast(msg){const t=document.createElement('div');t.className='toast';t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),2800)}
+function setSync(cls,txt){const el=$('#sync');el.className='sync '+cls;$('#sync-txt').textContent=txt}
+
+// Săptămână ISO — aceeași convenție ca getWeekDates() din planificare
+function isoInfo(dstr){
+  const d=new Date(dstr+'T12:00:00');const zi=(d.getDay()+6)%7;
+  const th=new Date(d);th.setDate(d.getDate()-zi+3);
+  const y=th.getFullYear();const j4=new Date(y,0,4);
+  const week=1+Math.round(((th-j4)/864e5-3+((j4.getDay()+6)%7))/7);
+  return {week,year:y,zi,key:`S${week}_${y}`};
+}
+
+/* ═══════════════════════════ GOOGLE SHEETS ═══════════════════════════ */
+function cleanJson(t){return t.replace(/^\)\]\}'/,'').trim()}
+async function sRead(sheet){
+  const r=await fetch(SHEETS_URL+'?sheet='+encodeURIComponent(sheet)+'&_='+Date.now(),{redirect:'follow'});
+  return JSON.parse(cleanJson(await r.text()));
+}
+async function sWrite(sheet,rows){
+  const r=await fetch(SHEETS_URL,{method:'POST',redirect:'follow',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'write',sheet,rows})});
+  let j=null;try{j=JSON.parse(cleanJson(await r.text()))}catch(e){}
+  if(j&&j.status&&j.status!=='ok')throw new Error(j.error||'Eroare la scriere');
+}
+// Fiecare înregistrare = un rând: id | updatedAt | json (JSON-ul nu e transformat de Sheets în dată)
+function parseRecs(data){
+  const map=new Map();
+  (data||[]).slice(1).forEach(r=>{if(!r||!r[2])return;try{const o=JSON.parse(r[2]);if(o&&o.id)map.set(o.id,o)}catch(e){}});
+  return map;
+}
+// Citește → îmbină după updatedAt → scrie → verifică. Protejează salvările simultane ale colegilor.
+async function saveRecs(sheet,recs){
+  for(let attempt=0;attempt<3;attempt++){
+    const cur=parseRecs((await sRead(sheet)).data);
+    for(const r of recs){const ex=cur.get(r.id);if(!ex||(ex.updatedAt||0)<=r.updatedAt)cur.set(r.id,r)}
+    const rows=[['id','updatedAt','json'],...[...cur.values()].sort((a,b)=>(a.date||'').localeCompare(b.date||'')||(a.createdAt||0)-(b.createdAt||0)).map(r=>[r.id,r.updatedAt||0,JSON.stringify(r)])];
+    await sWrite(sheet,rows);
+    const back=parseRecs((await sRead(sheet)).data);
+    if(recs.every(r=>{const b=back.get(r.id);return b&&(b.updatedAt||0)>=r.updatedAt}))return back;
+    await new Promise(res=>setTimeout(res,600+Math.random()*900));
+  }
+  throw new Error('Salvarea nu a putut fi confirmată');
+}
+async function saveMovs(recs){
+  const byMonth={};
+  for(const r of recs){const ym=r.date.slice(0,7);(byMonth[ym]=byMonth[ym]||[]).push(r)}
+  saving++;setSync('busy','Se salvează…');
+  try{
+    for(const ym in byMonth){store.months[ym]=await saveRecs(sheetLuna(ym),byMonth[ym])}
+    setSync('ok','Salvat '+nowTime());
+  }finally{saving--}
+  render();
+}
+async function saveSupplier(rec){
+  saving++;setSync('busy','Se salvează…');
+  try{store.suppliers=await saveRecs(SHEET_FURNIZORI,[rec]);setSync('ok','Salvat '+nowTime())}
+  finally{saving--}
+  render();if(!$('#v-fur').hidden)renderSuppliers();
+}
+function stamp(rec){rec.updatedAt=Date.now();return rec}
+
+/* ═══════════════════════════ ÎNCĂRCARE ═══════════════════════════ */
+function neededRange(){
+  const today=todayStr();
+  const from=addDays(selDay<today?selDay:today,-16);
+  const to=addDays(selDay>today?selDay:today,15);
+  return [from,to];
+}
+function monthsBetween(from,to){const out=[];let d=from.slice(0,7)+'-01';while(d.slice(0,7)<=to.slice(0,7)){out.push(d.slice(0,7));const x=new Date(d+'T12:00:00');x.setMonth(x.getMonth()+1);d=ds(x)}return out}
+function weeksBetween(from,to){const out=new Set();for(let d=from;d<=to;d=addDays(d,1))out.add(isoInfo(d).key);return [...out]}
+
+async function loadMonth(ym){const r=await sRead(sheetLuna(ym));store.months[ym]=parseRecs(r.data)}
+async function loadPlan(wk){
+  try{
+    const r=await sRead(wk);
+    const proc=parsePlan(r.data||[]);
+    store.plans[wk]=proc?{status:'ok',proc}:{status:'missing'};
+  }catch(e){store.plans[wk]={status:'error'}}
+}
+async function ensureLoaded(force){
+  const [from,to]=neededRange();
+  const months=monthsBetween(from,to).filter(m=>force||!store.months[m]);
+  const weeks=weeksBetween(from,to).filter(w=>force||!store.plans[w]);
+  if(!months.length&&!weeks.length&&!force)return;
+  if(!saving)setSync('busy','Se încarcă…');
+  try{
+    const jobs=[...months.map(loadMonth),...weeks.map(loadPlan)];
+    if(force||!store.suppliers.size)jobs.push(sRead(SHEET_FURNIZORI).then(r=>{store.suppliers=parseRecs(r.data)}));
+    await Promise.all(jobs);
+    if(!saving)setSync('ok','Actualizat '+nowTime());
+    $('#banner').hidden=true;
+  }catch(e){
+    setSync('err','Fără conexiune la Google Sheets');
+    const b=$('#banner');b.hidden=false;b.textContent='Nu pot citi datele din Google Sheets. Verifică internetul și reîncarcă pagina.';
+  }
+  render();if(!$('#v-fur').hidden)renderSuppliers();
+}
+
+/* ═══════════════════════════ PLAN PRODUCȚIE ═══════════════════════════ */
+// Citește foaia S{săpt}_{an}: rândurile „Procesare N”, coloanele Luni…Duminică
+function parsePlan(rows){
+  let c0=-1;
+  for(let i=0;i<Math.min(rows.length,12)&&c0<0;i++){const j=(rows[i]||[]).findIndex(c=>String(c).trim()==='Luni');if(j>=0)c0=j}
+  if(c0<0)return null;
+  const proc=Array(12).fill(0).map(()=>Array(7).fill('—'));let found=0;
+  for(const r of rows){
+    if(!r)continue;
+    let lab=null;for(let k=0;k<Math.min(3,c0);k++){const m=String(r[k]||'').trim().match(/^Procesare\s+(\d+)$/i);if(m){lab=+m[1];break}}
+    if(!lab||lab<1||lab>12)continue;
+    proc[lab-1]=[0,1,2,3,4,5,6].map(z=>String(r[c0+z]??'').trim()||'—');found++;
+  }
+  return found?proc:null;
+}
+function refFor(prod){
+  if(!prod||prod==='—')return null;
+  if(PROCESARE_REF[prod])return PROCESARE_REF[prod];
+  const k=Object.keys(PROCESARE_REF).sort((a,b)=>b.length-a.length).find(k=>prod.startsWith(k));
+  return k?PROCESARE_REF[k]:null;
+}
+// Necesarul de lapte pentru o zi, pe procesare și tip de lapte (ca în „Necesar Lapte / Zi” din planificare)
+function planNeeds(d){
+  const w=isoInfo(d);const pl=store.plans[w.key];
+  if(!pl||!pl.proc)return [];
+  const items=[];let ldProduced=0;
+  for(let p=0;p<12;p++){
+    const prod=pl.proc[p][w.zi];if(!prod||prod==='—')continue;
+    const ref=refFor(prod);
+    if(!ref){items.push({unknown:true,prod,p});continue}
+    if(ref.degresare&&ref.ldResult)ldProduced+=ref.ldResult;
+    for(const t in MILK){
+      const L=+ref[MILK[t].ref]||0;
+      if(L>0)items.push({id:`v_${w.key}_${w.zi}_P${p+1}_${t}`,planKey:`${w.key}|${w.zi}|P${p+1}|${t}`,virtual:true,type:'out',status:'plan',
+        date:d,time:ORA_PROCESARE[p]||'08:00',milk:t,liters:L,dest:`Procesare ${p+1} · ${prod}`,prod,proc:p+1,createdAt:0});
+    }
+  }
+  let rem=ldProduced;
+  for(const it of items.filter(i=>i.milk==='deg')){const r=Math.min(rem,it.liters);it.liters-=r;rem-=r}
+  return items.filter(i=>i.unknown||i.liters>0.5);
+}
+
+/* ═══════════════════════════ LISTA DE MIȘCĂRI ═══════════════════════════ */
+function storedMovs(){const out=[];for(const ym in store.months)for(const m of store.months[ym].values())if(!m.deleted)out.push(m);return out}
+function allMovs(){
+  const stored=storedMovs();
+  const used=new Set(stored.filter(m=>m.planKey).map(m=>m.planKey));
+  let [from,to]=neededRange();
+  // planul se aplică doar din ziua în care s-a început înregistrarea în tancuri (evită zile vechi „neconfirmate”)
+  const first=stored.reduce((a,m)=>!a||m.date<a?m.date:a,null);
+  if(!first)return stored;
+  if(first>from)from=first;
+  const virt=[];
+  for(let d=from;d<=to;d=addDays(d,1))for(const it of planNeeds(d))if(!it.unknown&&!used.has(it.planKey))virt.push(it);
+  return stored.concat(virt);
+}
+
+/* ═══════════════════════════ SIMULARE TANCURI ═══════════════════════════ */
+function emptyTank(){return{level:0,comp:{},first:null,q:{},dirty:false,lastSups:[],abPoz:false,fatEst:false}}
+function mains(t){return Object.keys(t.comp).filter(id=>t.comp[id]>0.5&&supType(id)!=='deg')}
+function degs(t){return Object.keys(t.comp).filter(id=>t.comp[id]>0.5&&supType(id)==='deg')}
+function tType(t){if(t.level<=0.5)return null;const m=mains(t);return m.length?supType(m[0]):'deg'}
+function mainSup(t){if(t.level<=0.5)return null;const m=mains(t);if(m.length>1)return '__MIX';if(m.length)return m[0];return degs(t)[0]||null}
+// Scoate L litri din tanc (proporțional pe furnizori) și întoarce ce s-a scos
+function takeFrom(t,L){
+  const f=t.level>0?Math.min(1,Math.max(0,L/t.level)):0;const out={comp:{},q:{},abPoz:t.abPoz,fatEst:t.fatEst,first:t.first};
+  for(const k in t.comp){out.comp[k]=t.comp[k]*f;t.comp[k]*=(1-f)}
+  for(const k in t.q){out.q[k]={s:t.q[k].s*f,l:t.q[k].l*f};t.q[k].s*=(1-f);t.q[k].l*=(1-f)}
+  t.level=Math.max(0,t.level-L);
+  if(t.level<=0.5){t.lastSups=Object.keys(t.comp);t.level=0;t.comp={};t.first=null;t.q={};t.abPoz=false;t.fatEst=false}
+  return out;
+}
+// Mută lapte între tancuri în simulare; întoarce litrii mutați efectiv
+function transfer(st,from,to,L,iss){
+  const src=st[from],dst=st[to];if(!src||!dst||from===to)return 0;
+  if(L>src.level+0.5)iss.push({lvl:'bad',msg:`${tankName(from)} are doar ${Lf(src.level)} (se cer ${Lf(L)})`});
+  const q=Math.min(L,src.level);if(q<=0)return 0;
+  const wasEmpty=dst.level<=0.5;const mv=takeFrom(src,q);
+  if(wasEmpty){dst.first=mv.first;dst.q={}}
+  for(const k in mv.comp)dst.comp[k]=(dst.comp[k]||0)+mv.comp[k];
+  for(const k in mv.q){dst.q[k]=dst.q[k]||{s:0,l:0};dst.q[k].s+=mv.q[k].s;dst.q[k].l+=mv.q[k].l}
+  dst.level+=q;dst.dirty=true;dst.abPoz=dst.abPoz||mv.abPoz;dst.fatEst=dst.fatEst||mv.fatEst;
+  return q;
+}
+function replay(list,{upto=null,includePlan=true,skipId=null}={}){
+  const st={};TANKS.forEach(t=>st[t.id]=emptyTank());
+  const issues={},alloc={};
+  const sorted=list.filter(m=>m.id!==skipId&&(includePlan||m.status==='real')).sort((a,b)=>key(a)<key(b)?-1:1);
+  for(const m of sorted){
+    if(upto&&key(m)>=upto)break;
+    if(m.type==='skip')continue;
+    if(m.virtual){
+      // consum din planul de producție: se ia din tancurile cu tipul potrivit, cel mai vechi lapte întâi
+      let need=m.liters;const al=[];
+      // laptele normalizat are prioritate, apoi cel mai vechi
+      const cands=TANKS.filter(t=>tType(st[t.id])===m.milk).sort((a,b)=>(isNormalized(st[b.id])-isNormalized(st[a.id]))||(st[a.id].first||'').localeCompare(st[b.id].first||''));
+      for(const t of cands){if(need<=0.5)break;const q=Math.min(need,st[t.id].level);if(q>0){takeFrom(st[t.id],q);al.push({tank:t.id,liters:q});need-=q}}
+      alloc[m.id]=al;
+      if(need>0.5)issues[m.id]=[{lvl:'bad',msg:`Lipsă lapte ${MILK[m.milk].name.toLowerCase()}: ${Lf(need)} pentru ${m.dest}`}];
+      continue;
+    }
+    const t=st[m.tank];if(!t)continue;
+    const cap=capOf(m.tank),iss=[],Lm=+m.liters||0;
+    if(m.type==='clean'){
+      if(t.level>0.5)iss.push({lvl:'bad',msg:'Spălare cu lapte în tanc ('+Lf(t.level)+')'});
+      Object.assign(t,emptyTank());
+    }else if(m.type==='in'){
+      const inT=supType(m.supplierId),ms=mains(t);
+      if(t.level>0.5&&inT!=='deg'&&ms.some(s=>s!==m.supplierId))iss.push({lvl:'bad',msg:'Amestec: tancul conține deja lapte de la '+ms.filter(s=>s!==m.supplierId).map(supName).join(', ')});
+      if(t.level+Lm>cap+0.5)iss.push({lvl:'bad',msg:'Depășește capacitatea cu '+Lf(t.level+Lm-cap)});
+      if(t.level<=0.5&&t.dirty&&t.lastSups.some(s=>s!==m.supplierId))iss.push({lvl:'warn',msg:'Tancul nu a fost marcat ca spălat după '+t.lastSups.filter(s=>s!==m.supplierId).map(supName).join(', ')});
+      if(t.level<=0.5){t.first=m.date+' '+m.time;t.q={};t.abPoz=false}
+      for(const [k] of QK){let v=parseFloat(m[k]);if(!isFinite(v)&&k==='fat'){v=GRASIME_IMPLICITA[inT];t.fatEst=true}if(isFinite(v)){t.q[k]=t.q[k]||{s:0,l:0};t.q[k].s+=v*Lm;t.q[k].l+=Lm}}
+      if(m.ab==='poz')t.abPoz=true;
+      t.comp[m.supplierId]=(t.comp[m.supplierId]||0)+Lm;t.level+=Lm;t.dirty=true;
+    }else if(m.type==='out'){
+      if(Lm>t.level+0.5)iss.push({lvl:'bad',msg:'Consum mai mare decât stocul ('+Lf(t.level)+')'});
+      takeFrom(t,Lm);
+    }else if(m.type==='move'||m.type==='norm'){
+      // mutare: din m.from în m.tank; normalizare: toate sursele în m.tank
+      const srcs=m.type==='move'?[{tank:m.from,liters:Lm}]:(m.sources||[]);
+      for(const x of srcs)transfer(st,x.tank,m.tank,+x.liters||0,iss);
+      const after=mains(t);
+      if(after.length>1)iss.push({lvl:'bad',msg:'Amestec lapte integral: '+after.map(supName).join(' + ')});
+      if(t.level>cap+0.5)iss.push({lvl:'bad',msg:'Depășește capacitatea cu '+Lf(t.level-cap)});
+    }
+    if(iss.length)issues[m.id]=iss;
+  }
+  return{st,issues,alloc};
+}
+function stateBefore(date,time,skipId){return replay(allMovs(),{upto:date+' '+time+' '+String(Date.now()).padStart(15,'0')+' ~',skipId}).st}
+
+function fatOf(t){if(t.q.fat&&t.q.fat.l>0.5)return t.q.fat.s/t.q.fat.l;const tt=tType(t);return tt?GRASIME_IMPLICITA[tt]:0}
+function isNormalized(t){return t.level>0.5&&mains(t).length>0&&degs(t).length>0}
+// tancuri cu lapte integral de vacă de la un singur furnizor, fără degresat
+function pureInt(x){return x.level>0.5&&!degs(x).length&&mains(x).length===1&&supType(mains(x)[0])==='vaca'}
+const byFirst=st=>(a,b)=>(st[a.id].first||'').localeCompare(st[b.id].first||'');
+
+// Rețeta de normalizare: cât integral și cât degresat intră în tancul țintă ca să iasă V litri la ft% grăsime.
+// opts.sup = furnizor integral, opts.intTank / opts.degTank = tancuri sursă alese manual ('auto' = automat)
+function planNorm(st,target,V,ft,opts={}){
+  const T=st[target],cap=capOf(target),r={target,errors:[],warns:[],sources:[],I:0,D:0,V,fat:null,sup:null,V0:T.level};
+  const tm=mains(T);
+  if(tm.length>1){r.errors.push(tankName(target)+' conține deja lapte integral amestecat.');return r}
+  if(tm.length&&supType(tm[0])!=='vaca'){r.errors.push(tankName(target)+' conține lapte de '+MILK[supType(tm[0])].name.toLowerCase()+'.');return r}
+  let sup=tm[0]||null;
+  const wantSup=opts.sup&&opts.sup!=='auto'?opts.sup:null;
+  const wantInt=opts.intTank&&opts.intTank!=='auto'?opts.intTank:null;
+  const wantDeg=opts.degTank&&opts.degTank!=='auto'?opts.degTank:null;
+  if(wantInt&&wantInt!==target){const x=st[wantInt];if(!pureInt(x)){r.errors.push(tankName(wantInt)+' nu conține lapte integral de vacă de la un singur furnizor.');return r}
+    const s2=mains(x)[0];if(sup&&s2!==sup){r.errors.push(`Nu se amestecă: ${tankName(target)} are ${supName(sup)}, ${tankName(wantInt)} are ${supName(s2)}.`);return r}sup=s2}
+  if(wantSup){if(sup&&sup!==wantSup){r.errors.push(`${tankName(target)} are deja lapte de la ${supName(sup)}.`);return r}sup=wantSup}
+  if(!sup){const av={};for(const t of TANKS){if(t.id===target)continue;const x=st[t.id];if(pureInt(x)){const s0=mains(x)[0];av[s0]=(av[s0]||0)+x.level}}sup=Object.keys(av).sort((a,b)=>av[b]-av[a])[0]||null}
+  r.sup=sup;
+  if(T.level<=0.5&&T.dirty&&T.lastSups.length)r.warns.push(tankName(target)+' nu e marcat ca spălat.');
+  const V0=T.level,f0=V0>0.5?fatOf(T):0;
+  const its=wantInt?(wantInt===target?[]:[TANKS.find(t=>t.id===wantInt)]):(sup?TANKS.filter(t=>t.id!==target&&pureInt(st[t.id])&&mains(st[t.id])[0]===sup).sort(byFirst(st)):[]);
+  const availI=its.reduce((a,t)=>a+st[t.id].level,0);
+  const fi=availI>0?its.reduce((a,t)=>a+st[t.id].level*fatOf(st[t.id]),0)/availI:GRASIME_IMPLICITA.vaca;
+  let dts;
+  if(wantDeg){const x=st[wantDeg];if(wantDeg===target||tType(x)!=='deg'){r.errors.push(tankName(wantDeg)+' nu conține lapte degresat.');return r}dts=[TANKS.find(t=>t.id===wantDeg)]}
+  else dts=TANKS.filter(t=>t.id!==target&&tType(st[t.id])==='deg').sort(byFirst(st));
+  const availD=dts.reduce((a,t)=>a+st[t.id].level,0);
+  const fd=availD>0?dts.reduce((a,t)=>a+st[t.id].level*fatOf(st[t.id]),0)/availD:GRASIME_IMPLICITA.deg;
+  if(V<V0-0.5){r.errors.push(`${tankName(target)} are deja ${Lf(V0)}. Alege un volum mai mare sau alt tanc.`);return r}
+  let I=(V*ft-V0*f0-(V-V0)*fd)/(fi-fd),D;
+  if(I<0){I=0;V=V0*(f0-fd)/(ft-fd);D=V-V0;r.warns.push(`Tancul are deja mai mult integral decât trebuie: se normalizează tot conținutul → ${Lf(V)}.`)}
+  else{D=V-V0-I;if(D<0){D=0;I=V-V0;r.warns.push('Laptele integral are grăsime sub țintă: nu se adaugă degresat.')}}
+  if(D>availD+0.5){const lack=D-availD;D=availD;I=V-V0-D;r.warns.push(`Degresat insuficient (lipsesc ${Lf(lack)}): grăsimea iese peste țintă.`)}
+  if(I>0.5&&!sup){r.errors.push('Nu există lapte integral de vacă disponibil.');return r}
+  if(I>availI+0.5){
+    // puțin integral lipsă: păstrăm volumul dacă grăsimea rămâne în toleranță
+    const I2=availI,D2=V-V0-I2,fat2=V>0?(V0*f0+I2*fi+D2*fd)/V:0;
+    if(D2<=availD+0.5&&Math.abs(fat2-ft)<=NORMALIZARE.toleranta){I=I2;D=D2;r.warns.push(`Integral puțin insuficient: grăsimea iese ${fat2.toFixed(2).replace('.',',')}%.`)}
+    else{const Dm=Math.max(0,Math.min(availD,(V0*(f0-ft)+availI*(fi-ft))/(ft-fd)));const Vm=V0+availI+Dm;
+      r.errors.push(`Lapte integral insuficient${sup?' de la '+supName(sup):''}${wantInt?' în '+tankName(wantInt):''}: ${Lf(availI)} disponibil, necesar ${Lf(I)}. Maxim posibil aici: ${Lf(Vm)}.`);return r}
+  }
+  if(V>cap+0.5){r.errors.push(`Nu încape: ${Lf(V)} în ${tankName(target)} (${Lf(cap)}).`);return r}
+  let need=I;for(const t of its){if(need<=0.5)break;const q=Math.min(need,st[t.id].level);r.sources.push({tank:t.id,liters:Math.round(q),kind:'int'});need-=q}
+  need=D;for(const t of dts){if(need<=0.5)break;const q=Math.min(need,st[t.id].level);r.sources.push({tank:t.id,liters:Math.round(q),kind:'deg'});need-=q}
+  Object.assign(r,{I,D,V,fi,fd,f0,fat:V>0?(V0*f0+I*fi+D*fd)/V:null});
+  return r;
+}
+// Alege automat tancul de normalizare: întâi tancul care are deja integral (fără pompare), apoi tancuri goale curate
+function autoNorm(st,V,ft,opts={}){
+  const score=t=>{const x=st[t.id];if(pureInt(x))return 0;if(x.level<=0.5&&!x.dirty)return 1;if(x.level<=0.5)return 2;if(tType(x)==='deg')return 3;return 4};
+  const cands=TANKS.filter(t=>t.cap>=V-0.5).sort((a,b)=>score(a)-score(b)||a.cap-b.cap);
+  let first=null;
+  for(const t of cands){const p=planNorm(st,t.id,V,ft,opts);if(!first)first=p;if(!p.errors.length)return p}
+  return first||{errors:['Niciun tanc nu are capacitatea de '+Lf(V)+'.'],warns:[],sources:[]};
+}
+
+// Recepție: propune tancul (același furnizor → cel mai mic tanc gol în care încape → împărțire)
+function suggest(st,supId,liters){
+  const inT=supType(supId);
+  const isSame=x=>inT==='deg'?(mains(x).length===0&&degs(x).every(s=>s===supId)):(mains(x).length===1&&mains(x)[0]===supId);
+  const same=TANKS.filter(t=>st[t.id].level>0.5&&isSame(st[t.id])).map(t=>({t,free:t.cap-st[t.id].level}));
+  const empty=TANKS.filter(t=>st[t.id].level<=0.5).map(t=>({t,free:t.cap,other:st[t.id].dirty&&st[t.id].lastSups.some(s=>s!==supId)?1:0}));
+  let fit=same.filter(x=>x.free>=liters).sort((a,b)=>a.free-b.free)[0];
+  if(fit)return{alloc:[{tank:fit.t.id,liters}],rest:0};
+  fit=empty.filter(x=>x.free>=liters).sort((a,b)=>(a.other-b.other)||(a.free-b.free))[0];
+  if(fit)return{alloc:[{tank:fit.t.id,liters}],rest:0};
+  let rest=liters;const alloc=[];
+  for(const x of [...same.sort((a,b)=>b.free-a.free),...empty.sort((a,b)=>(a.other-b.other)||(b.free-a.free))]){if(rest<=0)break;const q=Math.min(rest,x.free);if(q>0){alloc.push({tank:x.t.id,liters:q});rest-=q}}
+  return{alloc,rest};
+}
+
+/* ═══════════════════════════ AFIȘARE ═══════════════════════════ */
+function render(){
+  $('#d-pick').value=selDay;
+  $('#d-label').textContent=dayLabel(selDay)+(selDay===todayStr()?' · azi':'');
+  const list=allMovs();
+  const upto=selDay+' 99';
+  const real=replay(list,{upto,includePlan:false});
+  const proj=replay(list,{upto,includePlan:true});
+  const full=replay(list,{includePlan:true});
+  renderPlanStatus();
+  $('#tanks').innerHTML=TANKS.map(t=>tankCard(t,real.st[t.id],proj.st[t.id])).join('');
+  renderIssues(list,full.issues);
+  renderLog(list,full);
+  renderWeek(list,full.issues);
+  renderModel(list,full);
+}
+function renderPlanStatus(){
+  const w=isoInfo(selDay);const pl=store.plans[w.key];
+  let txt;
+  if(!pl)txt=`Plan producție S${w.week}: se încarcă…`;
+  else if(pl.status==='ok')txt=`<span class="pill p-prod">Plan producție S${w.week} preluat</span>`;
+  else if(pl.status==='missing')txt=`<span class="pill p-dirty">Nu există plan salvat pentru S${w.week}</span>`;
+  else txt=`<span class="pill p-full">Planul S${w.week} nu s-a putut citi</span>`;
+  $('#plan-status').innerHTML=txt;
+}
+function tankCard(t,r,p){
+  const lvl=r.level,pct=Math.min(100,lvl/t.cap*100),ppct=Math.min(100,p.level/t.cap*100);
+  const ms=mainSup(r),pms=mainSup(p);
+  const col=(ms||pms)?supColor(ms||pms):'transparent';
+  let status;
+  if(lvl<=0.5)status=r.dirty?'<span class="pill p-dirty">Gol · de spălat</span>':'<span class="pill p-free">Liber · curat</span>';
+  else if(pct>=98)status='<span class="pill p-full">Plin</span>';
+  else status='<span class="pill p-busy">Ocupat</span>';
+  if(ms==='__MIX')status='<span class="pill p-full">Amestec</span>';
+  const tt=tType(r);
+  const typeBadge=tt?`<span class="pill p-type">${MILK[tt].name}</span>`:'';
+  const degL=degs(r).reduce((a,id)=>a+r.comp[id],0);
+  const normal=mains(r).length&&degL>0.5?`<div class="small muted">din care ${Lf(degL)} degresat (normalizare)</div>`:'';
+  const vcls=t.cap<=6000?'v-small':t.cap<=15000?'v-mid':'';
+  const q=QK.filter(([k])=>r.q[k]&&r.q[k].l>0).map(([k,lab,u,dec])=>`<span>${lab}${k==='fat'&&r.fatEst?' (est.)':''}</span><b>${(r.q[k].s/r.q[k].l).toFixed(dec).replace('.',',')} ${u}</b>`).join('');
+  const projLine=Math.abs(p.level-r.level)>0.5?`<div class="small">Estimat cu planificări: <b class="num">${Lf(p.level)}</b>${p.level>0.5&&r.level<=0.5?' · '+chip(pms):''}</div>`:'';
+  return `<article class="tank">
+    <div class="tank-head"><h3>${t.name}</h3><span class="cap num">${t.cap.toLocaleString('ro-RO')} L</span></div>
+    <div class="tank-body">
+      <div class="vessel ${vcls}" aria-hidden="true">
+        <div class="fill" style="height:${pct}%;background:${ms==='__MIX'?'var(--bad)':`color-mix(in srgb, ${col} 55%, transparent)`}"></div>
+        ${Math.abs(ppct-pct)>0.3?`<div class="proj" style="bottom:${ppct}%"></div>`:''}
+        <div class="pct num">${Math.round(pct)}%</div>
+      </div>
+      <div class="tank-info">
+        <div class="actions" style="gap:6px">${status}${typeBadge}${isNormalized(r)?`<span class="pill p-prod">Normalizat ${fatOf(r).toFixed(2).replace('.',',')}%</span>`:''}</div>
+        <div class="big">${Lf(lvl)}</div>
+        <div class="small muted num">Liber: ${Lf(Math.max(0,t.cap-lvl))}</div>
+        ${lvl>0.5?chip(ms):'<span class="small muted">'+(r.dirty&&r.lastSups.length?'Ultimul: '+esc(r.lastSups.map(supName).join(', ')):'Fără lapte')+'</span>'}
+        ${normal}
+        ${r.first?`<div class="small muted">Din ${shortDate(r.first.slice(0,10))} ${r.first.slice(11)}</div>`:''}
+        ${r.abPoz?'<span class="pill p-full">Antibiotic POZITIV</span>':''}
+        ${projLine}
+      </div>
+    </div>
+    ${q?`<div class="qual">${q}</div>`:''}
+  </article>`;
+}
+function renderIssues(list,issues){
+  const today=todayStr();
+  const rows=list.filter(m=>issues[m.id]&&(m.date>=today||m.date===selDay)).sort((a,b)=>key(a)<key(b)?-1:1);
+  const pending=list.filter(m=>m.virtual&&m.date<today).length;
+  const el=$('#issues');
+  if(!rows.length&&!pending){el.hidden=true;el.innerHTML='';return}
+  el.hidden=false;
+  el.innerHTML=`<h2>Probleme de rezolvat (${rows.length+(pending?1:0)})</h2><ul>
+    ${pending?`<li class="warn"><b>${pending} consumuri din planul de producție din zilele trecute nu sunt confirmate.</b> Marchează-le „Realizat” sau „Anulat” ca stocul din tancuri să fie corect.</li>`:''}
+    ${rows.map(m=>issues[m.id].map(i=>`<li class="${i.lvl}"><b>${shortDay(m.date)} ${esc(m.time)} · ${m.virtual?'Plan producție':tankName(m.tank)}</b> — ${esc(i.msg)}</li>`).join('')).join('')}</ul>`;
+}
+function movDesc(m,al){
+  if(m.virtual){
+    const a=(al||[]).map(x=>`${tankName(x.tank)} ${Lf(x.liters)}`).join(' + ');
+    return `<span class="t-prod">${esc(m.dest)}</span><div class="small muted">Lapte ${MILK[m.milk].name.toLowerCase()}${a?' · din '+a:''}</div>`;
+  }
+  if(m.type==='in'){
+    const q=QK.filter(([k])=>m[k]!==''&&m[k]!=null&&isFinite(parseFloat(m[k]))).map(([k,lab,u])=>lab+' '+String(m[k]).replace('.',',')+u).join(' · ');
+    const ab=m.ab?'AB '+(m.ab==='poz'?'pozitiv':'negativ'):'';
+    return chip(m.supplierId)+((q||ab)?`<div class="small muted">${esc([q,ab].filter(Boolean).join(' · '))}</div>`:'');
+  }
+  if(m.type==='move')return `Din <b>${tankName(m.from)}</b> în <b>${tankName(m.tank)}</b>`+(m.supplierId?' · '+chip(m.supplierId):'');
+  if(m.type==='norm'){const src=(m.sources||[]).map(x=>`${tankName(x.tank)} ${Lf(x.liters)} ${x.kind==='deg'?'degresat':'integral'}`).join(' + ');
+    return (m.supplierId?chip(m.supplierId)+' ':'')+`<span class="t-prod">la ${String(m.fatCalc??m.fatTarget).replace('.',',')}% grăsime</span><div class="small muted">${src?'Intră: '+esc(src):'Doar conținutul tancului'}</div>`}
+  if(m.type==='out')return (m.supplierId?chip(m.supplierId):'')+(m.dest?`<div class="small muted">→ ${esc(m.dest)}</div>`:'');
+  if(m.type==='skip')return `<span class="muted">${esc(m.dest||'Procesare')} · anulată, nu consumă lapte</span>`;
+  return '<span class="muted">Spălare / CIP</span>';
+}
+function renderLog(list,full){
+  const issues=full.issues;
+  const rows=list.filter(m=>m.date===selDay).sort((a,b)=>key(a)<key(b)?-1:1);
+  $('#log-title').textContent='Mișcări · '+shortDay(selDay);
+  const sum=f=>rows.filter(f).reduce((s,m)=>s+(+m.liters||0),0);
+  const needs=planNeeds(selDay);
+  const byT={};needs.filter(n=>!n.unknown).forEach(n=>byT[n.milk]=(byT[n.milk]||0)+n.liters);
+  const unknown=needs.filter(n=>n.unknown);
+  $('#day-sum').innerHTML=`<span>Recepție: <b class="num">${Lf(sum(m=>m.type==='in'))}</b></span><span>Consum: <b class="num">${Lf(sum(m=>m.type==='out'))}</b></span>`+
+    (Object.keys(byT).length?`<span>Necesar plan: <b class="num">${Object.entries(byT).map(([t,l])=>MILK[t].name+' '+Lf(l)).join(' · ')}</b></span>`:'')+
+    (unknown.length?`<span class="pill p-dirty">Produs necunoscut: ${esc(unknown.map(u=>u.prod).join(', '))}</span>`:'');
+  if(!rows.length){
+    $('#log').innerHTML=`<div class="empty">Nicio mișcare și nicio procesare planificată în această zi.${suppliers().length?'':'<br>Începe prin a adăuga furnizorii în tabul Furnizori.'}</div>`;return;
+  }
+  $('#log').innerHTML=`<div class="tbl-wrap"><table>
+    <thead><tr><th>Ora</th><th>Tip</th><th>Tanc</th><th>Detalii</th><th class="r">Litri</th><th>Stare</th><th class="r"></th></tr></thead>
+    <tbody>${rows.map(m=>{
+      const iss=issues[m.id]||[];
+      const type=m.virtual?'<span class="t-prod">Producție</span>':m.type==='in'?'<span class="t-in">Recepție</span>':m.type==='out'?'<span class="t-out">Consum</span>':m.type==='skip'?'<span class="t-clean">Anulat</span>':m.type==='move'?'<span class="t-out">Mutare</span>':m.type==='norm'?'<span class="t-prod">Normalizare</span>':'<span class="t-clean">Spălare</span>';
+      const st=m.virtual?'<span class="pill p-prod">Din plan</span>':m.status==='plan'?'<span class="pill p-plan">Planificat</span>':'<span class="pill p-real">Realizat</span>';
+      const fromPlan=!m.virtual&&m.planKey&&m.type!=='skip'?' <span class="pill p-prod">plan prod.</span>':'';
+      let acts;
+      if(m.virtual)acts=`<button class="btn small" data-act="vdone" data-id="${m.id}">✓ Realizat</button><button class="btn small" data-act="vedit" data-id="${m.id}">Editează</button><button class="btn small danger" data-act="vskip" data-id="${m.id}">Anulează</button>`;
+      else if(m.type==='skip')acts=`<button class="btn small" data-act="del" data-id="${m.id}" data-label="Restaurează">Restaurează</button>`;
+      else acts=`${m.status==='plan'?`<button class="btn small" data-act="done" data-id="${m.id}">✓ Realizat</button>`:''}<button class="btn small" data-act="edit" data-id="${m.id}">Editează</button><button class="btn small danger" data-act="del" data-id="${m.id}" data-label="Șterge">Șterge</button>`;
+      return `<tr class="${m.virtual?'virt':''} ${m.type==='skip'?'skipped':''}">
+        <td class="num">${esc(m.time)}</td><td>${type}</td><td>${m.virtual?'<span class="muted">auto</span>':tankName(m.tank)}</td>
+        <td>${movDesc(m,full.alloc[m.id])}${fromPlan}${m.note?`<div class="small muted">${esc(m.note)}</div>`:''}${iss.map(i=>`<div class="row-iss ${i.lvl}">⚠ ${esc(i.msg)}</div>`).join('')}</td>
+        <td class="r">${m.type==='clean'||m.type==='skip'?'—':m.type==='move'||m.type==='norm'?Lf(+m.liters||0):(m.type==='out'?'−':'+')+Lf(+m.liters||0)}</td>
+        <td>${st}</td>
+        <td><div class="row-actions">${acts}</div></td></tr>`}).join('')}</tbody></table></div>`;
+}
+// Ce normalizare se poate face în ziua respectivă (stocul de dimineață + recepțiile zilei)
+function normCell(list,d,rows){
+  const done=rows.filter(m=>m.type==='norm');
+  if(done.length)return `<span class="pill p-real">Normalizat ${Lf(done.reduce((a,m)=>a+(+m.liters||0),0))}</span>`;
+  const st0=replay(list.filter(m=>m.date!==d||m.type==='in'),{upto:d+' 99'}).st;
+  for(const V of [...NORMALIZARE.volume].sort((a,b)=>b-a)){
+    const p=autoNorm(st0,V,NORMALIZARE.grasime);
+    if(!p.errors.length){const f=p.fat!=null&&Math.abs(p.fat-NORMALIZARE.grasime)>0.05?' · '+p.fat.toFixed(1).replace('.',',')+'%':'';return `<span class="pill ${f?'p-plan':'p-real'}">Se pot normaliza ${Lf(p.V)}${f}</span>`}
+  }
+  return '<span class="pill p-full">Normalizare imposibilă</span>';
+}
+function renderWeek(list,issues){
+  const today=todayStr();const start=today>selDay?today:selDay;
+  const days=[...Array(7)].map((_,i)=>addDays(start,i));
+  const head=`<thead><tr><th>Zi</th><th class="r">Recepție</th><th class="r">Necesar producție</th><th class="r">Alt consum</th><th class="r">Stoc estimat seara</th>${TANKS.map(t=>`<th>${t.name}</th>`).join('')}<th>Normalizare</th><th>Probleme</th></tr></thead>`;
+  const body=days.map(d=>{
+    const rows=list.filter(m=>m.date===d);
+    const s=f=>rows.filter(f).reduce((a,m)=>a+(+m.liters||0),0);
+    const prodNeed=planNeeds(d).filter(n=>!n.unknown).reduce((a,n)=>a+n.liters,0);
+    const st=replay(list,{upto:d+' 99'}).st;
+    const tot=TANKS.reduce((a,t)=>a+st[t.id].level,0);
+    const nIss=rows.filter(m=>issues[m.id]).length;
+    return `<tr class="clk ${d===selDay?'sel':''}" data-day="${d}">
+      <td>${shortDay(d)}</td>
+      <td class="r">${Lf(s(m=>m.type==='in'))}</td>
+      <td class="r">${prodNeed?Lf(prodNeed):'<span class="muted">—</span>'}</td>
+      <td class="r">${Lf(s(m=>m.type==='out'&&!m.virtual&&!m.planKey))}</td>
+      <td class="r"><b>${Lf(tot)}</b></td>
+      ${TANKS.map(t=>{const x=st[t.id];return `<td>${x.level>0.5?`<span class="chip small"><span class="dot" style="background:${supColor(mainSup(x))}"></span><span class="nm num">${Math.round(x.level/t.cap*100)}%</span></span>`:'<span class="muted small">gol</span>'}</td>`}).join('')}
+      <td>${normCell(list,d,rows)}</td>
+      <td>${nIss?`<span class="pill p-full">${nIss}</span>`:'<span class="muted small">—</span>'}</td></tr>`}).join('');
+  $('#week').innerHTML=head+'<tbody>'+body+'</tbody>';
+}
+
+/* ═══════════════════════════ FORMULARE ═══════════════════════════ */
+function closeModal(){$('#modal-root').innerHTML=''}
+function openModal(html,onMount){
+  $('#modal-root').innerHTML=`<div class="overlay" id="ov"><div class="modal" role="dialog" aria-modal="true">${html}</div></div>`;
+  $('#ov').addEventListener('mousedown',e=>{if(e.target.id==='ov')closeModal()});
+  onMount&&onMount();
+  const f=$('#ov input,#ov select');f&&f.focus();
+}
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal()});
+function defTime(date){return date===todayStr()?nowTime():'07:00'}
+function defStatus(date,time){return (date+' '+time)>(todayStr()+' '+nowTime())?'plan':'real'}
+function segHtml(id,opts,val){return `<div class="seg" id="${id}">${opts.map(([v,l])=>`<button type="button" data-v="${v}" aria-pressed="${v===val}">${l}</button>`).join('')}</div>`}
+function segVal(id){const b=document.querySelector('#'+id+' [aria-pressed="true"]');return b?b.dataset.v:null}
+function segWire(id,cb){document.querySelectorAll('#'+id+' button').forEach(b=>b.onclick=()=>{document.querySelectorAll('#'+id+' button').forEach(x=>x.setAttribute('aria-pressed',x===b));cb&&cb()})}
+function saveErr(e){const b=$('#f-save');if(b)b.disabled=false;setSync('err','Eroare la salvare');toast('Nu s-a putut salva în Google Sheets. Încearcă din nou.');console.error(e)}
+
+function receptionForm(edit){
+  const act=suppliers().filter(s=>s.active!==false||(edit&&s.id===edit.supplierId));
+  if(!act.length){toast('Adaugă întâi un furnizor în tabul Furnizori');switchTab('fur');return}
+  const m=edit||{date:selDay,time:defTime(selDay)};
+  const status=edit?edit.status:defStatus(m.date,m.time);
+  openModal(`
+    <h2>${edit?'Editează recepția':'Recepție lapte'}</h2>
+    <div class="field"><label class="label" for="f-sup">Furnizor</label>
+      <select id="f-sup">${act.map(s=>`<option value="${s.id}" ${edit&&edit.supplierId===s.id?'selected':''}>${esc(s.name)} · ${MILK[s.type||'vaca'].name}</option>`).join('')}</select></div>
+    <div class="grid2">
+      <div class="field"><label class="label" for="f-lit">Cantitate (litri)</label><input id="f-lit" type="number" min="1" step="1" inputmode="numeric" value="${edit?edit.liters:''}" placeholder="ex. 8500"></div>
+      <div class="field"><span class="label">Stare</span>${segHtml('f-status',[['real','Realizat'],['plan','Planificat']],status)}</div>
+      <div class="field"><label class="label" for="f-date">Data</label><input id="f-date" type="date" value="${m.date}"></div>
+      <div class="field"><label class="label" for="f-time">Ora</label><input id="f-time" type="time" value="${m.time}"></div>
+    </div>
+    <div class="field"><span class="label">Tanc</span>${segHtml('f-tank',[...(edit?[]:[['auto','Automat']]),...TANKS.map(t=>[t.id,t.name])],edit?edit.tank:'auto')}</div>
+    <div id="f-preview" class="preview"></div>
+    <details ${edit&&QK.some(([k])=>edit[k]!=null&&edit[k]!=='')?'open':''}><summary>Calitate la recepție</summary>
+      <div class="grid4" style="margin-top:10px">
+        ${QK.map(([k,lab,u])=>`<div class="field"><label class="label" for="f-${k}">${lab} (${u})</label><input id="f-${k}" type="number" step="0.01" inputmode="decimal" value="${edit&&edit[k]!=null?edit[k]:''}"></div>`).join('')}
+      </div>
+      <div class="field" style="margin-top:10px"><span class="label">Test antibiotic</span>${segHtml('f-ab',[['','Netestat'],['neg','Negativ'],['poz','Pozitiv']],edit?edit.ab||'':'')}</div>
+    </details>
+    <div class="field"><label class="label" for="f-note">Observații</label><input id="f-note" type="text" value="${esc(edit?edit.note:'')}" placeholder="ex. cisterna CJ-10-ABC, nr. aviz"></div>
+    ${edit?'':`<div class="field"><label class="label" for="f-rep">Repetă zilnic încă … zile (planificat, în aceleași tancuri)</label><input id="f-rep" type="number" min="0" max="31" step="1" value="0" inputmode="numeric"></div>`}
+    <div class="modal-foot"><button class="btn" id="f-cancel">Anulează</button><button class="btn primary" id="f-save">Salvează</button></div>
+  `,()=>{
+    let plan=null;
+    const upd=()=>{
+      const supId=$('#f-sup').value,L=Math.round(+$('#f-lit').value||0),date=$('#f-date').value,time=$('#f-time').value||'00:00',mode=segVal('f-tank');
+      const pv=$('#f-preview');plan=null;
+      if(!date||L<=0){pv.className='preview';pv.innerHTML='<span class="muted">Introdu cantitatea ca să vezi repartizarea pe tancuri.</span>';$('#f-save').disabled=true;return}
+      const st=stateBefore(date,time,edit&&edit.id);
+      const inT=supType(supId);
+      let errs=[],warns=[],infos=[],alloc=[];
+      if(mode==='auto'){
+        const s=suggest(st,supId,L);alloc=s.alloc;
+        if(s.rest>0)errs.push('Nu există loc suficient fără amestec. Lipsesc '+Lf(s.rest)+'. Golește sau spală un tanc înainte.');
+      }else{
+        alloc=[{tank:mode,liters:L}];
+        const t=st[mode],ms=mains(t);
+        if(t.level>0.5&&inT!=='deg'&&ms.some(s=>s!==supId))errs.push(tankName(mode)+' conține lapte de la '+ms.filter(s=>s!==supId).map(supName).join(', ')+' ('+Lf(t.level)+'). Nu se poate amesteca.');
+        if(t.level>0.5&&inT==='deg'&&ms.length)infos.push('Normalizare: adaugi lapte degresat peste laptele integral de la '+ms.map(supName).join(', ')+'.');
+        if(t.level>0.5&&inT!=='deg'&&!ms.length)infos.push('Normalizare: adaugi lapte integral peste lapte degresat.');
+        if(t.level+L>capOf(mode))errs.push('Nu încape: liber doar '+Lf(Math.max(0,capOf(mode)-t.level))+' în '+tankName(mode)+'.');
+      }
+      for(const a of alloc){const t=st[a.tank];if(t.level<=0.5&&t.dirty&&t.lastSups.some(s=>s!==supId))warns.push(tankName(a.tank)+' a avut lapte de la '+t.lastSups.filter(s=>s!==supId).map(supName).join(', ')+' și nu e marcat ca spălat.')}
+      pv.className='preview'+(errs.length?' err':'');
+      pv.innerHTML=(alloc.length?`<div><b>${alloc.length>1?'Repartizare împărțită:':'Repartizare:'}</b> ${alloc.map(a=>`${tankName(a.tank)} <b class="num">${Lf(a.liters)}</b> (${Lf(st[a.tank].level)} → ${Lf(st[a.tank].level+a.liters)} din ${Lf(capOf(a.tank))})`).join(' · ')}</div>`:'')+
+        errs.map(e=>`<div>⛔ ${esc(e)}</div>`).join('')+warns.map(w=>`<div class="warn">⚠ ${esc(w)}</div>`).join('')+infos.map(w=>`<div class="info">ℹ ${esc(w)}</div>`).join('');
+      if(!errs.length)plan=alloc;
+      $('#f-save').disabled=!plan;
+    };
+    ['#f-sup','#f-lit','#f-date','#f-time'].forEach(s=>{$(s).addEventListener('input',upd);$(s).addEventListener('change',upd)});
+    segWire('f-tank',upd);segWire('f-status');segWire('f-ab');
+    $('#f-cancel').onclick=closeModal;
+    $('#f-save').onclick=async()=>{
+      if(!plan)return;
+      const base={type:'in',supplierId:$('#f-sup').value,date:$('#f-date').value,time:$('#f-time').value||'00:00',status:segVal('f-status'),ab:segVal('f-ab')||'',note:$('#f-note').value.trim()};
+      for(const [k] of QK){const v=$('#f-'+k).value;base[k]=v===''?null:+v}
+      $('#f-save').disabled=true;$('#f-save').textContent='Se salvează…';
+      try{
+        let recs;
+        if(edit){
+          const rec=stamp({...edit,...base,tank:plan[0].tank,liters:plan[0].liters});
+          recs=[rec];
+          if(edit.date.slice(0,7)!==rec.date.slice(0,7))recs.push(stamp({...edit,deleted:true}));
+        }else{
+          const grp=plan.length>1?uid('g'):null;let i=0;
+          recs=plan.map(a=>stamp({...base,id:uid('m'),tank:a.tank,liters:a.liters,group:grp,createdAt:Date.now()+i++}));
+          const reps=Math.min(31,Math.max(0,Math.round(+($('#f-rep')||{}).value||0)));
+          for(let d=1;d<=reps;d++)for(const a of plan)recs.push(stamp({...base,id:uid('m'),date:addDays(base.date,d),status:'plan',tank:a.tank,liters:a.liters,group:grp,createdAt:Date.now()+i++}));
+        }
+        await saveMovs(recs);
+        closeModal();toast(edit?'Recepție actualizată':'Recepție salvată');selDay=base.date;ensureLoaded();render();
+      }catch(e){$('#f-save').textContent='Salvează';saveErr(e)}
+    };
+    upd();
+  });
+}
+
+// Consum, golire sau spălare. `fromPlan` = consum preluat din planul de producție
+function outForm(edit,type,fromPlan){
+  type=edit?edit.type:type;
+  const m=edit||fromPlan||{date:selDay,time:defTime(selDay)};
+  const status=edit?edit.status:fromPlan?'real':defStatus(m.date,m.time);
+  const isClean=type==='clean';
+  const preTank=edit?edit.tank:(fromPlan&&fromPlan.tank)||'';
+  openModal(`
+    <h2>${isClean?(edit?'Editează spălarea':'Spălare tanc (CIP)'):(edit?'Editează consumul':fromPlan?'Consum din planul de producție':'Consum / golire tanc')}</h2>
+    ${fromPlan?`<div class="preview"><span class="info">${esc(fromPlan.dest)} · necesar ${Lf(fromPlan.liters)} lapte ${MILK[fromPlan.milk].name.toLowerCase()}</span></div>`:''}
+    <div class="field"><span class="label">Tanc</span>${segHtml('f-tank',TANKS.map(t=>[t.id,t.name]),preTank)}</div>
+    <div class="grid2">
+      ${isClean?'':`<div class="field"><label class="label" for="f-lit">Cantitate (litri)</label><input id="f-lit" type="number" min="1" step="1" inputmode="numeric" value="${edit?edit.liters:fromPlan?Math.round(fromPlan.tankLiters||fromPlan.liters):''}"></div>
+      <div class="field"><span class="label">&nbsp;</span><button type="button" class="btn" id="f-all">Golește tot tancul</button></div>`}
+      <div class="field"><label class="label" for="f-date">Data</label><input id="f-date" type="date" value="${m.date}"></div>
+      <div class="field"><label class="label" for="f-time">Ora</label><input id="f-time" type="time" value="${m.time}"></div>
+    </div>
+    <div class="field"><span class="label">Stare</span>${segHtml('f-status',[['real','Realizat'],['plan','Planificat']],status)}</div>
+    ${isClean?'':`<div class="field"><label class="label" for="f-dest">Destinație</label><input id="f-dest" type="text" value="${esc(edit?edit.dest:fromPlan?fromPlan.dest:'')}" placeholder="ex. Procesare 3 · TVPS, vânzare"></div>`}
+    <div class="field"><label class="label" for="f-note">Observații</label><input id="f-note" type="text" value="${esc(edit?edit.note:'')}"></div>
+    <div id="f-preview" class="preview"></div>
+    <div class="modal-foot"><button class="btn" id="f-cancel">Anulează</button><button class="btn primary" id="f-save">Salvează</button></div>
+  `,()=>{
+    let ok=false,curSup=null;
+    const upd=()=>{
+      const tank=segVal('f-tank'),date=$('#f-date').value,time=$('#f-time').value||'00:00';
+      const pv=$('#f-preview');ok=false;
+      if(!tank||!date){pv.className='preview';pv.innerHTML='<span class="muted">Alege tancul.</span>';$('#f-save').disabled=true;return}
+      const t=stateBefore(date,time,edit&&edit.id)[tank];curSup=mainSup(t);
+      let html=`<div>${tankName(tank)} la ${shortDate(date)} ${esc(time)}: <b class="num">${Lf(t.level)}</b> ${t.level>0.5?chip(curSup)+' · '+MILK[tType(t)].name:'<span class="muted">(gol)</span>'}</div>`,err='',warn='';
+      if(isClean){if(t.level>0.5)err='Tancul mai are '+Lf(t.level)+'. Golește-l înainte de spălare.';ok=!err}
+      else{
+        const L=Math.round(+$('#f-lit').value||0);
+        if(fromPlan&&t.level>0.5&&tType(t)!==fromPlan.milk)warn=`Procesarea cere lapte ${MILK[fromPlan.milk].name.toLowerCase()}, dar tancul are ${MILK[tType(t)].name.toLowerCase()}.`;
+        if(t.level<=0.5)err='Tancul este gol la această oră.';
+        else if(L<=0)html+='<span class="muted">Introdu cantitatea consumată.</span>';
+        else if(L>t.level+0.5)err='Cantitatea depășește stocul din tanc ('+Lf(t.level)+').';
+        else{html+=`<div>Rămân <b class="num">${Lf(t.level-L)}</b>${t.level-L<=0.5?' · tancul devine gol':''}</div>`;ok=true}
+        if(fromPlan&&ok&&L<fromPlan.liters-0.5)html+=`<div class="warn">⚠ Rămân ${Lf(fromPlan.liters-L)} neacoperiți din necesarul procesării. Adaugă un consum separat din alt tanc.</div>`;
+      }
+      pv.className='preview'+(err?' err':'');pv.innerHTML=html+(warn?`<div class="warn">⚠ ${esc(warn)}</div>`:'')+(err?`<div>⛔ ${esc(err)}</div>`:'');
+      $('#f-save').disabled=!ok;
+    };
+    segWire('f-tank',upd);segWire('f-status');
+    ['#f-date','#f-time','#f-lit'].forEach(s=>{const e=$(s);if(e){e.addEventListener('input',upd);e.addEventListener('change',upd)}});
+    if(!isClean)$('#f-all').onclick=()=>{const tank=segVal('f-tank');if(!tank){toast('Alege întâi tancul');return}const t=stateBefore($('#f-date').value,$('#f-time').value||'00:00',edit&&edit.id)[tank];$('#f-lit').value=Math.round(t.level);upd()};
+    $('#f-cancel').onclick=closeModal;
+    $('#f-save').onclick=async()=>{
+      if(!ok)return;
+      const doc={type,tank:segVal('f-tank'),date:$('#f-date').value,time:$('#f-time').value||'00:00',status:segVal('f-status'),note:$('#f-note').value.trim(),
+        liters:isClean?0:Math.round(+$('#f-lit').value),dest:isClean?'':$('#f-dest').value.trim(),supplierId:isClean?null:(curSup==='__MIX'?null:curSup)};
+      $('#f-save').disabled=true;$('#f-save').textContent='Se salvează…';
+      try{
+        let recs;
+        if(edit){const rec=stamp({...edit,...doc});recs=[rec];if(edit.date.slice(0,7)!==rec.date.slice(0,7))recs.push(stamp({...edit,deleted:true}))}
+        else recs=[stamp({...doc,id:uid('m'),createdAt:Date.now(),planKey:fromPlan?fromPlan.planKey:null})];
+        await saveMovs(recs);
+        closeModal();toast(isClean?'Spălare salvată':'Consum salvat');selDay=doc.date;ensureLoaded();render();
+      }catch(e){$('#f-save').textContent='Salvează';saveErr(e)}
+    };
+    upd();
+  });
+}
+
+
+// Salvare comună pentru formularele de mutare / normalizare
+async function saveDoc(edit,doc,msg){
+  let recs;
+  if(edit){const rec=stamp({...edit,...doc});recs=[rec];if(edit.date.slice(0,7)!==rec.date.slice(0,7))recs.push(stamp({...edit,deleted:true}))}
+  else recs=[stamp({...doc,id:uid('m'),createdAt:Date.now()})];
+  await saveMovs(recs);closeModal();toast(msg);selDay=doc.date;ensureLoaded();render();
+}
+function tankLine(st,id){const t=st[id];return `${tankName(id)}: <b class="num">${Lf(t.level)}</b> ${t.level>0.5?chip(mainSup(t))+(isNormalized(t)?' <span class="pill p-prod">normalizat</span>':' · '+MILK[tType(t)].name):'<span class="muted">(gol)</span>'}`}
+
+function moveForm(edit){
+  const m=edit||{date:selDay,time:defTime(selDay)};
+  const status=edit?edit.status:defStatus(m.date,m.time);
+  openModal(`
+    <h2>${edit?'Editează mutarea':'Mută lapte între tancuri'}</h2>
+    <div class="field"><span class="label">Din tancul</span>${segHtml('m-from',TANKS.map(t=>[t.id,t.name]),edit?edit.from:'')}</div>
+    <div class="field"><span class="label">În tancul</span>${segHtml('m-to',TANKS.map(t=>[t.id,t.name]),edit?edit.tank:'')}</div>
+    <div class="grid2">
+      <div class="field"><label class="label" for="f-lit">Cantitate (litri)</label><input id="f-lit" type="number" min="1" step="1" inputmode="numeric" value="${edit?edit.liters:''}"></div>
+      <div class="field"><span class="label">&nbsp;</span><button type="button" class="btn" id="m-all">Tot tancul</button></div>
+      <div class="field"><label class="label" for="f-date">Data</label><input id="f-date" type="date" value="${m.date}"></div>
+      <div class="field"><label class="label" for="f-time">Ora</label><input id="f-time" type="time" value="${m.time}"></div>
+    </div>
+    <div class="field"><span class="label">Stare</span>${segHtml('f-status',[['real','Realizat'],['plan','Planificat']],status)}</div>
+    <div class="field"><label class="label" for="f-note">Observații</label><input id="f-note" type="text" value="${esc(edit?edit.note:'')}"></div>
+    <div id="f-preview" class="preview"></div>
+    <div class="modal-foot"><button class="btn" id="f-cancel">Anulează</button><button class="btn primary" id="f-save">Salvează</button></div>
+  `,()=>{
+    let ok=false,curSup=null;
+    const upd=()=>{
+      const from=segVal('m-from'),to=segVal('m-to'),date=$('#f-date').value,time=$('#f-time').value||'00:00',L=Math.round(+$('#f-lit').value||0);
+      const pv=$('#f-preview');ok=false;
+      if(!from||!to||!date){pv.className='preview';pv.innerHTML='<span class="muted">Alege tancul din care iei și tancul în care pui.</span>';$('#f-save').disabled=true;return}
+      const st=stateBefore(date,time,edit&&edit.id),a=st[from],b=st[to];curSup=mainSup(a);
+      let html=`<div>${tankLine(st,from)}</div><div>${tankLine(st,to)}</div>`,err='',info='';
+      const am=mains(a),bm=mains(b);
+      if(from===to)err='Alege două tancuri diferite.';
+      else if(a.level<=0.5)err=tankName(from)+' este gol la această oră.';
+      else if(L<=0)html+='<span class="muted">Introdu cantitatea.</span>';
+      else if(L>a.level+0.5)err='Cantitatea depășește ce e în '+tankName(from)+' ('+Lf(a.level)+').';
+      else if(b.level+L>capOf(to)+0.5)err='Nu încape: în '+tankName(to)+' mai sunt liberi '+Lf(capOf(to)-b.level)+'.';
+      else if(b.level>0.5&&am.length&&bm.length&&(am.length>1||bm.length>1||am[0]!==bm[0]))err='Amestec interzis: '+tankName(from)+' are '+am.map(supName).join(', ')+', '+tankName(to)+' are '+bm.map(supName).join(', ')+'.';
+      else{
+        if(b.level>0.5&&(am.length?!bm.length:bm.length))info='Normalizare: se amestecă lapte integral cu degresat.';
+        if(b.level<=0.5&&b.dirty&&b.lastSups.some(x=>!(a.comp[x]>0.5)))html+=`<div class="warn">⚠ ${tankName(to)} nu e marcat ca spălat.</div>`;
+        html+=`<div>După mutare: ${tankName(from)} <b class="num">${Lf(a.level-L)}</b> · ${tankName(to)} <b class="num">${Lf(b.level+L)}</b></div>`;ok=true;
+      }
+      pv.className='preview'+(err?' err':'');pv.innerHTML=html+(info?`<div class="info">ℹ ${esc(info)}</div>`:'')+(err?`<div>⛔ ${esc(err)}</div>`:'');
+      $('#f-save').disabled=!ok;
+    };
+    segWire('m-from',upd);segWire('m-to',upd);segWire('f-status');
+    ['#f-date','#f-time','#f-lit'].forEach(x=>{$(x).addEventListener('input',upd);$(x).addEventListener('change',upd)});
+    $('#m-all').onclick=()=>{const from=segVal('m-from');if(!from){toast('Alege întâi tancul din care iei');return}$('#f-lit').value=Math.round(stateBefore($('#f-date').value,$('#f-time').value||'00:00',edit&&edit.id)[from].level);upd()};
+    $('#f-cancel').onclick=closeModal;
+    $('#f-save').onclick=async()=>{
+      if(!ok)return;$('#f-save').disabled=true;$('#f-save').textContent='Se salvează…';
+      const doc={type:'move',from:segVal('m-from'),tank:segVal('m-to'),liters:Math.round(+$('#f-lit').value),date:$('#f-date').value,time:$('#f-time').value||'00:00',status:segVal('f-status'),note:$('#f-note').value.trim(),supplierId:curSup==='__MIX'?null:curSup};
+      try{await saveDoc(edit,doc,'Mutare salvată')}catch(e){$('#f-save').textContent='Salvează';saveErr(e)}
+    };
+    upd();
+  });
+}
+
+function normForm(edit){
+  const vacaSups=suppliers().filter(x=>(x.type||'vaca')==='vaca'&&(x.active!==false||(edit&&edit.supplierId===x.id)));
+  const m=edit||{date:selDay,time:selDay===todayStr()?nowTime():'06:00'};
+  const status=edit?edit.status:defStatus(m.date,m.time);
+  const vol0=edit?edit.liters:NORMALIZARE.volume[NORMALIZARE.volume.length-1];
+  const preset=NORMALIZARE.volume.includes(vol0);
+  const srcInt=edit?((edit.sources||[]).find(x=>x.kind==='int')||{}).tank||'auto':'auto';
+  const srcDeg=edit?((edit.sources||[]).find(x=>x.kind==='deg')||{}).tank||'auto':'auto';
+  openModal(`
+    <h2>${edit?'Editează normalizarea':'Normalizare lapte'}</h2>
+    <p class="small muted" style="margin:0">Lapte integral de la un singur furnizor + lapte degresat, la grăsimea țintă. Alege tancurile sau lasă pe Automat.</p>
+    <div class="field"><span class="label">Volum lapte normalizat</span>${segHtml('n-vol',[...NORMALIZARE.volume.map(v=>[String(v),Lf(v)]),['alt','Alt volum']],preset?String(vol0):'alt')}
+      <input id="n-volx" type="number" min="100" step="100" inputmode="numeric" value="${preset?'':vol0}" placeholder="Litri" ${preset?'hidden':''} style="margin-top:6px"></div>
+    <div class="grid2">
+      <div class="field"><label class="label" for="n-fat">Grăsime țintă (%)</label><input id="n-fat" type="number" step="0.05" inputmode="decimal" value="${edit?edit.fatTarget:NORMALIZARE.grasime}"></div>
+      <div class="field"><label class="label" for="n-sup">Lapte integral de la</label><select id="n-sup"><option value="auto">Automat</option>${vacaSups.map(x=>`<option value="${x.id}" ${edit&&edit.supplierId===x.id?'selected':''}>${esc(x.name)}</option>`).join('')}</select></div>
+      <div class="field"><label class="label" for="f-date">Data</label><input id="f-date" type="date" value="${m.date}"></div>
+      <div class="field"><label class="label" for="f-time">Ora</label><input id="f-time" type="time" value="${m.time}"></div>
+    </div>
+    <div class="field"><span class="label">Tancul în care se face amestecul</span>${segHtml('n-tank',[['auto','Automat'],...TANKS.map(t=>[t.id,t.name])],edit?edit.tank:'auto')}</div>
+    <div class="field"><span class="label">Integral luat din</span>${segHtml('n-int',[['auto','Automat'],...TANKS.map(t=>[t.id,t.name])],srcInt)}</div>
+    <div class="field"><span class="label">Degresat luat din</span>${segHtml('n-deg',[['auto','Automat'],...TANKS.map(t=>[t.id,t.name])],srcDeg)}</div>
+    <div class="field"><span class="label">Stare</span>${segHtml('f-status',[['real','Realizat'],['plan','Planificat']],status)}</div>
+    <div id="f-preview" class="preview"></div>
+    <div class="field"><label class="label" for="f-note">Observații</label><input id="f-note" type="text" value="${esc(edit?edit.note:'')}"></div>
+    <div class="modal-foot"><button class="btn" id="f-cancel">Anulează</button><button class="btn primary" id="f-save">Salvează</button></div>
+  `,()=>{
+    let plan=null,ft=NORMALIZARE.grasime;
+    const vol=()=>segVal('n-vol')==='alt'?Math.round(+$('#n-volx').value||0):+segVal('n-vol');
+    const upd=()=>{
+      $('#n-volx').hidden=segVal('n-vol')!=='alt';
+      const V=vol(),date=$('#f-date').value,time=$('#f-time').value||'00:00',tank=segVal('n-tank');ft=parseFloat($('#n-fat').value);
+      const opts={sup:$('#n-sup').value,intTank:segVal('n-int'),degTank:segVal('n-deg')};
+      const pv=$('#f-preview');plan=null;
+      if(!V||!isFinite(ft)||!date){pv.className='preview';pv.innerHTML='<span class="muted">Alege volumul și grăsimea.</span>';$('#f-save').disabled=true;return}
+      const st=stateBefore(date,time,edit&&edit.id);
+      const p=tank==='auto'?autoNorm(st,V,ft,opts):planNorm(st,tank,V,ft,opts);
+      let h='';
+      if(!p.errors.length){
+        const ints=p.sources.filter(x=>x.kind==='int'),dg=p.sources.filter(x=>x.kind==='deg');
+        h+=`<div><b>${tankName(p.target)}</b> → <b class="num">${Lf(p.V)}</b> lapte normalizat la <b>${p.fat.toFixed(2).replace('.',',')}%</b> grăsime</div>`;
+        if(p.V0>0.5)h+=`<div>Deja în tanc: ${Lf(p.V0)} (${p.f0.toFixed(2).replace('.',',')}%)</div>`;
+        if(p.I>0.5)h+=`<div>Integral ${chip(p.sup)}: <b class="num">${Lf(p.I)}</b> (${p.fi.toFixed(2).replace('.',',')}%) din ${ints.map(x=>tankName(x.tank)+' '+Lf(x.liters)).join(' + ')}</div>`;
+        if(p.D>0.5)h+=`<div>Degresat: <b class="num">${Lf(p.D)}</b> (${p.fd.toFixed(2).replace('.',',')}%) din ${dg.map(x=>tankName(x.tank)+' '+Lf(x.liters)).join(' + ')}</div>`;
+        plan=p;
+      }
+      pv.className='preview'+(p.errors.length?' err':'');
+      pv.innerHTML=h+p.errors.map(e=>`<div>⛔ ${esc(e)}</div>`).join('')+p.warns.map(w=>`<div class="warn">⚠ ${esc(w)}</div>`).join('');
+      $('#f-save').disabled=!plan;
+    };
+    ['#n-volx','#n-fat','#n-sup','#f-date','#f-time'].forEach(x=>{$(x).addEventListener('input',upd);$(x).addEventListener('change',upd)});
+    segWire('n-vol',upd);segWire('n-tank',upd);segWire('n-int',upd);segWire('n-deg',upd);segWire('f-status');
+    $('#f-cancel').onclick=closeModal;
+    $('#f-save').onclick=async()=>{
+      if(!plan)return;$('#f-save').disabled=true;$('#f-save').textContent='Se salvează…';
+      const doc={type:'norm',tank:plan.target,liters:Math.round(plan.V),fatTarget:ft,fatCalc:+plan.fat.toFixed(2),sources:plan.sources,supplierId:plan.sup,
+        intL:Math.round(plan.I),degL:Math.round(plan.D),date:$('#f-date').value,time:$('#f-time').value||'00:00',status:segVal('f-status'),note:$('#f-note').value.trim()};
+      try{await saveDoc(edit,doc,'Normalizare salvată')}catch(e){$('#f-save').textContent='Salvează';saveErr(e)}
+    };
+    upd();
+  });
+}
+
+/* ═══════════════════════════ MODEL PE ZILE ═══════════════════════════ */
+let modelN=7;
+function typeLabel(m){return m.virtual?'Producție':({in:'Recepție',out:'Consum',clean:'Spălare',skip:'Anulat',move:'Mutare',norm:'Normalizare'})[m.type]||m.type}
+function renderModel(list,full){
+  if($('#v-mod').hidden)return;
+  list=list||allMovs();full=full||replay(list,{includePlan:true});
+  $('#mo-start').value=selDay;
+  const today=todayStr();
+  const out=[];
+  for(let i=0;i<modelN;i++){
+    const d=addDays(selDay,i);
+    const s0=replay(list,{upto:d+' 00'}).st,s1=replay(list,{upto:d+' 99'}).st;
+    const rows=list.filter(m=>m.date===d).sort((a,b)=>key(a)<key(b)?-1:1);
+    const sum=f=>rows.filter(f).reduce((a,m)=>a+(+m.liters||0),0);
+    const prod=sum(m=>m.virtual)+sum(m=>m.type==='out'&&m.planKey);
+    const tanks=TANKS.map(t=>{const a=s0[t.id],b=s1[t.id],ms=mainSup(b);
+      return `<div class="mt"><div class="small"><b>${t.name}</b> <span class="muted">${(t.cap/1000).toLocaleString('ro-RO')}k</span></div>
+        <div class="lv">${Lf(b.level)}</div>
+        <div class="bar"><i style="width:${Math.min(100,b.level/t.cap*100)}%;background:${ms?supColor(ms):'transparent'}"></i></div>
+        <div class="small muted num">dimineața ${Lf(a.level)}</div>
+        ${b.level>0.5?`<div class="small">${chip(ms)}${isNormalized(b)?` <span class="pill p-prod">${fatOf(b).toFixed(1).replace('.',',')}%</span>`:''}</div>`:`<div class="small muted">${b.dirty?'gol · de spălat':'liber'}</div>`}</div>`}).join('');
+    const mrows=rows.map(m=>{
+      const iss=full.issues[m.id]||[];
+      const sign=m.type==='in'?'+':(m.type==='out'||m.virtual)?'−':'';
+      return `<div class="mrow ${m.virtual?'virt':''}"><span class="num">${esc(m.time)}</span><span class="mtype small ${m.virtual||m.type==='norm'?'t-prod':m.type==='in'?'t-in':'t-out'}">${typeLabel(m)}</span>
+        <span style="min-width:0">${m.virtual?'':(m.type==='move'||m.type==='norm'||m.type==='skip'||!m.tank?'':'<b>'+tankName(m.tank)+'</b> · ')}${movDesc(m,full.alloc[m.id])}${m.status==='plan'&&!m.virtual?' <span class="pill p-plan">plan</span>':''}${iss.map(x=>`<div class="row-iss ${x.lvl}">⚠ ${esc(x.msg)}</div>`).join('')}</span>
+        <span class="num r" style="text-align:right;white-space:nowrap">${m.type==='clean'||m.type==='skip'?'':sign+Lf(+m.liters||0)}</span></div>`}).join('');
+    const tot=TANKS.reduce((a,t)=>a+s1[t.id].level,0);
+    out.push(`<article class="mday ${d===today?'today':''}">
+      <div class="mday-head"><h3>${shortDay(d)}${d===today?' · azi':''}</h3>
+        <div class="actions">
+          <button class="btn small primary" data-mact="in" data-day="${d}">+ Intrare</button>
+          <button class="btn small" data-mact="move" data-day="${d}">⇄ Mută</button>
+          <button class="btn small" data-mact="norm" data-day="${d}">Normalizare</button>
+          <button class="btn small" data-mact="out" data-day="${d}">− Consum</button>
+          <button class="btn small" data-mact="open" data-day="${d}">Detalii zi</button>
+        </div></div>
+      <div class="mtanks">${tanks}</div>
+      <div class="mlist">${mrows||'<div class="muted small">Nimic planificat în această zi.</div>'}</div>
+      <div class="sumline small"><span>Intrări <b class="num">${Lf(sum(m=>m.type==='in'))}</b></span><span>Normalizat <b class="num">${Lf(sum(m=>m.type==='norm'))}</b></span><span>Producție <b class="num">${Lf(prod)}</b></span><span>Alt consum <b class="num">${Lf(sum(m=>m.type==='out'&&!m.planKey))}</b></span><span>Stoc seara <b class="num">${Lf(tot)}</b></span><span>${normCell(list,d,rows)}</span></div>
+    </article>`);
+  }
+  $('#model').innerHTML=out.join('');
+}
+$('#model').addEventListener('click',e=>{
+  const b=e.target.closest('button[data-mact]');if(!b)return;
+  selDay=b.dataset.day;const a=b.dataset.mact;
+  if(a==='in')receptionForm(null);else if(a==='move')moveForm(null);else if(a==='norm')normForm(null);else if(a==='out')outForm(null,'out');
+  else{switchTab('zi');setDay(selDay);window.scrollTo({top:0})}
+});
+$('#mo-prev').onclick=()=>setDay(addDays(selDay,-1));
+$('#mo-next').onclick=()=>setDay(addDays(selDay,1));
+$('#mo-today').onclick=()=>setDay(todayStr());
+$('#mo-start').onchange=e=>setDay(e.target.value);
+segWire('mo-n',()=>{modelN=+segVal('mo-n');ensureLoaded();render()});
+
+/* ═══════════════════════════ ACȚIUNI JURNAL ═══════════════════════════ */
+$('#log').addEventListener('click',async e=>{
+  const b=e.target.closest('button[data-act]');if(!b)return;
+  const list=allMovs();const m=list.find(x=>x.id===b.dataset.id);if(!m)return;
+  const act=b.dataset.act;
+  try{
+    if(act==='done'){b.disabled=true;await saveMovs([stamp({...m,status:'real'})]);toast('Marcat ca realizat')}
+    if(act==='edit'){m.type==='in'?receptionForm(m):m.type==='norm'?normForm(m):m.type==='move'?moveForm(m):outForm(m)}
+    if(act==='vdone'){
+      // salvează consumul exact cum l-a repartizat simularea
+      const al=replay(list,{includePlan:true}).alloc[m.id]||[];
+      if(!al.length){toast('Nu există lapte potrivit în tancuri. Folosește Editează.');return}
+      b.disabled=true;
+      const st0=stateBefore(m.date,m.time);
+      await saveMovs(al.map((a,i)=>stamp({id:uid('m'),type:'out',tank:a.tank,liters:Math.round(a.liters),date:m.date,time:m.time,status:'real',dest:m.dest,note:'',
+        supplierId:mainSup(st0[a.tank]),planKey:m.planKey,createdAt:Date.now()+i})));
+      const tot=al.reduce((s,a)=>s+a.liters,0);
+      toast(tot<m.liters-0.5?`Consum salvat parțial (${Lf(tot)} din ${Lf(m.liters)})`:'Consum din plan confirmat');
+    }
+    if(act==='vedit'){
+      const al=replay(list,{includePlan:true}).alloc[m.id]||[];
+      outForm(null,'out',{...m,tank:al[0]?al[0].tank:'',tankLiters:al[0]?al[0].liters:m.liters});
+    }
+    if(act==='vskip'){
+      if(!b.dataset.armed){b.dataset.armed='1';b.textContent='Confirmă anularea';setTimeout(()=>{if(b.isConnected){delete b.dataset.armed;b.textContent='Anulează'}},4000);return}
+      b.disabled=true;
+      await saveMovs([stamp({id:uid('m'),type:'skip',tank:'',liters:0,date:m.date,time:m.time,status:'real',dest:m.dest,planKey:m.planKey,createdAt:Date.now()})]);
+      toast('Procesare anulată');
+    }
+    if(act==='del'){
+      if(!b.dataset.armed){b.dataset.armed='1';b.textContent='Confirmă';setTimeout(()=>{if(b.isConnected){delete b.dataset.armed;b.textContent=b.dataset.label}},4000);return}
+      b.disabled=true;
+      await saveMovs([stamp({...m,deleted:true})]);toast(m.type==='skip'?'Procesare restaurată':'Șters');
+    }
+  }catch(err){b.disabled=false;saveErr(err)}
+});
+$('#week').addEventListener('click',e=>{const tr=e.target.closest('tr[data-day]');if(tr){setDay(tr.dataset.day);window.scrollTo({top:0,behavior:'smooth'})}});
+
+/* ═══════════════════════════ NAVIGARE ═══════════════════════════ */
+function setDay(d){if(!d)return;selDay=d;render();ensureLoaded()}
+$('#d-prev').onclick=()=>setDay(addDays(selDay,-1));
+$('#d-next').onclick=()=>setDay(addDays(selDay,1));
+$('#d-today').onclick=()=>setDay(todayStr());
+$('#d-pick').onchange=e=>setDay(e.target.value);
+$('#a-in').onclick=()=>receptionForm(null);
+$('#a-out').onclick=()=>outForm(null,'out');
+$('#a-clean').onclick=()=>outForm(null,'clean');
+$('#a-move').onclick=()=>moveForm(null);
+$('#a-norm').onclick=()=>normForm(null);
+
+function switchTab(t){
+  document.querySelectorAll('.tabs button').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===t));
+  for(const v of ['zi','mod','ist','fur']){const el=$('#v-'+v);el.hidden=v!==t;el.style.display=v===t?'flex':'none'}
+  if(t==='fur')renderSuppliers();
+  if(t==='mod')renderModel();
+}
+document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>switchTab(b.dataset.tab));
+
+/* ═══════════════════════════ FURNIZORI ═══════════════════════════ */
+function renderSuppliers(){
+  const el=$('#sup-list');const list=suppliers();
+  if(!list.length){el.innerHTML='<div class="empty">Niciun furnizor încă. Adaugă-i mai sus: fiecare primește o culoare, folosită pe tancuri și în jurnal. Adaugă și „Lapte degresat” ca furnizor intern dacă normalizezi.</div>';return}
+  el.innerHTML=list.map(s=>`<div class="sup-row ${s.active===false?'inactive':''}" data-id="${s.id}">
+    <span style="width:14px;height:14px;border-radius:50%;background:${s.color};flex:none"></span>
+    <input type="text" id="sn-${s.id}" value="${esc(s.name)}" aria-label="Nume furnizor">
+    <select data-type="1" aria-label="Tip lapte">${Object.entries(MILK).map(([k,v])=>`<option value="${k}" ${(s.type||'vaca')===k?'selected':''}>${v.name}</option>`).join('')}</select>
+    <div class="swatches">${PALETTE.map(c=>`<button class="sw" style="background:${c}" data-color="${c}" aria-pressed="${c===s.color}" aria-label="Culoare"></button>`).join('')}</div>
+    <button class="btn small" data-toggle="1">${s.active===false?'Activează':'Dezactivează'}</button>
+  </div>`).join('');
+}
+$('#sup-list').addEventListener('click',async e=>{
+  const row=e.target.closest('.sup-row');if(!row)return;const s=sup(row.dataset.id);if(!s)return;
+  try{
+    if(e.target.dataset.color)await saveSupplier(stamp({...s,color:e.target.dataset.color}));
+    if(e.target.dataset.toggle)await saveSupplier(stamp({...s,active:s.active===false}));
+  }catch(err){saveErr(err)}
+});
+$('#sup-list').addEventListener('change',async e=>{
+  const row=e.target.closest('.sup-row');if(!row)return;const s=sup(row.dataset.id);if(!s)return;
+  try{
+    if(e.target.matches('input[type=text]')){const v=e.target.value.trim();if(v){await saveSupplier(stamp({...s,name:v}));toast('Nume actualizat')}}
+    if(e.target.dataset.type){await saveSupplier(stamp({...s,type:e.target.value}));toast('Tip lapte actualizat')}
+  }catch(err){saveErr(err)}
+});
+$('#sup-add').addEventListener('submit',async e=>{
+  e.preventDefault();const name=$('#sup-name').value.trim();if(!name)return;
+  const used=new Set(suppliers().map(s=>s.color));const color=PALETTE.find(c=>!used.has(c))||PALETTE[suppliers().length%PALETTE.length];
+  try{await saveSupplier(stamp({id:uid('f'),name,type:$('#sup-type').value,color,active:true,createdAt:Date.now()}));$('#sup-name').value='';toast('Furnizor adăugat')}catch(err){saveErr(err)}
+});
+
+/* ═══════════════════════════ ISTORIC ═══════════════════════════ */
+$('#h-from').value=addDays(todayStr(),-6);$('#h-to').value=todayStr();
+$('#h-go').onclick=async()=>{
+  const from=$('#h-from').value,to=$('#h-to').value;if(!from||!to||from>to)return;
+  $('#h-out').innerHTML='<div class="empty">Se încarcă…</div>';
+  try{
+    await Promise.all(monthsBetween(from,to).map(loadMonth));
+    const rows=storedMovs().filter(m=>m.date>=from&&m.date<=to&&m.status==='real'&&m.type!=='skip').sort((a,b)=>key(a)<key(b)?-1:1);
+    lastHist={from,to,rows};renderHist();
+  }catch(e){$('#h-out').innerHTML='<div class="empty">Nu s-a putut încărca istoricul din Google Sheets.</div>'}
+};
+function renderHist(){
+  const {rows,from,to}=lastHist;
+  if(!rows.length){$('#h-out').innerHTML='<div class="empty">Nicio mișcare realizată în interval.</div>';$('#h-csv').hidden=true;return}
+  const sids=[...new Set(rows.filter(m=>m.type==='in').map(m=>m.supplierId))];
+  const days=[...new Set(rows.map(m=>m.date))].sort();
+  const sum=f=>rows.filter(f).reduce((a,m)=>a+(+m.liters||0),0);
+  const totals=sids.map(id=>({id,l:sum(m=>m.type==='in'&&m.supplierId===id)})).sort((a,b)=>b.l-a.l);
+  const totIn=sum(m=>m.type==='in'),totOut=sum(m=>m.type==='out'),totProd=sum(m=>m.type==='out'&&m.planKey);
+  $('#h-out').innerHTML=`
+    <div class="sumline"><span>Recepționat: <b class="num">${Lf(totIn)}</b></span><span>Consumat: <b class="num">${Lf(totOut)}</b></span><span>din care pe planul de producție: <b class="num">${Lf(totProd)}</b></span><span class="muted">${shortDate(from)} – ${shortDate(to)}</span></div>
+    <div class="tbl-wrap"><table><thead><tr><th>Furnizor</th><th>Tip</th><th class="r">Litri recepționați</th><th class="r">Pondere</th><th class="r">Nr. recepții</th></tr></thead><tbody>
+      ${totals.map(t=>`<tr><td>${chip(t.id)}</td><td>${MILK[supType(t.id)].name}</td><td class="r">${Lf(t.l)}</td><td class="r">${totIn?(t.l/totIn*100).toFixed(1).replace('.',','):0}%</td><td class="r">${rows.filter(m=>m.type==='in'&&m.supplierId===t.id).length}</td></tr>`).join('')}
+    </tbody></table></div>
+    <h3 style="font-size:17px">Pe zile</h3>
+    <div class="tbl-wrap"><table><thead><tr><th>Zi</th>${sids.map(id=>`<th class="r">${esc(supName(id))}</th>`).join('')}<th class="r">Total recepție</th><th class="r">Consum</th></tr></thead><tbody>
+      ${days.map(d=>`<tr class="clk" data-day="${d}"><td>${shortDay(d)}</td>${sids.map(id=>{const v=sum(m=>m.date===d&&m.type==='in'&&m.supplierId===id);return `<td class="r">${v?Lf(v):'<span class="muted">—</span>'}</td>`}).join('')}<td class="r"><b>${Lf(sum(m=>m.date===d&&m.type==='in'))}</b></td><td class="r">${Lf(sum(m=>m.date===d&&m.type==='out'))}</td></tr>`).join('')}
+    </tbody></table></div>`;
+  $('#h-csv').hidden=false;
+}
+$('#h-out').addEventListener('click',e=>{const tr=e.target.closest('tr[data-day]');if(tr){switchTab('zi');setDay(tr.dataset.day)}});
+$('#h-csv').onclick=()=>{
+  if(!lastHist)return;
+  const q=v=>'"'+String(v??'').replace(/"/g,'""')+'"';
+  const head=['Data','Ora','Tip','Tanc','Furnizor','Tip lapte','Litri','Grasime %','Proteina %','Temp C','Aciditate T','Antibiotic','Destinatie','Plan productie','Observatii'];
+  const tip={in:'Receptie',out:'Consum',clean:'Spalare',move:'Mutare',norm:'Normalizare'};
+  const lines=[head.join(';')].concat(lastHist.rows.map(m=>[m.date,m.time,tip[m.type],tankName(m.tank),m.supplierId?supName(m.supplierId):'',m.supplierId?MILK[supType(m.supplierId)].name:'',m.liters||0,m.fat??'',m.protein??'',m.temp??'',m.acid??'',m.ab||'',m.dest||'',m.planKey?'da':'',m.note||''].map(q).join(';')));
+  const blob=new Blob(['﻿'+lines.join('\r\n')],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`miscari-lapte_${lastHist.from}_${lastHist.to}.csv`;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},500);
+};
+
+/* ═══════════════════════════ PORNIRE ═══════════════════════════ */
+switchTab('zi');render();ensureLoaded(true);
+setInterval(()=>{if(!saving&&!document.hidden&&!$('#modal-root').innerHTML)ensureLoaded(true)},REFRESH_MS);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&!saving)ensureLoaded(true)});
+</script>
+</body>
+</html>
