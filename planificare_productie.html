@@ -1383,10 +1383,11 @@ let state = {
   monitorizare: {}
 };
 
-const SHEETS_URL_DEFAULT = 'https://script.google.com/macros/s/AKfycbwxDj763V6mK1ou0QjdwJKWK631gbVtzug50oxYtyjIeZohc1ScPj_Qvmp-yBP9gEUK/exec';
+// URL-ul Web App din Apps Script (Code.gs) — același și în tancuri_lapte.html
+const SHEETS_URL_DEFAULT = 'https://script.google.com/macros/s/AKfycbxJx5f7g0oHLLiFtzfzxVB2HF48mMhU3MwIuskr1y-o6L5yDzwDbv4LXTXncQqISuPn/exec';
 
 let config = {
-  sheetsUrl: localStorage.getItem('sheetsUrl') || SHEETS_URL_DEFAULT
+  sheetsUrl: SHEETS_URL_DEFAULT   // URL fix în cod: colegii nu trebuie să configureze nimic
 };
 
 // ═══════════════════════════════════════════════════════════════
@@ -3845,10 +3846,9 @@ window.onload = async function() {
   state.year = now.getFullYear();
   document.getElementById('firstLot').value = state.firstLot;
 
-  if (!localStorage.getItem('sheetsUrl')) {
-    localStorage.setItem('sheetsUrl', SHEETS_URL_DEFAULT);
-  }
-  config.sheetsUrl = localStorage.getItem('sheetsUrl') || SHEETS_URL_DEFAULT;
+  // URL-ul vine mereu din cod (un URL vechi salvat în browser nu mai are efect)
+  localStorage.setItem('sheetsUrl', SHEETS_URL_DEFAULT);
+  config.sheetsUrl = SHEETS_URL_DEFAULT;
 
   if (config.sheetsUrl) {
     // Încarcă date referință din Sheets (Procesare_Ref + Ambalare_Ref)
