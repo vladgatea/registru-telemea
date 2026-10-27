@@ -1270,12 +1270,12 @@ let PROCESARE_REF = {
   'TV DEG 4KG':       {lot:500, buc:0,   lv:1500, lc:0,    lo:0,   ld:1500, um:'KG'},
   'TV':               {lot:650, buc:0,   lv:3000, lc:0,    lo:0,   ld:0,    um:'KG'},
   // Smântână — procesare prin degresare lapte integral
-  // 3000L integral → 300kg smântână 32% + 2700L lapte degresat
+  // 3000L integral → 300kg smântână 30% + 2700L lapte degresat
   // 3000L integral → 200kg smântână 50% + 2800L lapte degresat
   'SMÂNTÂNĂ':          {lot:300, buc:0,  lv:3000, lc:0,    lo:0,   ld:0,    um:'KG', degresare:true},
-  'Smântână 32% 5kg':  {lot:300, buc:60, lv:3000, lc:0,    lo:0,   ld:0,    um:'KG', degresare:true, pct:32, ldResult:2700},
-  'Smântână 32% 200g': {lot:300, buc:1500,lv:3000,lc:0,    lo:0,   ld:0,    um:'BUC',degresare:true, pct:32, ldResult:2700},
-  'Smântână 32% 400g': {lot:300, buc:750,lv:3000, lc:0,    lo:0,   ld:0,    um:'BUC',degresare:true, pct:32, ldResult:2700},
+  'Smântână 30% 5kg':  {lot:300, buc:60, lv:3000, lc:0,    lo:0,   ld:0,    um:'KG', degresare:true, pct:30, ldResult:2700},
+  'Smântână 30% 200g': {lot:300, buc:1500,lv:3000,lc:0,    lo:0,   ld:0,    um:'BUC',degresare:true, pct:30, ldResult:2700},
+  'Smântână 30% 400g': {lot:300, buc:750,lv:3000, lc:0,    lo:0,   ld:0,    um:'BUC',degresare:true, pct:30, ldResult:2700},
   'Smântână 50% 15kg': {lot:200, buc:13, lv:3000, lc:0,    lo:0,   ld:0,    um:'KG', degresare:true, pct:50, ldResult:2800},
 };
 
@@ -1320,9 +1320,9 @@ let AMBALARE_REF = {
   'BB PDA 1KG':         { timp: 1.6,  lotOptim: 240,  um: 'KG'  },
   'BB DLF 1KG':         { timp: 1.6,  lotOptim: 240,  um: 'KG'  },
   // Smântână — loturi optime TBD
-  'Smântână 32% 5kg':   { timp: 1.0,  lotOptim: 300,  um: 'KG'  },
-  'Smântână 32% 200g':  { timp: 1.0,  lotOptim: 1500, um: 'BUC' },
-  'Smântână 32% 400g':  { timp: 1.0,  lotOptim: 750,  um: 'BUC' },
+  'Smântână 30% 5kg':   { timp: 1.0,  lotOptim: 300,  um: 'KG'  },
+  'Smântână 30% 200g':  { timp: 1.0,  lotOptim: 1500, um: 'BUC' },
+  'Smântână 30% 400g':  { timp: 1.0,  lotOptim: 750,  um: 'BUC' },
   'Smântână 50% 15kg':  { timp: 1.0,  lotOptim: 200,  um: 'KG'  },
 };
 
@@ -1335,7 +1335,7 @@ const FORMATE_AMBALARE = {
   'BV':      ['—', 'BV 400G', 'BV 5KG'],
   'CAS V+O': ['—', 'CAS V+O 300G', 'CAS V+O 800G'],
   'CAS V':   ['—', 'CAS V 300G', 'CAS V 800G'],
-  'SMÂNTÂNĂ':['—', 'Smântână 32% 5kg', 'Smântână 32% 200g', 'Smântână 32% 400g', 'Smântână 50% 15kg'],
+  'SMÂNTÂNĂ':['—', 'Smântână 30% 5kg', 'Smântână 30% 200g', 'Smântână 30% 400g', 'Smântână 50% 15kg'],
 };
 
 // Returnează materia primă din care provine un produs de procesare
@@ -1383,11 +1383,10 @@ let state = {
   monitorizare: {}
 };
 
-// URL-ul Web App din Apps Script (Code.gs) — același și în tancuri_lapte.html
 const SHEETS_URL_DEFAULT = 'https://script.google.com/macros/s/AKfycbwxDj763V6mK1ou0QjdwJKWK631gbVtzug50oxYtyjIeZohc1ScPj_Qvmp-yBP9gEUK/exec';
 
 let config = {
-  sheetsUrl: SHEETS_URL_DEFAULT   // URL fix în cod: colegii nu trebuie să configureze nimic
+  sheetsUrl: localStorage.getItem('sheetsUrl') || SHEETS_URL_DEFAULT
 };
 
 // ═══════════════════════════════════════════════════════════════
@@ -3103,7 +3102,8 @@ async function sheetsRead(sheetName) {
   const text = await resp.text();
   // Apps Script returnează uneori cu prefix )]}' — curățăm
   const clean = text.replace(/^\)\]\}\'/, '').trim();
-  return JSON.parse(clean);
+  // Smântâna Ferma a trecut de la 32% la 30% — săptămânile salvate înainte au denumirea veche
+  return JSON.parse(clean.replace(/Smântână 32%/g, 'Smântână 30%'));
 }
 
 async function saveToSheets() {
@@ -3846,9 +3846,10 @@ window.onload = async function() {
   state.year = now.getFullYear();
   document.getElementById('firstLot').value = state.firstLot;
 
-  // URL-ul vine mereu din cod (un URL vechi salvat în browser nu mai are efect)
-  localStorage.setItem('sheetsUrl', SHEETS_URL_DEFAULT);
-  config.sheetsUrl = SHEETS_URL_DEFAULT;
+  if (!localStorage.getItem('sheetsUrl')) {
+    localStorage.setItem('sheetsUrl', SHEETS_URL_DEFAULT);
+  }
+  config.sheetsUrl = localStorage.getItem('sheetsUrl') || SHEETS_URL_DEFAULT;
 
   if (config.sheetsUrl) {
     // Încarcă date referință din Sheets (Procesare_Ref + Ambalare_Ref)
