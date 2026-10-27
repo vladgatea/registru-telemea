@@ -10,7 +10,7 @@
   --acc:#2f5d3f; --acc2:#e8f0ea; --ok:#2e7d4f; --okbg:#e3f3e9; --wip:#b26a00; --wipbg:#fff1d9;
   --none:#8a8f88; --nonebg:#eeeeea; --err:#b3261e;
 }
-*{box-sizing:border-box}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
 header{background:var(--acc);color:#fff;padding:14px 16px}
 header h1{margin:0;font-size:18px;font-weight:600}
@@ -86,14 +86,71 @@ dialog .bd{padding:16px;overflow:auto}
   .printhead{display:block!important}
 }
 .printhead{display:none;margin-bottom:12px}
+.furn-alt{margin-top:6px}
+.combo li .c:empty{display:none}
+nav .ic{display:none}
+.mcards{display:none}
+
+/* ===================== TELEFON ===================== */
+@media (max-width:700px){
+  body{font-size:16px;padding-bottom:calc(64px + env(safe-area-inset-bottom))}
+  header{padding:10px 16px;position:sticky;top:0;z-index:30}
+  header h1{font-size:17px} header small{display:none}
+  nav{position:fixed;left:0;right:0;bottom:0;z-index:40;padding:0 0 env(safe-area-inset-bottom);gap:0;box-shadow:0 -2px 10px rgba(0,0,0,.15)}
+  nav button{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:9px 4px 10px;font-size:12px;border-bottom:0}
+  nav button.on{background:rgba(255,255,255,.16);color:#fff}
+  nav .ic{display:block;font-size:20px;line-height:1}
+  nav .tx-long{display:none}
+  main{padding:12px}
+  .card{padding:14px;border-radius:12px;margin-bottom:12px}
+  .grid{grid-template-columns:1fr;gap:14px}
+  label{font-size:14px}
+  input,select,textarea{font-size:16px;min-height:48px;padding:11px 12px;border-radius:9px}
+  input[type=date]{display:block;-webkit-appearance:none;appearance:none;background:#fff}
+  select{-webkit-appearance:none;appearance:none;padding-right:36px;
+    background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='9'%3E%3Cpath d='M1 1l6 6 6-6' stroke='%236b7468' stroke-width='2' fill='none'/%3E%3C/svg%3E") no-repeat right 12px center}
+  .btn{min-height:48px;font-size:16px;border-radius:9px}
+  .segs button{min-height:52px;font-size:15px}
+  .combo ul{max-height:45vh}
+  .combo input{scroll-margin-top:64px}
+  .combo li{padding:12px;font-size:15px;flex-wrap:wrap;gap:2px 8px;border-bottom:1px solid #f0efe9}
+  .combo li .c{min-width:0}
+  /* bara de salvare lipită jos */
+  .actions{position:sticky;bottom:calc(64px + env(safe-area-inset-bottom));background:var(--card);margin:16px -14px -14px;padding:12px 14px;border-top:1px solid var(--line);border-radius:0 0 12px 12px;z-index:5}
+  .actions .btn[type=submit]{flex:1 1 100%;order:-1}
+  dialog .actions{bottom:0}
+  /* lista ca și carduri */
+  .tw.desk{display:none}
+  .mcards{display:block}
+  .mc{border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:10px;background:#fff}
+  .mc .t{display:flex;gap:8px;align-items:baseline}
+  .mc .t b{flex:1;font-size:15px}
+  .mc .s{color:var(--mut);font-size:14px;margin:2px 0 8px}
+  .mc .p{font-size:14px;margin-bottom:10px}
+  .mc select{min-height:44px;font-size:15px}
+  .mc.ok{border-left:5px solid var(--ok)} .mc.wip{border-left:5px solid var(--wip)} .mc.none{border-left:5px solid #c9c9c2}
+  /* raport */
+  .kpis{grid-template-columns:1fr 1fr;gap:10px}
+  .kpi .v{font-size:26px}
+  .row{gap:8px} .row>div{flex:1 1 100%}
+  #rCsv,#rPrint{flex:1 1 40%;white-space:nowrap;font-size:15px;padding:10px 8px}
+  .cols{gap:12px}
+  table{font-size:13px} th,td{padding:7px 5px}
+  .bar{display:none}
+  #toast{bottom:calc(76px + env(safe-area-inset-bottom))}
+  dialog{width:100vw;max-width:100vw;height:100%;max-height:100%;margin:0;border-radius:0}
+  dialog[open]{display:flex;flex-direction:column}
+  dialog .bd{flex:1;padding:12px}
+  dialog .hd{position:sticky;top:0;background:#fff;z-index:6}
+}
 </style>
 </head>
 <body>
 <header><h1>Reclamații clienți</h1><small>Ferma cu Omenie</small></header>
 <nav>
-  <button data-t="nou" class="on">+ Reclamație nouă</button>
-  <button data-t="lista">Listă reclamații</button>
-  <button data-t="raport">Raport lunar</button>
+  <button data-t="nou" class="on"><span class="ic">＋</span><span><span class="tx-long">+ </span>Reclamație nouă</span></button>
+  <button data-t="lista"><span class="ic">☰</span><span>Listă<span class="tx-long"> reclamații</span></span></button>
+  <button data-t="raport"><span class="ic">▤</span><span>Raport<span class="tx-long"> lunar</span></span></button>
 </nav>
 <div id="banner" class="hide"></div>
 <main>
@@ -118,10 +175,11 @@ dialog .bd{padding:16px;overflow:auto}
   <div class="card">
     <div class="row" style="margin-bottom:8px"><span id="lCount" class="mut sm"></span><span class="sp"></span>
       <button class="btn sec" id="lReload" type="button">↻ Reîncarcă</button></div>
-    <div class="tw"><table>
+    <div class="tw desk"><table>
       <thead><tr><th>Data</th><th>Client</th><th>Produs</th><th>Lot</th><th>Problemă</th><th>Cant.</th><th>Status</th></tr></thead>
       <tbody id="lBody"></tbody>
     </table></div>
+    <div class="mcards" id="lCards"></div>
   </div>
 </section>
 
@@ -143,7 +201,7 @@ dialog .bd{padding:16px;overflow:auto}
     <div class="card"><h2>Pe furnizor</h2><div class="tw" id="rFurn"></div></div>
     <div class="card"><h2>Evoluție pe luni</h2><div class="tw" id="rEvol"></div></div>
   </div>
-  <div class="card"><h2>Reclamațiile lunii</h2><div class="tw" id="rLista"></div></div>
+  <div class="card"><h2>Reclamațiile lunii</h2><div class="tw desk" id="rLista"></div><div class="mcards" id="rCards"></div></div>
 </section>
 </main>
 
@@ -214,9 +272,12 @@ function buildForm(form, rec){
   <div class="grid">
     <div><label>Data <b>*</b></label><input type="date" name="data" required value="${esc(r.data)}"></div>
     <div class="full"><label>Produs reclamat <b>*</b> <span class="mut">(scrie codul sau numele, ex. „tvps 375”)</span></label>
-      <div class="combo"><input name="produs" required placeholder="Caută produsul…" value="${esc(r.produs||'')}"><ul class="hide"></ul></div></div>
-    <div><label>Furnizor</label><input name="furnizor" list="dlFurn" value="${esc(r.furnizor||'')}"></div>
-    <div><label>Client</label><input name="client" list="dlClient" value="${esc(r.client||'')}"></div>
+      <div class="combo" data-prod><input name="produs" required placeholder="Atinge pentru listă sau caută…" value="${esc(r.produs||'')}" enterkeyhint="done"><ul class="hide"></ul></div></div>
+    <div><label>Furnizor</label>
+      <select data-furn>${furnOptions(r.furnizor)}</select>
+      <input name="furnizor" class="furn-alt hide" placeholder="Scrie numele furnizorului" value="${esc(r.furnizor||'')}"></div>
+    <div><label>Client</label>
+      <div class="combo" data-free><input name="client" placeholder="Scrie sau alege clientul" value="${esc(r.client||'')}" enterkeyhint="next"><ul class="hide"></ul></div></div>
     <div><label>Lot / Expirare</label><input name="lot" value="${esc(r.lot||'')}" placeholder="ex. 26127071 / 12.07.2026"></div>
     <div><label>Cantitate reclamată</label><input name="cantitate" value="${esc(r.cantitate||'')}" placeholder="ex. 4 kg / 2 buc"></div>
     <div><label>Problema <b>*</b></label><select name="problema" required><option value="">— alege —</option>
@@ -230,13 +291,22 @@ function buildForm(form, rec){
       <input type="hidden" name="status" value="${esc(r.status||'')}"></div>
     <div><label>Consemnat de</label><input name="adaugatDe" value="${esc(r.adaugatDe||'')}" placeholder="Numele tău"></div>
   </div>
-  <div class="row" style="margin-top:16px">
+  <div class="row actions" style="margin-top:16px">
     ${rec?`<button type="button" class="btn del" data-del>Șterge</button><span class="mut sm">${esc(rec.id)}${rec.creatLa?' · creat '+esc(rec.creatLa):''}${rec.modificatLa?' · modificat '+esc(rec.modificatLa):''}</span>`:''}
     <span class="sp"></span>
     <button class="btn" type="submit">${rec?'Salvează modificările':'Înregistrează reclamația'}</button>
   </div>`;
   form.dataset.id = rec ? rec.id : '';
-  setupCombo(form.querySelector('.combo'), form);
+  setupCombo(form.querySelector('.combo[data-prod]'), form, () => PRODUSE, false);
+  setupCombo(form.querySelector('.combo[data-free]'), form, () => clientList().map(c=>({cod:'',nume:c})), true);
+  const fs = form.querySelector('[data-furn]');
+  fs.onchange = () => {
+    const alt = fs.value === '__alt';
+    form.furnizor.classList.toggle('hide', !alt);
+    form.furnizor.value = alt ? '' : fs.value;
+    if (alt) form.furnizor.focus();
+  };
+  syncFurn(form);
   form.querySelectorAll('.segs button').forEach(b=>b.onclick=()=>{
     form.querySelectorAll('.segs button').forEach(x=>x.classList.toggle('on',x===b));
     form.status.value = b.dataset.v;
@@ -246,40 +316,79 @@ function buildForm(form, rec){
   form.onsubmit = e => { e.preventDefault(); save(form); };
 }
 
-function setupCombo(box, form){
+/* ---- furnizor: listă derulantă + „Altul…” ---- */
+function furnList(){
+  return [...new Set([...FURNIZORI, ...PRODUSE.map(p=>p.furnizor), ...DATA.map(r=>r.furnizor)].filter(Boolean).map(s=>s.trim()))]
+    .sort((a,b)=> a==='Ferma'?-1 : b==='Ferma'?1 : a.localeCompare(b,'ro'));
+}
+function furnOptions(cur){
+  return '<option value="">— alege furnizorul —</option>' + furnList().map(f=>`<option ${f===cur?'selected':''}>${esc(f)}</option>`).join('')
+    + '<option value="__alt">Altul… (scrie)</option>';
+}
+function setFurn(form, f){
+  const fs = form.querySelector('[data-furn]');
+  if (f && ![...fs.options].some(o=>o.value===f)) fs.insertAdjacentHTML('beforeend', `<option>${esc(f)}</option>`);
+  form.furnizor.value = f || ''; syncFurn(form);
+}
+function syncFurn(form){
+  const fs = form.querySelector('[data-furn]'), v = form.furnizor.value;
+  if ([...fs.options].some(o=>o.value===v && o.value!=='__alt')){ fs.value = v; form.furnizor.classList.add('hide'); }
+  else { fs.value = '__alt'; form.furnizor.classList.remove('hide'); }
+}
+function clientList(){
+  const m = new Map();
+  DATA.forEach(r=>{ const c=(r.client||'').trim().replace(/\s+/g,' '); if(c && !m.has(norm(c))) m.set(norm(c), c); });
+  return [...m.values()].sort((a,b)=>a.localeCompare(b,'ro'));
+}
+
+/* ---- listă cu căutare (produs = obligatoriu din listă, client = text liber) ---- */
+function setupCombo(box, form, getItems, free){
   const inp = box.querySelector('input'), ul = box.querySelector('ul');
   let act = -1, items = [];
-  const label = p => p.nume;
   function open(){
+    const all = getItems();
     const toks = norm(inp.value).split(/\s+/).filter(Boolean);
-    items = PRODUSE.filter(p => { const h = norm(p.cod+' '+p.nume); return toks.every(t=>h.includes(t)); });
-    if (items.length===PRODUSE.length || !toks.length) items = PRODUSE;
+    items = toks.length ? all.filter(p => { const h = norm(p.cod+' '+p.nume); return toks.every(t=>h.includes(t)); }) : all;
+    if (!free && toks.length && inp.value === (all.find(p=>p.nume===inp.value)||{}).nume) items = all; // deja ales → arată tot
+    if (free) items = items.slice(0, 60);
     act = items.length ? 0 : -1;
+    if (!items.length && free){ ul.classList.add('hide'); return; }
     ul.innerHTML = items.length ? items.map((p,i)=>`<li data-i="${i}" class="${i===act?'act':''}"><span class="c">${esc(p.cod)}</span><span>${esc(p.nume)}</span></li>`).join('')
       : '<li class="empty">Niciun produs găsit</li>';
-    ul.classList.remove('hide');
+    ul.classList.remove('hide'); ul.scrollTop = 0;
   }
   function pick(i){
     const p = items[i]; if (!p) return;
-    inp.value = label(p); ul.classList.add('hide');
-    if (!form.furnizor.value || FURNIZORI.includes(form.furnizor.value)) form.furnizor.value = p.furnizor || form.furnizor.value;
+    inp.value = p.nume; ul.classList.add('hide');
     inp.setCustomValidity('');
+    if (!free && p.furnizor){
+      const cur = form.furnizor.value;
+      if (!cur || PRODUSE.some(x=>x.furnizor===cur)) setFurn(form, p.furnizor);
+    }
+    inp.blur();
   }
-  inp.addEventListener('focus', ()=>{ inp.select(); open(); });
+  inp.addEventListener('focus', ()=>{
+    open();
+    if (window.innerWidth <= 700) setTimeout(()=>inp.scrollIntoView({block:'start', behavior:'smooth'}), 250);
+  });
+  inp.addEventListener('click', ()=>{ if (ul.classList.contains('hide')) open(); });
   inp.addEventListener('input', open);
   inp.addEventListener('keydown', e=>{
     if (ul.classList.contains('hide')) return;
     if (e.key==='ArrowDown'||e.key==='ArrowUp'){ e.preventDefault(); act=Math.max(0,Math.min(items.length-1,act+(e.key==='ArrowDown'?1:-1)));
       ul.querySelectorAll('li').forEach((l,i)=>l.classList.toggle('act',i===act)); ul.children[act]?.scrollIntoView({block:'nearest'}); }
-    else if (e.key==='Enter'){ e.preventDefault(); pick(act); }
+    else if (e.key==='Enter'){ e.preventDefault(); if (free && !inp.value) ul.classList.add('hide'); else pick(act); }
     else if (e.key==='Escape'){ ul.classList.add('hide'); }
   });
-  ul.addEventListener('mousedown', e=>{ const li=e.target.closest('li[data-i]'); if(li){ e.preventDefault(); pick(+li.dataset.i); } });
+  ul.addEventListener('mousedown', e=>e.preventDefault());   // nu pierde focusul
+  ul.addEventListener('click', e=>{ const li=e.target.closest('li[data-i]'); if(li) pick(+li.dataset.i); });
   inp.addEventListener('blur', ()=>setTimeout(()=>{
+    if (document.activeElement === inp) return;
     ul.classList.add('hide');
-    const ok = PRODUSE.some(p=>label(p)===inp.value) || (form.dataset.id && inp.value === (DATA.find(x=>x.id===form.dataset.id)||{}).produs);
+    if (free) return;
+    const ok = PRODUSE.some(p=>p.nume===inp.value) || (form.dataset.id && inp.value === (DATA.find(x=>x.id===form.dataset.id)||{}).produs);
     inp.setCustomValidity(ok||!inp.value ? '' : 'Alege un produs din listă');
-  },150));
+  },200));
 }
 
 async function save(form){
@@ -335,11 +444,13 @@ function fillMonths(){
     sel.innerHTML = (all?'<option value="*">Toate lunile</option>':'') + ms.map(m=>`<option value="${m}">${lunaTxt(m)}</option>`).join('');
     sel.value = cur && [...sel.options].some(o=>o.value===cur) ? cur : ms[0];
   }
-  $('#dlClient') || document.body.insertAdjacentHTML('beforeend','<datalist id="dlClient"></datalist><datalist id="dlFurn"></datalist>');
-  const cl = [...new Set(DATA.map(r=>r.client.trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ro'));
-  $('#dlClient').innerHTML = cl.map(c=>`<option value="${esc(c)}">`).join('');
-  $('#dlFurn').innerHTML = FURNIZORI.map(c=>`<option value="${esc(c)}">`).join('');
 }
+const statusSel = r => `<select data-st aria-label="Status">${STATUS.map(([v,t])=>`<option value="${v}" ${v===(r.status||'')?'selected':''}>${t}</option>`).join('')}</select>`;
+const card = (r, withSel) => `<div class="mc ${stCls(r.status)}" data-id="${esc(r.id)}">
+  <div class="t"><b>${esc(r.produs)}</b><span class="mut sm">${fmtD(r.data)}</span></div>
+  <div class="s">${esc(r.client)||'fără client'}${r.lot?' · lot '+esc(r.lot):''}${r.cantitate?' · '+esc(r.cantitate):''}</div>
+  <div class="p">${esc(r.problema)}${r.detalii&&norm(r.detalii)!==norm(r.problema)?' – <span class="mut">'+esc(r.detalii)+'</span>':''}</div>
+  ${withSel ? statusSel(r) : pill(r.status)}</div>`;
 function renderList(){
   const m = $('#lLuna').value, st = $('#lStatus').value, q = norm($('#lCauta').value).split(/\s+/).filter(Boolean);
   const rows = DATA.filter(r => (m==='*'||r.data.startsWith(m)) && (st==='*'||(r.status||'')===st)
@@ -350,18 +461,26 @@ function renderList(){
     <td>${fmtD(r.data)}</td><td>${esc(r.client)||'<span class="mut">—</span>'}</td><td>${esc(r.produs)}</td>
     <td class="sm">${esc(r.lot)}</td><td>${esc(r.problema)}${r.detalii&&norm(r.detalii)!==norm(r.problema)?`<div class="mut sm">${esc(r.detalii)}</div>`:''}</td>
     <td class="sm">${esc(r.cantitate)}</td>
-    <td><select data-st>${STATUS.map(([v,t])=>`<option value="${v}" ${v===(r.status||'')?'selected':''}>${t}</option>`).join('')}</select></td></tr>`).join('')
+    <td>${statusSel(r)}</td></tr>`).join('')
     || '<tr><td colspan="7" class="mut">Nicio reclamație.</td></tr>';
+  const lim = 150;
+  $('#lCards').innerHTML = rows.slice(0, lim).map(r=>card(r, true)).join('')
+    + (rows.length > lim ? `<p class="mut sm">Se afișează primele ${lim}. Alege o lună sau caută pentru restul.</p>` : '')
+    || '<p class="mut">Nicio reclamație.</p>';
 }
-$('#lBody').addEventListener('click', e=>{
-  if (e.target.closest('select')) return;
-  const tr = e.target.closest('tr[data-id]'); if (!tr) return;
-  const rec = DATA.find(x=>x.id===tr.dataset.id);
-  $('#dlgT').textContent = 'Reclamația '+rec.id; buildForm($('#fEdit'), rec); dlg.showModal();
-});
-$('#lBody').addEventListener('change', e=>{
-  const s = e.target.closest('select[data-st]'); if (s) quickStatus(s.closest('tr').dataset.id, s.value, s);
-});
+for (const box of ['#lBody','#lCards']){
+  $(box).addEventListener('click', e=>{
+    if (e.target.closest('select')) return;
+    const el = e.target.closest('[data-id]'); if (!el) return;
+    const rec = DATA.find(x=>x.id===el.dataset.id);
+    $('#dlgT').textContent = 'Reclamația '+rec.id; buildForm($('#fEdit'), rec); dlg.showModal();
+  });
+  $(box).addEventListener('change', e=>{
+    const s = e.target.closest('select[data-st]'); if (!s) return;
+    const el = s.closest('[data-id]'); quickStatus(el.dataset.id, s.value, s);
+    if (el.classList.contains('mc')) el.className = 'mc '+stCls(s.value);
+  });
+}
 ['#lLuna','#lStatus'].forEach(id=>$(id).addEventListener('change',renderList));
 $('#lCauta').addEventListener('input',renderList);
 $('#lReload').onclick = async ()=>{ $('#lReload').disabled=true; await reload(); $('#lReload').disabled=false; };
@@ -402,6 +521,7 @@ function renderReport(){
   $('#rLista').innerHTML = `<table><thead><tr><th>Data</th><th>Client</th><th>Produs</th><th>Lot</th><th>Problemă</th><th>Cant.</th><th>Compensare</th><th>Status</th></tr></thead><tbody>`+
     rows.map(r=>`<tr><td>${fmtD(r.data)}</td><td>${esc(r.client)}</td><td>${esc(r.produs)}</td><td class="sm">${esc(r.lot)}</td><td>${esc(r.problema)}</td><td class="sm">${esc(r.cantitate)}</td><td class="sm">${esc(r.compensare)}</td><td>${pill(r.status)}</td></tr>`).join('')+
     (n?'':'<tr><td colspan="8" class="mut">Nicio reclamație în această lună.</td></tr>')+'</tbody></table>';
+  $('#rCards').innerHTML = rows.map(r=>card(r, false)).join('') || '<p class="mut">Nicio reclamație în această lună.</p>';
 }
 $('#rLuna').addEventListener('change', renderReport);
 $('#rPrint').onclick = ()=>window.print();
@@ -424,6 +544,7 @@ function show(t){
   document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.t===t));
   document.querySelectorAll('main section').forEach(s=>s.classList.toggle('hide',s.id!=='t-'+t));
   history.replaceState(null,'','#'+t);
+  window.scrollTo(0,0);
 }
 document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>show(b.dataset.t));
 const dlg = $('#dlg');
