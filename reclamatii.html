@@ -87,6 +87,16 @@ dialog .bd{padding:16px;overflow:auto}
 }
 .printhead{display:none;margin-bottom:12px}
 .furn-alt{margin-top:6px}
+.pz{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:8px}
+.pz:not(:empty){margin-bottom:10px}
+.pz>div{position:relative;aspect-ratio:1;border-radius:9px;overflow:hidden;background:#eceae3;display:flex;align-items:center;justify-content:center;font-size:12px}
+.pz>div.nou{outline:2px solid var(--acc);outline-offset:-2px}
+.pz a{display:block;width:100%;height:100%;color:var(--acc);text-decoration:none;display:flex;align-items:center;justify-content:center}
+.pz img{width:100%;height:100%;object-fit:cover;display:block}
+.pz .x{position:absolute;top:4px;right:4px;width:30px;height:30px;border-radius:50%;border:0;background:rgba(0,0,0,.6);color:#fff;font-size:18px;line-height:1;cursor:pointer}
+.pz-btns{display:flex;gap:8px}
+label.pz-add{flex:1;display:flex;align-items:center;justify-content:center;gap:6px;margin:0;font-size:15px;color:var(--acc);text-align:center}
+.cam{font-size:12px;color:var(--acc);white-space:nowrap}
 .combo li .c:empty{display:none}
 nav .ic{display:none}
 .mcards{display:none}
@@ -223,6 +233,7 @@ let PRODUSE = [{cod:'TVPS 375 G',nume:'Telemea de vacă puțin sărată 375g',fu
 let PROBLEME = ['Moale','Sfărâmicioasă','Apariție mucegai','Apariție drojdii','Capac umflat','Brânzită / acră','Fermentată','Gust acru','Devidată','Diferență de gramaj','Ambalaj deteriorat','Etichetare / lot / expirare','Termen scurt / expirat','Altele'];
 let DATA = [];
 const DEMO = !/^https:\/\/script\.google\.com\//.test(API_URL);
+const MAX_POZE = 8;
 
 /* ===================== UTILS ===================== */
 const $ = s => document.querySelector(s);
@@ -245,8 +256,9 @@ async function apiGet(){
 }
 async function apiPost(body){
   if (DEMO){ // mod demonstrativ – doar în memorie
-    if (body.action==='add'){ const rec={...body.data,id:'R'+String(DATA.length+1).padStart(4,'0'),creatLa:today()}; return {ok:true,rec}; }
-    if (body.action==='update'){ return {ok:true,rec:{...DATA.find(x=>x.id===body.data.id),...body.data}}; }
+    const poze = () => [...splitPoze(body.data.poze), ...(body.pozeNoi||[]).map(p=>p.data)].join('\n');
+    if (body.action==='add'){ const rec={...body.data,id:'R'+String(DATA.length+1).padStart(4,'0'),creatLa:today(),poze:poze()}; return {ok:true,rec}; }
+    if (body.action==='update'){ return {ok:true,rec:{...DATA.find(x=>x.id===body.data.id),...body.data,poze:poze()}}; }
     return {ok:true,rec:{id:body.id}};
   }
   const r = await fetch(API_URL,{method:'POST',body:JSON.stringify(body)}); const j = await r.json();
@@ -286,6 +298,12 @@ function buildForm(form, rec){
     <div><label>Detalii problemă</label><input name="detalii" value="${esc(r.detalii||'')}"></div>
     <div><label>Compensare</label><input name="compensare" value="${esc(r.compensare||'')}" placeholder="ex. retur, notă de credit, înlocuire"></div>
     <div><label>Observații</label><input name="observatii" value="${esc(r.observatii||'')}"></div>
+    <div class="full"><label>Poze <span class="mut">(max. ${MAX_POZE})</span></label>
+      <div class="pz" data-pz></div>
+      <div class="pz-btns">
+        <label class="btn sec pz-add">📷 Fă o poză<input type="file" accept="image/*" capture="environment" hidden data-cam></label>
+        <label class="btn sec pz-add">🖼 Din galerie<input type="file" accept="image/*" multiple hidden data-gal></label>
+      </div></div>
     <div class="full"><label>Status reclamație</label>
       <div class="segs">${STATUS.map(([v,t])=>`<button type="button" data-v="${v}" class="${v===(r.status||'')?'on':''}">${t}</button>`).join('')}</div>
       <input type="hidden" name="status" value="${esc(r.status||'')}"></div>
@@ -307,6 +325,7 @@ function buildForm(form, rec){
     if (alt) form.furnizor.focus();
   };
   syncFurn(form);
+  setupPoze(form, r.poze);
   form.querySelectorAll('.segs button').forEach(b=>b.onclick=()=>{
     form.querySelectorAll('.segs button').forEach(x=>x.classList.toggle('on',x===b));
     form.status.value = b.dataset.v;
@@ -315,6 +334,52 @@ function buildForm(form, rec){
   if (del) del.onclick = () => removeRec(rec.id);
   form.onsubmit = e => { e.preventDefault(); save(form); };
 }
+
+/* ---- poze: cameră / galerie, micșorate pe telefon înainte de trimitere ---- */
+const splitPoze = s => String(s||'').split(/\s*[\n,]\s*/).filter(x=>/^(https:\/\/|data:image)/.test(x));
+function driveId(link){ const m = /\/d\/([\w-]{10,})/.exec(link) || /[?&]id=([\w-]{10,})/.exec(link); return m ? m[1] : ''; }
+function thumbUrl(link){ if (link.startsWith('data:')) return link; const id = driveId(link); return id ? `https://drive.google.com/thumbnail?id=${id}&sz=w400` : link; }
+function compressImage(file, max=1600, q=0.8){
+  return new Promise((res, rej)=>{
+    const url = URL.createObjectURL(file), img = new Image();
+    img.onload = ()=>{
+      const k = Math.min(1, max/Math.max(img.naturalWidth, img.naturalHeight));
+      const c = document.createElement('canvas');
+      c.width = Math.round(img.naturalWidth*k); c.height = Math.round(img.naturalHeight*k);
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(url);
+      res(c.toDataURL('image/jpeg', q));
+    };
+    img.onerror = ()=>{ URL.revokeObjectURL(url); rej(new Error('Imaginea nu poate fi citită')); };
+    img.src = url;
+  });
+}
+function setupPoze(form, poze){
+  const st = form._pz = { vechi: splitPoze(poze), noi: [] };
+  const box = form.querySelector('[data-pz]');
+  const render = ()=>{
+    box.innerHTML = st.vechi.map((l,i)=>`<div><a href="${esc(l.startsWith('data:')?'#':l)}" target="_blank" rel="noopener"><img src="${esc(thumbUrl(l))}" alt="" loading="lazy" onerror="this.replaceWith(Object.assign(document.createElement('span'),{textContent:'📷 deschide'}))"></a><button type="button" class="x" data-rm-v="${i}" aria-label="Șterge poza">×</button></div>`).join('')
+      + st.noi.map((d,i)=>`<div class="nou"><img src="${d}" alt=""><button type="button" class="x" data-rm-n="${i}" aria-label="Șterge poza">×</button></div>`).join('');
+    form.querySelectorAll('.pz-add').forEach(b=>b.classList.toggle('hide', st.vechi.length+st.noi.length >= MAX_POZE));
+  };
+  box.addEventListener('click', e=>{
+    const b = e.target.closest('button.x'); if (!b) return;
+    if (b.dataset.rmV !== undefined){ if (!confirm('Scoți poza din reclamație?')) return; st.vechi.splice(+b.dataset.rmV,1); }
+    else st.noi.splice(+b.dataset.rmN,1);
+    render();
+  });
+  form.querySelectorAll('[data-cam],[data-gal]').forEach(inp=>inp.addEventListener('change', async ()=>{
+    const files = [...inp.files]; inp.value = '';
+    const loc = MAX_POZE - st.vechi.length - st.noi.length;
+    if (files.length > loc) toast(`Se pot adăuga doar ${loc} poze în plus`, true);
+    for (const f of files.slice(0, Math.max(0,loc))){
+      try{ st.noi.push(await compressImage(f)); render(); }
+      catch(e){ toast(e.message, true); }
+    }
+  }));
+  render();
+}
+const nrPoze = r => splitPoze(r.poze).length;
 
 /* ---- furnizor: listă derulantă + „Altul…” ---- */
 function furnList(){
@@ -397,22 +462,28 @@ async function save(form){
   if (!ok){ prodInp.setCustomValidity('Alege un produs din listă'); prodInp.reportValidity(); return; }
   const d = Object.fromEntries(new FormData(form).entries());
   if (d.adaugatDe) store.set('rec_nume', d.adaugatDe);
-  const btn = form.querySelector('[type=submit]'); btn.disabled = true;
+  const pz = form._pz || {vechi:[], noi:[]};
+  d.poze = pz.vechi.join('\n');
+  const pozeNoi = pz.noi.map(data=>({mime:'image/jpeg', data}));
+  const btn = form.querySelector('[type=submit]'), btnTxt = btn.textContent;
+  btn.disabled = true; if (pozeNoi.length) btn.textContent = `Se salvează (${pozeNoi.length} poze)…`;
   try{
     if (form.dataset.id){
       d.id = form.dataset.id;
-      const j = await apiPost({action:'update', data:d});
+      const j = await apiPost({action:'update', data:d, pozeNoi});
       const i = DATA.findIndex(x=>x.id===d.id); DATA[i] = {...DATA[i], ...j.rec};
       dlg.close(); toast('Reclamația a fost actualizată');
     } else {
-      const j = await apiPost({action:'add', data:d});
+      const j = await apiPost({action:'add', data:d, pozeNoi});
       DATA.push({...d, ...j.rec});
       toast('Reclamația '+j.rec.id+' a fost înregistrată');
       buildForm(form, null);
+      window.scrollTo(0,0);
+      return fillMonths(), renderList(), renderReport();
     }
     fillMonths(); renderList(); renderReport();
   }catch(e){ toast('Eroare la salvare: '+e.message, true); }
-  btn.disabled = false;
+  btn.disabled = false; btn.textContent = btnTxt;
 }
 
 async function quickStatus(id, status, sel){
@@ -449,7 +520,7 @@ const statusSel = r => `<select data-st aria-label="Status">${STATUS.map(([v,t])
 const card = (r, withSel) => `<div class="mc ${stCls(r.status)}" data-id="${esc(r.id)}">
   <div class="t"><b>${esc(r.produs)}</b><span class="mut sm">${fmtD(r.data)}</span></div>
   <div class="s">${esc(r.client)||'fără client'}${r.lot?' · lot '+esc(r.lot):''}${r.cantitate?' · '+esc(r.cantitate):''}</div>
-  <div class="p">${esc(r.problema)}${r.detalii&&norm(r.detalii)!==norm(r.problema)?' – <span class="mut">'+esc(r.detalii)+'</span>':''}</div>
+  <div class="p">${esc(r.problema)}${r.detalii&&norm(r.detalii)!==norm(r.problema)?' – <span class="mut">'+esc(r.detalii)+'</span>':''}${nrPoze(r)?' <span class="cam">📷 '+nrPoze(r)+'</span>':''}</div>
   ${withSel ? statusSel(r) : pill(r.status)}</div>`;
 function renderList(){
   const m = $('#lLuna').value, st = $('#lStatus').value, q = norm($('#lCauta').value).split(/\s+/).filter(Boolean);
@@ -459,7 +530,7 @@ function renderList(){
   $('#lCount').textContent = rows.length+' reclamații';
   $('#lBody').innerHTML = rows.map(r=>`<tr class="click" data-id="${esc(r.id)}">
     <td>${fmtD(r.data)}</td><td>${esc(r.client)||'<span class="mut">—</span>'}</td><td>${esc(r.produs)}</td>
-    <td class="sm">${esc(r.lot)}</td><td>${esc(r.problema)}${r.detalii&&norm(r.detalii)!==norm(r.problema)?`<div class="mut sm">${esc(r.detalii)}</div>`:''}</td>
+    <td class="sm">${esc(r.lot)}</td><td>${esc(r.problema)}${nrPoze(r)?` <span class="cam">📷 ${nrPoze(r)}</span>`:''}${r.detalii&&norm(r.detalii)!==norm(r.problema)?`<div class="mut sm">${esc(r.detalii)}</div>`:''}</td>
     <td class="sm">${esc(r.cantitate)}</td>
     <td>${statusSel(r)}</td></tr>`).join('')
     || '<tr><td colspan="7" class="mut">Nicio reclamație.</td></tr>';
@@ -528,10 +599,10 @@ $('#rPrint').onclick = ()=>window.print();
 $('#rCsv').onclick = ()=>{
   const m = $('#rLuna').value;
   const rows = DATA.filter(r=>r.data.startsWith(m)).sort((a,b)=>a.data.localeCompare(b.data));
-  const H = ['ID','Data','Furnizor','Client','Produs','Lot / Expirare','Cantitate','Problema','Detalii','Compensare','Observatii','Status','Consemnat de'];
-  const K = ['id','data','furnizor','client','produs','lot','cantitate','problema','detalii','compensare','observatii','status','adaugatDe'];
+  const H = ['ID','Data','Furnizor','Client','Produs','Lot / Expirare','Cantitate','Problema','Detalii','Compensare','Observatii','Status','Consemnat de','Poze'];
+  const K = ['id','data','furnizor','client','produs','lot','cantitate','problema','detalii','compensare','observatii','status','adaugatDe','poze'];
   const q = v => '"'+String(v??'').replace(/"/g,'""')+'"';
-  const lines = [H.map(q).join(';'), ...rows.map(r=>K.map(k=>q(k==='data'?fmtD(r[k]):k==='status'?stTxt(r[k]):r[k])).join(';'))];
+  const lines = [H.map(q).join(';'), ...rows.map(r=>K.map(k=>q(k==='data'?fmtD(r[k]):k==='status'?stTxt(r[k]):k==='poze'?splitPoze(r.poze).join(' '):r[k])).join(';'))];
   const ok=rows.filter(r=>r.status==='Rezolvată').length, wip=rows.filter(r=>r.status==='În curs de rezolvare').length;
   lines.push('', q('Total')+';'+rows.length, q('Soluționate')+';'+ok, q('În curs')+';'+wip, q('Fără status')+';'+(rows.length-ok-wip));
   const blob = new Blob(['﻿'+lines.join('\r\n')], {type:'text/csv;charset=utf-8'});
