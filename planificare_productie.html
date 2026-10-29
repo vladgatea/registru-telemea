@@ -887,6 +887,17 @@
         </table>
       </div>
     </div>
+    <div style="padding:0 16px 16px">
+      <div class="print-section-label">Necesar caș pentru burduf (kg) — pe ziua procesării burdufului</div>
+      <div style="overflow-x:auto">
+        <table class="rezultat-table" id="tblCasBurduf" style="width:100%">
+          <thead><tr><th style="text-align:left">Materie</th>
+            <th>Luni</th><th>Marți</th><th>Miercuri</th><th>Joi</th><th>Vineri</th><th>Sâmbătă</th><th>Duminică</th><th>TOTAL</th></tr></thead>
+          <tbody id="tbodyCasBurduf"></tbody>
+        </table>
+      </div>
+      <div id="notaCasBurduf" style="font-size:11px;color:var(--ink-muted);margin-top:6px"></div>
+    </div>
   </div>
 
 </div>
@@ -1270,12 +1281,12 @@ let PROCESARE_REF = {
   'TV DEG 4KG':       {lot:500, buc:0,   lv:1500, lc:0,    lo:0,   ld:1500, um:'KG'},
   'TV':               {lot:650, buc:0,   lv:3000, lc:0,    lo:0,   ld:0,    um:'KG'},
   // Smântână — procesare prin degresare lapte integral
-  // 3000L integral → 300kg smântână 30% + 2700L lapte degresat
+  // 3000L integral → 300kg smântână 32% + 2700L lapte degresat
   // 3000L integral → 200kg smântână 50% + 2800L lapte degresat
   'SMÂNTÂNĂ':          {lot:300, buc:0,  lv:3000, lc:0,    lo:0,   ld:0,    um:'KG', degresare:true},
-  'Smântână 30% 5kg':  {lot:300, buc:60, lv:3000, lc:0,    lo:0,   ld:0,    um:'KG', degresare:true, pct:30, ldResult:2700},
-  'Smântână 30% 200g': {lot:300, buc:1500,lv:3000,lc:0,    lo:0,   ld:0,    um:'BUC',degresare:true, pct:30, ldResult:2700},
-  'Smântână 30% 400g': {lot:300, buc:750,lv:3000, lc:0,    lo:0,   ld:0,    um:'BUC',degresare:true, pct:30, ldResult:2700},
+  'Smântână 32% 5kg':  {lot:300, buc:60, lv:3000, lc:0,    lo:0,   ld:0,    um:'KG', degresare:true, pct:32, ldResult:2700},
+  'Smântână 32% 200g': {lot:300, buc:1500,lv:3000,lc:0,    lo:0,   ld:0,    um:'BUC',degresare:true, pct:32, ldResult:2700},
+  'Smântână 32% 400g': {lot:300, buc:750,lv:3000, lc:0,    lo:0,   ld:0,    um:'BUC',degresare:true, pct:32, ldResult:2700},
   'Smântână 50% 15kg': {lot:200, buc:13, lv:3000, lc:0,    lo:0,   ld:0,    um:'KG', degresare:true, pct:50, ldResult:2800},
 };
 
@@ -1320,9 +1331,9 @@ let AMBALARE_REF = {
   'BB PDA 1KG':         { timp: 1.6,  lotOptim: 240,  um: 'KG'  },
   'BB DLF 1KG':         { timp: 1.6,  lotOptim: 240,  um: 'KG'  },
   // Smântână — loturi optime TBD
-  'Smântână 30% 5kg':   { timp: 1.0,  lotOptim: 300,  um: 'KG'  },
-  'Smântână 30% 200g':  { timp: 1.0,  lotOptim: 1500, um: 'BUC' },
-  'Smântână 30% 400g':  { timp: 1.0,  lotOptim: 750,  um: 'BUC' },
+  'Smântână 32% 5kg':   { timp: 1.0,  lotOptim: 300,  um: 'KG'  },
+  'Smântână 32% 200g':  { timp: 1.0,  lotOptim: 1500, um: 'BUC' },
+  'Smântână 32% 400g':  { timp: 1.0,  lotOptim: 750,  um: 'BUC' },
   'Smântână 50% 15kg':  { timp: 1.0,  lotOptim: 200,  um: 'KG'  },
 };
 
@@ -1335,7 +1346,7 @@ const FORMATE_AMBALARE = {
   'BV':      ['—', 'BV 400G', 'BV 5KG'],
   'CAS V+O': ['—', 'CAS V+O 300G', 'CAS V+O 800G'],
   'CAS V':   ['—', 'CAS V 300G', 'CAS V 800G'],
-  'SMÂNTÂNĂ':['—', 'Smântână 30% 5kg', 'Smântână 30% 200g', 'Smântână 30% 400g', 'Smântână 50% 15kg'],
+  'SMÂNTÂNĂ':['—', 'Smântână 32% 5kg', 'Smântână 32% 200g', 'Smântână 32% 400g', 'Smântână 50% 15kg'],
 };
 
 // Returnează materia primă din care provine un produs de procesare
@@ -2076,7 +2087,66 @@ function buildPersonalSection() {
   container.appendChild(grid);
 }
 
+
+// ── NECESAR CAȘ PENTRU BURDUF ────────────────────────────────────
+// Rețete burduf (procente din cantitatea de burduf)
+const BURDUF_RETETE = {
+  DLF: { vaca: 0.80, oaie: 0.20, materie: 0    },
+  PDA: { vaca: 0.70, oaie: 0.05, materie: 0.25 },
+  OAIE: { vaca: 0, oaie: 1, materie: 0 }
+};
+// Cantitatea de burduf per lot (kg) și rețeta folosită
+const BURDUF_PROD = {
+  'DLF 350G - 1500':   { kg: 525, ret: 'DLF' },  // 1500 buc x 0,35 kg
+  'BB 4X60DLF - 2000': { kg: 480, ret: 'DLF' },  // 2000 buc x 4x60 g
+  'DLF 250G - 2000':   { kg: 500, ret: 'DLF' },  // 2000 buc x 0,25 kg
+  'BB DLF 2KG - 300':  { kg: 300, ret: 'DLF' },
+  'BB DLF 1KG - 240':  { kg: 240, ret: 'DLF' },
+  'PDA 300G - 2000':   { kg: 600, ret: 'PDA' },  // 2000 buc x 0,30 kg
+  'BB PDA 2KG - 300':  { kg: 300, ret: 'PDA' },
+  'BB PDA 1KG - 240':  { kg: 240, ret: 'PDA' },
+  'BB FRA - 600':      { kg: 600, ret: 'OAIE' },  // 100% oaie
+  'BB Oaie 300G - 600': { kg: 180, ret: 'OAIE' }  // 600 buc x 0,30 kg, 100% oaie
+};
+
+// Produse care nu se calculează separat la necesarul de caș
+const BURDUF_FARA_CALCUL = ['MARUNȚITA - 86', 'Bulgaraș', 'Pecorino'];
+
+function updateNecesarCasBurduf() {
+  const tbody = document.getElementById('tbodyCasBurduf');
+  if (!tbody) return;
+  const vaca = Array(7).fill(0), oaie = Array(7).fill(0), mat = Array(7).fill(0), burd = Array(7).fill(0);
+  const nemapate = {};
+  for (let r = 0; r < state.burduf.length; r++) {
+    for (let zi = 0; zi < 7; zi++) {
+      const prod = state.burduf[r][zi];
+      if (!prod || prod === '—') continue;
+      const info = BURDUF_PROD[prod];
+      if (!info) { if (!BURDUF_FARA_CALCUL.includes(prod)) nemapate[prod] = true; continue; }
+      const ret = BURDUF_RETETE[info.ret];
+      burd[zi] += info.kg;
+      vaca[zi] += info.kg * ret.vaca;
+      oaie[zi] += info.kg * ret.oaie;
+      mat[zi]  += info.kg * ret.materie;
+    }
+  }
+  const fmt = v => v > 0 ? Math.round(v).toLocaleString('ro-RO') : '—';
+  const sum = a => a.reduce((s, v) => s + v, 0);
+  const row = (label, arr, style) => `<tr${style ? ` style="${style}"` : ''}><td style="text-align:left;font-weight:600">${label}</td>${arr.map(v => `<td>${fmt(v)}</td>`).join('')}<td style="font-weight:700">${fmt(sum(arr))}</td></tr>`;
+  tbody.innerHTML =
+    row('Caș de vacă', vaca) +
+    row('Caș de oaie', oaie) +
+    row('Materie (PDA 25%)', mat) +
+    row('Total burduf', burd, 'background:var(--accent-pale)');
+  const nota = document.getElementById('notaCasBurduf');
+  const lista = Object.keys(nemapate);
+  nota.textContent = lista.length
+    ? 'Fără rețetă, neincluse în calcul: ' + lista.join(', ')
+    : 'Rețete: DLF = 80% vacă + 20% oaie · PDA = 70% vacă + 25% materie + 5% oaie · BB FRA și BB Oaie = 100% oaie';
+}
+
 function updateCentralizare() {
+  try { updateNecesarCasBurduf(); } catch (e) { console.error(e); }
   const tbodyL = document.getElementById('tbodyLapte');
   tbodyL.innerHTML = '';
   let totLv=0, totLc=0, totLo=0, totLd=0;
@@ -3102,8 +3172,7 @@ async function sheetsRead(sheetName) {
   const text = await resp.text();
   // Apps Script returnează uneori cu prefix )]}' — curățăm
   const clean = text.replace(/^\)\]\}\'/, '').trim();
-  // Smântâna Ferma a trecut de la 32% la 30% — săptămânile salvate înainte au denumirea veche
-  return JSON.parse(clean.replace(/Smântână 32%/g, 'Smântână 30%'));
+  return JSON.parse(clean);
 }
 
 async function saveToSheets() {
