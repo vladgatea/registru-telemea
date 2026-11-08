@@ -309,8 +309,8 @@ function onProdusChange() {
     {id:'std_ph',   v: std?.ph   ? std.ph[0]+'-'+std.ph[1] : ''},
     {id:'std_temp', v: std?.temp ? (std.temp[0]===std.temp[1] ? std.temp[0]+'°C' : std.temp[0]+'-'+std.temp[1]+'°C') : '13-14°C'},
     {id:'std_su',   v: std?.su_min ? (std.su_max ? std.su_min+'-'+std.su_max+'%' : 'min. '+std.su_min+'%') : ''},
-    {id:'std_gb',   v: std?.grasime ? 'min. '+std.grasime+'%' : ''},
-    {id:'std_gsu',  v: std?.gsu_min ? (std.gsu_max ? std.gsu_min+'-'+std.gsu_max+'%' : 'min. '+std.gsu_min+'%') : ''},
+    {id:'std_gb',   v: std?.grasime ? 'min. '+std.grasime+'% (nu se notează)' : ''},
+    {id:'std_gsu',  v: std?.gsu_min ? (std.gsu_max ? std.gsu_min+'-'+std.gsu_max+'%' : 'min. '+std.gsu_min+'%') + ' (nu se notează)' : ''},
     {id:'std_sare', v: ''},
   ];
   defs.forEach(d => { const el=document.getElementById(d.id); if(el) el.textContent = d.v; });
@@ -333,8 +333,9 @@ const INDICATORI = [
   {key:'ph',        id:'f_ph',   label:'pH',        tip:'ph'},
   {key:'temp',      id:'f_temp', label:'Temp',      tip:'temp'},
   {key:'su',        id:'f_su',   label:'SU',        tip:'rel'},
-  {key:'gb',        id:'f_gb',   label:'Grăsime',   tip:'rel'},
-  {key:'gsu',       id:'f_gsu',  label:'G/SU',      tip:'rel'},
+  // Grăsimea (GB) și G/SU nu se notează deocamdată. Pentru a le reactiva, adaugă înapoi:
+  //   {key:'gb',  id:'f_gb',  label:'Grăsime', tip:'rel'},
+  //   {key:'gsu', id:'f_gsu', label:'G/SU',    tip:'rel'},
 ];
 
 function getLimite(std, key) {
@@ -468,6 +469,7 @@ function calcNota() {
 function colorFields(std, vals) {
   const elAcid = document.getElementById('f_acid');
   if (elAcid) elAcid.classList.remove('ok', 'warn', 'bad'); // aciditatea nu se notează
+  ['f_gb', 'f_gsu'].forEach(id => { const e = document.getElementById(id); if (e) e.classList.remove('ok', 'warn', 'bad'); }); // nici grăsimile
   INDICATORI.forEach(ind => {
     const el = document.getElementById(ind.id);
     if (!el) return;
