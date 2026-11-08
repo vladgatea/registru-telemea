@@ -279,20 +279,20 @@ select{padding-right:30px;cursor:pointer}
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzSi7JpF6q0LPK1zP3ue3slKze92dksT-lKM63SwKrMs8gQI953bsOcsCKqPwB2xWqY/exec';
 
 const STANDARDE = {
-  'TVPS 4-8kg':     {aciditate:[170,220],ph:[4.6,4.9],temp:[0,14],su_min:46,su_max:null,grasime:45,gsu_min:null,gsu_max:null},
-  'TV 4-8kg':       {aciditate:[170,220],ph:[4.6,4.9],temp:[0,14],su_min:46,su_max:null,grasime:45,gsu_min:null,gsu_max:null},
-  'TC 4-8kg':       {aciditate:[170,220],ph:[4.6,4.9],temp:[0,14],su_min:46,su_max:null,grasime:45,gsu_min:null,gsu_max:null},
-  'TO 4-8kg':       {aciditate:[170,220],ph:[4.6,4.9],temp:[0,14],su_min:46,su_max:null,grasime:45,gsu_min:null,gsu_max:null},
-  'Cas de vaca rotund':{aciditate:[150,210],ph:[5.3,5.5],temp:[0,14],su_min:48,su_max:50,grasime:44,gsu_min:44,gsu_max:45},
-  'Cas de vaca mp': {aciditate:[150,210],ph:[5.3,5.5],temp:[0,14],su_min:48,su_max:50,grasime:44,gsu_min:44,gsu_max:45},
-  'Cas de oaie mp': {aciditate:[160,220],ph:[5.1,5.4],temp:[0,14],su_min:48,su_max:50,grasime:47,gsu_min:47,gsu_max:48},
-  'BB DLF':         {aciditate:[180,240],ph:[4.5,4.9],temp:[0,14],su_min:44,su_max:null,grasime:45,gsu_min:null,gsu_max:null},
-  'BB PDA':         {aciditate:[180,240],ph:[4.5,4.9],temp:[0,14],su_min:44,su_max:null,grasime:45,gsu_min:null,gsu_max:null},
-  'Branza de vaci': {aciditate:[180,240],ph:[4.5,4.6],temp:[0,14],su_min:34,su_max:null,grasime:null,gsu_min:null,gsu_max:null},
-  'Tops':           {aciditate:[170,220],ph:[4.6,4.9],temp:[0,14],su_min:46,su_max:null,grasime:45,gsu_min:null,gsu_max:null},
-  'Tcps':           {aciditate:[170,220],ph:[4.6,4.9],temp:[0,14],su_min:46,su_max:null,grasime:45,gsu_min:null,gsu_max:null},
-  'TV DEG 4kg':     {aciditate:[170,220],ph:[4.6,4.9],temp:[0,14],su_min:46,su_max:null,grasime:null,gsu_min:null,gsu_max:null},
-  'Cas de vaca materie prima':{aciditate:[120,190],ph:[5.3,5.5],temp:[0,14],su_min:null,su_max:null,grasime:null,gsu_min:null,gsu_max:null},
+  'TVPS 4-8kg':     {aciditate:[60,90],ph:[4.6,4.9],temp:[0,14],su_min:46,su_max:null,grasime:45,gsu_min:null,gsu_max:null},
+  'TV 4-8kg':       {aciditate:[60,90],ph:[4.6,4.9],temp:[0,14],su_min:46,su_max:null,grasime:45,gsu_min:null,gsu_max:null},
+  'TC 4-8kg':       {aciditate:[60,90],ph:[4.6,4.9],temp:[0,14],su_min:46,su_max:null,grasime:45,gsu_min:null,gsu_max:null},
+  'TO 4-8kg':       {aciditate:[60,90],ph:[4.6,4.9],temp:[0,14],su_min:46,su_max:null,grasime:45,gsu_min:null,gsu_max:null},
+  'Cas de vaca rotund':{aciditate:[30,50],ph:[5.3,5.5],temp:[0,14],su_min:48,su_max:50,grasime:44,gsu_min:44,gsu_max:45},
+  'Cas de vaca mp': {aciditate:[30,50],ph:[5.3,5.5],temp:[0,14],su_min:48,su_max:50,grasime:44,gsu_min:44,gsu_max:45},
+  'Cas de oaie mp': {aciditate:[50,90],ph:[5.1,5.4],temp:[0,14],su_min:48,su_max:50,grasime:47,gsu_min:47,gsu_max:48},
+  'BB DLF':         {aciditate:null,ph:[4.5,4.9],temp:[0,14],su_min:44,su_max:null,grasime:45,gsu_min:null,gsu_max:null},
+  'BB PDA':         {aciditate:null,ph:[4.5,4.9],temp:[0,14],su_min:44,su_max:null,grasime:45,gsu_min:null,gsu_max:null},
+  'Branza de vaci': {aciditate:[80,100],ph:[4.5,4.6],temp:[0,14],su_min:34,su_max:null,grasime:null,gsu_min:null,gsu_max:null},
+  'Tops':           {aciditate:[60,90],ph:[4.6,4.9],temp:[0,14],su_min:46,su_max:null,grasime:45,gsu_min:null,gsu_max:null},
+  'Tcps':           {aciditate:[60,90],ph:[4.6,4.9],temp:[0,14],su_min:46,su_max:null,grasime:45,gsu_min:null,gsu_max:null},
+  'TV DEG 4kg':     {aciditate:[60,90],ph:[4.6,4.9],temp:[0,14],su_min:46,su_max:null,grasime:null,gsu_min:null,gsu_max:null},
+  'Cas de vaca materie prima':{aciditate:[30,50],ph:[5.3,5.5],temp:[0,14],su_min:null,su_max:null,grasime:null,gsu_min:null,gsu_max:null},
   'Telemea proaspata de vaca':{aciditate:null,ph:[6.2,6.5],temp:[8,8],su_min:30,su_max:null,grasime:11,gsu_min:38,gsu_max:null,ecoli_max:100},
   // Smântână cremoasă: pH 4,7 · temperatura 2–4 °C măsurată la 12 ore · grăsime 30% (grăsimea nu se notează deocamdată)
   'Smantana cremoasa':{aciditate:null,ph:[4.7,4.7],temp:[2,4],temp_nota:'la 12 ore',su_min:null,su_max:null,grasime:30,gsu_min:null,gsu_max:null},
@@ -309,7 +309,7 @@ function onProdusChange() {
   const produs = document.getElementById('f_produs').value;
   const std = STANDARDE[produs];
   const defs = [
-    {id:'std_acid', v: std?.aciditate ? std.aciditate[0]+'-'+std.aciditate[1]+' °Th (nu se notează)' : ''},
+    {id:'std_acid', v: std?.aciditate ? std.aciditate[0]+'-'+std.aciditate[1]+' °Th' : ''},
     {id:'std_ph',   v: std?.ph   ? (std.ph[0]===std.ph[1] ? String(std.ph[0]) : std.ph[0]+'-'+std.ph[1]) : ''},
     {id:'std_temp', v: std?.temp ? (std.temp[0]===std.temp[1] ? std.temp[0]+'°C' : std.temp[0]+'-'+std.temp[1]+'°C') + (std.temp_nota ? ' ('+std.temp_nota+')' : '') : (std?.fara_nota ? '' : '13-14°C')},
     {id:'std_su',   v: std?.su_min ? (std.su_max ? std.su_min+'-'+std.su_max+'%' : 'min. '+std.su_min+'%') : ''},
@@ -332,8 +332,7 @@ const PRAGURI = {
 const PRAG_MEDIE = { A: 4.5, B: 3.5, C: 2.5 }; // media sub pragul C = nota D
 
 const INDICATORI = [
-  // Aciditatea nu se notează deocamdată (standardele nu mai sunt valabile după modificările la saramură).
-  // Pentru a o reactiva, adaugă înapoi linia: {key:'aciditate', id:'f_acid', label:'Aciditate', tip:'rel'},
+  {key:'aciditate', id:'f_acid', label:'Aciditate', tip:'rel'}, // limite noi (saramură)
   {key:'ph',        id:'f_ph',   label:'pH',        tip:'ph'},
   {key:'temp',      id:'f_temp', label:'Temp',      tip:'temp'},
   {key:'su',        id:'f_su',   label:'SU',        tip:'rel'},
@@ -477,8 +476,6 @@ function calcNota() {
 }
 
 function colorFields(std, vals) {
-  const elAcid = document.getElementById('f_acid');
-  if (elAcid) elAcid.classList.remove('ok', 'warn', 'bad'); // aciditatea nu se notează
   ['f_gb', 'f_gsu'].forEach(id => { const e = document.getElementById(id); if (e) e.classList.remove('ok', 'warn', 'bad'); }); // nici grăsimile
   INDICATORI.forEach(ind => {
     const el = document.getElementById(ind.id);
