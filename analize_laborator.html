@@ -217,6 +217,16 @@ select{padding-right:30px;cursor:pointer}
             </select>
           </div>
         </div>
+        <div class="field">
+          <label>Se poate ambala standard?</label>
+          <div class="select-wrap">
+            <select id="f_ambalabil" onchange="calcNota()">
+              <option value="">—</option>
+              <option value="Da">Da</option>
+              <option value="Nu">Nu (doar tocare)</option>
+            </select>
+          </div>
+        </div>
       </div>
 
       <div style="font-size:11px;font-weight:700;color:var(--gray-4);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--gray-2);">DATE SUPLIMENTARE</div>
@@ -295,7 +305,7 @@ function onProdusChange() {
   const produs = document.getElementById('f_produs').value;
   const std = STANDARDE[produs];
   const defs = [
-    {id:'std_acid', v: std?.aciditate ? std.aciditate[0]+'-'+std.aciditate[1]+' °Th' : ''},
+    {id:'std_acid', v: std?.aciditate ? std.aciditate[0]+'-'+std.aciditate[1]+' °Th (nu se notează)' : ''},
     {id:'std_ph',   v: std?.ph   ? std.ph[0]+'-'+std.ph[1] : ''},
     {id:'std_temp', v: std?.temp ? (std.temp[0]===std.temp[1] ? std.temp[0]+'°C' : std.temp[0]+'-'+std.temp[1]+'°C') : '13-14°C'},
     {id:'std_su',   v: std?.su_min ? (std.su_max ? std.su_min+'-'+std.su_max+'%' : 'min. '+std.su_min+'%') : ''},
@@ -307,6 +317,55 @@ function onProdusChange() {
   calcNota();
 }
 
+// ── SISTEM DE NOTARE 1–5 ─────────────────────────────────────────
+// Fiecare indicator primește nota 5 (în standard) până la 1 (abatere foarte mare).
+// Media notelor dă calificativul A/B/C/D. Pragurile se pot modifica aici.
+const PRAGURI = {
+  rel:  [0.02, 0.05, 0.10], // abatere relativă (aciditate, SU, grăsime, G/SU): nota 4 ≤2%, nota 3 ≤5%, nota 2 ≤10%, peste = 1
+  ph:   [0.1, 0.2, 0.3],    // diferență absolută de pH: nota 4 ≤0,1, nota 3 ≤0,2, nota 2 ≤0,3, peste = 1
+  temp: [1, 2, 4],          // diferență absolută în °C: nota 4 ≤1, nota 3 ≤2, nota 2 ≤4, peste = 1
+};
+const PRAG_MEDIE = { A: 4.5, B: 3.5, C: 2.5 }; // media sub pragul C = nota D
+
+const INDICATORI = [
+  // Aciditatea nu se notează deocamdată (standardele nu mai sunt valabile după modificările la saramură).
+  // Pentru a o reactiva, adaugă înapoi linia: {key:'aciditate', id:'f_acid', label:'Aciditate', tip:'rel'},
+  {key:'ph',        id:'f_ph',   label:'pH',        tip:'ph'},
+  {key:'temp',      id:'f_temp', label:'Temp',      tip:'temp'},
+  {key:'su',        id:'f_su',   label:'SU',        tip:'rel'},
+  {key:'gb',        id:'f_gb',   label:'Grăsime',   tip:'rel'},
+  {key:'gsu',       id:'f_gsu',  label:'G/SU',      tip:'rel'},
+];
+
+function getLimite(std, key) {
+  switch (key) {
+    case 'aciditate': return [std.aciditate?.[0], std.aciditate?.[1]];
+    case 'ph':        return [std.ph?.[0], std.ph?.[1]];
+    case 'temp':      return [std.temp?.[0], std.temp?.[1]];
+    case 'su':        return [std.su_min, std.su_max];
+    case 'gb':        return [std.grasime, null];
+    case 'gsu':       return [std.gsu_min, std.gsu_max];
+  }
+  return [null, null];
+}
+
+// Nota 1–5 pentru o valoare; null dacă produsul nu are standard pentru indicator
+function scorIndicator(tip, val, min, max) {
+  const hasMin = min !== null && min !== undefined && !isNaN(min);
+  const hasMax = max !== null && max !== undefined && !isNaN(max);
+  if (!hasMin && !hasMax) return null;
+  let dist = 0, ref = 1;
+  if (hasMin && val < min)      { dist = min - val; ref = min; }
+  else if (hasMax && val > max) { dist = val - max; ref = max; }
+  if (dist === 0) return 5;
+  const m = tip === 'rel' ? dist / ref : dist;
+  const praguri = PRAGURI[tip];
+  for (let i = 0; i < praguri.length; i++) {
+    if (m <= praguri[i] + 1e-9) return 4 - i;
+  }
+  return 1;
+}
+
 function getAbatere(val, min, max) {
   if (val === null || val === undefined || isNaN(val)) return null;
   if (min !== null && min !== undefined && val < min) return (min - val) / min;
@@ -314,16 +373,32 @@ function getAbatere(val, min, max) {
   return 0;
 }
 
+function setBanner(cls, big, txt) {
+  document.getElementById('notaBanner').className = 'nota-banner ' + cls;
+  document.getElementById('notaBig').textContent = big;
+  document.getElementById('notaText').textContent = txt;
+}
+
 function calcNota() {
   const produs = document.getElementById('f_produs').value;
   const std = STANDARDE[produs];
-  const banner = document.getElementById('notaBanner');
-  const big = document.getElementById('notaBig');
-  const txt = document.getElementById('notaText');
+
+  // E-Coli peste 100 = D la ORICE produs, indiferent de restul datelor
+  if (document.getElementById('f_ecoli').value === '>100') {
+    setBanner('D', 'D', 'E-Coli >100 — Nota D automată');
+    if (std) colorFields(std, {
+      aciditate: parseFloat(document.getElementById('f_acid').value),
+      ph:        parseFloat(document.getElementById('f_ph').value),
+      temp:      parseFloat(document.getElementById('f_temp').value),
+      su:        parseFloat(document.getElementById('f_su').value),
+      gb:        parseFloat(document.getElementById('f_gb').value),
+      gsu:       parseFloat(document.getElementById('f_gsu').value),
+    });
+    return;
+  }
 
   if (!std) {
-    banner.className = 'nota-banner empty';
-    big.textContent = '—'; txt.textContent = 'Selectați produsul pentru calcul automat';
+    setBanner('empty', '—', 'Selectați produsul pentru calcul automat');
     return;
   }
 
@@ -336,73 +411,74 @@ function calcNota() {
     gsu:       parseFloat(document.getElementById('f_gsu').value),
   };
   const ecoli = document.getElementById('f_ecoli').value;
+  const ambalabil = document.getElementById('f_ambalabil').value;
 
-  // E-Coli >100 = D automat
+  colorFields(std, vals);
+
+  // Situații care dau D direct
   if (ecoli === '>100') {
-    banner.className = 'nota-banner D';
-    big.textContent = 'D'; txt.textContent = 'E-Coli >100 — Nota D automată';
-    colorFields(std, vals);
+    setBanner('D', 'D', 'E-Coli >100 — Nota D automată');
+    return;
+  }
+  if (ambalabil === 'Nu') {
+    setBanner('D', 'D', 'Nu se poate ambala în forma standard — doar tocare (Nota D)');
     return;
   }
 
-  const checks = [
-    {key:'aciditate', min:std.aciditate?.[0], max:std.aciditate?.[1]},
-    {key:'ph',        min:std.ph?.[0],         max:std.ph?.[1]},
-    {key:'temp',      min:std.temp?.[0],        max:std.temp?.[1]},
-    {key:'su',        min:std.su_min,           max:std.su_max},
-    {key:'gb',        min:std.grasime,          max:null},
-    {key:'gsu',       min:std.gsu_min,          max:std.gsu_max},
-  ];
-
-  let maxAbatere = 0, nrDepasiti = 0, detalii = [];
-  let hasAnyValue = false;
-
-  checks.forEach(c => {
-    const v = vals[c.key];
+  // Nota 1–5 per indicator
+  const note = [];
+  INDICATORI.forEach(ind => {
+    const v = vals[ind.key];
     if (isNaN(v)) return;
-    hasAnyValue = true;
-    const ab = getAbatere(v, c.min ?? null, c.max ?? null);
-    if (ab === null) return;
-    if (ab > 0) { nrDepasiti++; detalii.push(c.key+': '+((ab*100).toFixed(1))+'%'); }
-    if (ab > maxAbatere) maxAbatere = ab;
+    const [mn, mx] = getLimite(std, ind.key);
+    const s = scorIndicator(ind.tip, v, mn, mx);
+    if (s === null) return;
+    note.push({ key: ind.key, label: ind.label, score: s });
   });
 
-  if (!hasAnyValue) {
-    banner.className = 'nota-banner empty';
-    big.textContent = '—'; txt.textContent = 'Introduceți parametrii pentru calcul';
-    colorFields(std, vals);
+  if (!note.length) {
+    setBanner('empty', '—', 'Introduceți parametrii pentru calcul');
     return;
   }
 
-  let nota, cls, motiv;
-  if (nrDepasiti === 0) { nota='A'; cls='A'; motiv='Toți parametrii în standard ✓'; }
-  else if (nrDepasiti === 1 && maxAbatere <= 0.05) { nota='B'; cls='B'; motiv='1 parametru ușor depășit (≤5%): '+detalii.join(', '); }
-  else if ((nrDepasiti === 1 && maxAbatere > 0.05) || nrDepasiti === 2) { nota='C'; cls='C'; motiv='Abatere semnificativă: '+detalii.join(', '); }
-  else { nota='D'; cls='D'; motiv='3+ parametri depășiți sau abatere >15%: '+detalii.join(', '); }
+  const media = note.reduce((s, n) => s + n.score, 0) / note.length;
+  const mediaTxt = media.toFixed(2).replace('.', ',');
+  const detaliu = note.map(n => n.label + ' ' + n.score).join(' · ');
 
-  banner.className = 'nota-banner ' + cls;
-  big.textContent = nota;
-  txt.textContent = motiv;
-  colorFields(std, vals);
+  const ph = note.find(n => n.key === 'ph');
+  if (ph && ph.score === 1) {
+    setBanner('D', 'D', 'pH în afara standardului (nota 1) — nu se poate ambala în forma standard · Media ' + mediaTxt + ' · ' + detaliu);
+    return;
+  }
+
+  let nota = media + 1e-9 >= PRAG_MEDIE.A ? 'A'
+           : media + 1e-9 >= PRAG_MEDIE.B ? 'B'
+           : media + 1e-9 >= PRAG_MEDIE.C ? 'C' : 'D';
+  let motiv = 'Media ' + mediaTxt + ' · ' + detaliu;
+
+  // Un indicator cu nota 1 limitează calificativul la C
+  if (note.some(n => n.score === 1) && (nota === 'A' || nota === 'B')) {
+    nota = 'C';
+    motiv += ' · limitat la C (un indicator are nota 1)';
+  }
+
+  setBanner(nota, nota, motiv);
 }
 
 function colorFields(std, vals) {
-  const map = [
-    {id:'f_acid', min:std.aciditate?.[0], max:std.aciditate?.[1], v:vals.aciditate},
-    {id:'f_ph',   min:std.ph?.[0],         max:std.ph?.[1],        v:vals.ph},
-    {id:'f_temp', min:std.temp?.[0],        max:std.temp?.[1],      v:vals.temp},
-    {id:'f_su',   min:std.su_min,           max:std.su_max,         v:vals.su},
-    {id:'f_gb',   min:std.grasime,          max:null,               v:vals.gb},
-    {id:'f_gsu',  min:std.gsu_min,          max:std.gsu_max,        v:vals.gsu},
-  ];
-  map.forEach(m => {
-    const el = document.getElementById(m.id);
+  const elAcid = document.getElementById('f_acid');
+  if (elAcid) elAcid.classList.remove('ok', 'warn', 'bad'); // aciditatea nu se notează
+  INDICATORI.forEach(ind => {
+    const el = document.getElementById(ind.id);
     if (!el) return;
-    el.classList.remove('ok','warn','bad');
-    if (isNaN(m.v)) return;
-    const ab = getAbatere(m.v, m.min??null, m.max??null);
-    if (ab === 0) el.classList.add('ok');
-    else if (ab <= 0.05) el.classList.add('warn');
+    el.classList.remove('ok', 'warn', 'bad');
+    const v = vals[ind.key];
+    if (isNaN(v)) return;
+    const [mn, mx] = getLimite(std, ind.key);
+    const s = scorIndicator(ind.tip, v, mn, mx);
+    if (s === null) return;
+    if (s === 5) el.classList.add('ok');
+    else if (s >= 3) el.classList.add('warn');
     else el.classList.add('bad');
   });
 }
@@ -437,6 +513,7 @@ function adaugaInRegistru() {
     gb:        document.getElementById('f_gb').value,
     gsu:       document.getElementById('f_gsu').value,
     ecoli:     document.getElementById('f_ecoli').value,
+    ambalabil: document.getElementById('f_ambalabil').value,
     dm:        document.getElementById('f_dm').value,
     organoleptic: document.getElementById('f_org').value,
     acid_lactic:  document.getElementById('f_alactic').value,
@@ -458,6 +535,7 @@ function stergeFormular() {
     if (el) { el.value = ''; el.classList.remove('ok','warn','bad'); }
   });
   document.getElementById('f_ecoli').value = '';
+  document.getElementById('f_ambalabil').value = '';
   document.getElementById('notaBanner').className = 'nota-banner empty';
   document.getElementById('notaBig').textContent = '—';
   document.getElementById('notaText').textContent = 'Introduceți parametrii pentru calculul automat al notei';
@@ -483,6 +561,7 @@ function editRecord(idx) {
   document.getElementById('f_gb').value     = r.gb || '';
   document.getElementById('f_gsu').value    = r.gsu || '';
   document.getElementById('f_ecoli').value  = r.ecoli || '';
+  document.getElementById('f_ambalabil').value = r.ambalabil || '';
   document.getElementById('f_dm').value     = r.dm || '';
   document.getElementById('f_org').value    = r.organoleptic || '';
   document.getElementById('f_alactic').value = r.acid_lactic || '';
