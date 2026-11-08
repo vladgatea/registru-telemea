@@ -95,6 +95,7 @@ select{padding-right:30px;cursor:pointer}
 .nota-B{background:#FFFDE7;color:#F57F17}
 .nota-C{background:#FFF3E0;color:#E65100}
 .nota-D{background:#FFEBEE;color:#C62828}
+.nota-none{background:var(--gray-2);color:var(--gray-4)}
 
 .badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700}
 .badge-saved{background:#E8F5E9;color:#2E7D32}
@@ -154,6 +155,7 @@ select{padding-right:30px;cursor:pointer}
               <option>Branza de vaci</option><option>Tops</option><option>Tcps</option>
               <option>TV DEG 4kg</option><option>Cas de vaca materie prima</option>
               <option>Telemea proaspata de vaca</option>
+              <option>Smantana cremoasa</option>
             </select>
           </div>
         </div>
@@ -292,6 +294,8 @@ const STANDARDE = {
   'TV DEG 4kg':     {aciditate:[170,220],ph:[4.6,4.9],temp:[0,14],su_min:46,su_max:null,grasime:null,gsu_min:null,gsu_max:null},
   'Cas de vaca materie prima':{aciditate:[120,190],ph:[5.3,5.5],temp:[0,14],su_min:null,su_max:null,grasime:null,gsu_min:null,gsu_max:null},
   'Telemea proaspata de vaca':{aciditate:null,ph:[6.2,6.5],temp:[8,8],su_min:30,su_max:null,grasime:11,gsu_min:38,gsu_max:null,ecoli_max:100},
+  // Smântână cremoasă: pH 4,7 · temperatura 2–4 °C măsurată la 12 ore · grăsime 30% (grăsimea nu se notează deocamdată)
+  'Smantana cremoasa':{aciditate:null,ph:[4.7,4.7],temp:[2,4],temp_nota:'la 12 ore',su_min:null,su_max:null,grasime:30,gsu_min:null,gsu_max:null},
 };
 
 let records = [];
@@ -306,8 +310,8 @@ function onProdusChange() {
   const std = STANDARDE[produs];
   const defs = [
     {id:'std_acid', v: std?.aciditate ? std.aciditate[0]+'-'+std.aciditate[1]+' °Th (nu se notează)' : ''},
-    {id:'std_ph',   v: std?.ph   ? std.ph[0]+'-'+std.ph[1] : ''},
-    {id:'std_temp', v: std?.temp ? (std.temp[0]===std.temp[1] ? std.temp[0]+'°C' : std.temp[0]+'-'+std.temp[1]+'°C') : '13-14°C'},
+    {id:'std_ph',   v: std?.ph   ? (std.ph[0]===std.ph[1] ? String(std.ph[0]) : std.ph[0]+'-'+std.ph[1]) : ''},
+    {id:'std_temp', v: std?.temp ? (std.temp[0]===std.temp[1] ? std.temp[0]+'°C' : std.temp[0]+'-'+std.temp[1]+'°C') + (std.temp_nota ? ' ('+std.temp_nota+')' : '') : (std?.fara_nota ? '' : '13-14°C')},
     {id:'std_su',   v: std?.su_min ? (std.su_max ? std.su_min+'-'+std.su_max+'%' : 'min. '+std.su_min+'%') : ''},
     {id:'std_gb',   v: std?.grasime ? 'min. '+std.grasime+'% (nu se notează)' : ''},
     {id:'std_gsu',  v: std?.gsu_min ? (std.gsu_max ? std.gsu_min+'-'+std.gsu_max+'%' : 'min. '+std.gsu_min+'%') + ' (nu se notează)' : ''},
@@ -423,6 +427,12 @@ function calcNota() {
   }
   if (ambalabil === 'Nu') {
     setBanner('D', 'D', 'Nu se poate ambala în forma standard — doar tocare (Nota D)');
+    return;
+  }
+
+  // Produse fără standard definit (ex. smântână cremoasă): se introduc analizele, fără notă automată
+  if (std.fara_nota) {
+    setBanner('empty', '—', 'Fără standard definit pentru acest produs — nota nu se calculează automat (E-Coli >100 rămâne D)');
     return;
   }
 
@@ -597,7 +607,7 @@ function renderRegistru() {
         <td>${r.data||''}</td>
         <td style="text-align:left;font-weight:600">${r.produs||''}</td>
         <td>${r.lot||''}</td>
-        <td><span class="nota-chip nota-${r.nota||'D'}">${r.nota||'—'}</span></td>
+        <td><span class="nota-chip nota-${r.nota||'none'}">${r.nota||'—'}</span></td>
         <td>${r.aciditate||'—'}</td><td>${r.sare||'—'}</td><td>${r.ph||'—'}</td><td>${r.temp||'—'}</td>
         <td>${r.su||'—'}</td><td>${r.gb||'—'}</td><td>${r.gsu||'—'}</td><td>${r.ecoli||'—'}</td>
         <td>${r.efectuat||'—'}</td>
